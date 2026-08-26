@@ -1,0 +1,1 @@
+{ "extends": "../../tsconfig.plugin.json", "compilerOptions": { "rootDir": "src", "outDir": "dist", "emitDeclarationOnly": false, "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo", "module": "nodenext", "moduleResolution": "nodenext", "types": ["node", "vscode"] }, "include": ["src/**/*.ts"], "exclude": ["dist", "**/*.spec.ts"] }
