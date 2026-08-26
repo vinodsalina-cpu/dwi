@@ -3,14 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@11.17.0",
-  "engines": {"node": "22.16.0", "pnpm": "11.17.0"},
+  "engines": { "node": "24.18.0", "pnpm": "11.17.0" },
+  "volta": { "node": "24.18.0", "pnpm": "11.17.0" },
   "scripts": {
-    "build": "pnpm --filter @platform/dwi-host build:deps && pnpm --filter @platform/dwi-host build",
-    "vsix": "pnpm --filter @platform/dwi-host package:vsix"
+    "build:deps": "pnpm --filter @platform/domain-prompt-optimizer build && pnpm --filter @platform/domain-workspace build && pnpm --filter @platform/dwi-core build && pnpm --filter @platform/dwi-webview build",
+    "build": "pnpm build:deps && pnpm --filter @platform/dwi-host build",
+    "test": "pnpm build:deps && pnpm --filter @platform/domain-prompt-optimizer exec vitest run --config vitest.config.ts && pnpm --filter @platform/domain-workspace exec vitest run && pnpm --filter @platform/dwi-core exec vitest run && pnpm --filter @platform/dwi-host test && pnpm --filter @platform/dwi-webview test",
+    "vsix": "pnpm build && node apps/dwi-host/scripts/package-vsix.mjs",
+    "verify:extension": "node scripts/verify-installed-extension.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
-    "typescript": "^5.9.3"
+    "@vscode/test-electron": "2.5.2",
+    "typescript": "^5.9.3",
+    "vitest": "~4.1.10"
   },
   "workspaces": [
     "apps/dwi-host",

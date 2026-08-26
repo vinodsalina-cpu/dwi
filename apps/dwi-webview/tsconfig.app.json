@@ -1,1 +1,1 @@
-{ "extends": "../../tsconfig.plugin.json", "compilerOptions": { "types": ["vite/client"], "jsx": "react-jsx", "noEmit": true }, "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.mts"] }
+{ "extends": "../../tsconfig.base.json", "compilerOptions": { "jsx": "react-jsx", "lib": ["ES2023", "DOM", "DOM.Iterable"], "types": ["node", "vite/client"], "noEmit": true }, "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.mts"] }
