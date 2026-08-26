@@ -67,7 +67,6 @@ jobs:
           node-version: 24.18.0
       - name: Replay README from a true fresh clone
         shell: bash
-        working-directory: ${{ runner.temp }}
         run: |
           set -euo pipefail
           rm -rf dwi
@@ -81,10 +80,12 @@ jobs:
           test "$(pnpm --version)" = "11.17.0"
           pnpm install --frozen-lockfile
           pnpm build
+          pnpm test
           pnpm vsix
           test -f apps/dwi-host/developer-work-intelligence-0.1.0.vsix
-          node --input-type=module -e "import { downloadAndUnzipVSCode } from '@vscode/test-electron'; console.log(await downloadAndUnzipVSCode('1.134.0'));"
+          Xvfb :99 -screen 0 1280x1024x24 >/tmp/dwi-xvfb.log 2>&1 &
+          export DISPLAY=:99
+          pnpm verify:extension
           export PATH="$PWD/.vscode-test/vscode-linux-x64-1.134.0/bin:$PATH"
-          mkdir -p "${RUNNER_TEMP}/readme-code-exts" "${RUNNER_TEMP}/readme-code-data"
-          code --install-extension apps/dwi-host/developer-work-intelligence-0.1.0.vsix --force --extensions-dir "${RUNNER_TEMP}/readme-code-exts" --user-data-dir "${RUNNER_TEMP}/readme-code-data"
+          code --install-extension apps/dwi-host/developer-work-intelligence-0.1.0.vsix --force
           stat -c 'README_REPLAY_VSIX_BYTES=%s' apps/dwi-host/developer-work-intelligence-0.1.0.vsix
