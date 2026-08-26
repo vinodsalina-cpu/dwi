@@ -56,3 +56,35 @@ jobs:
         with:
           name: dwi-vsix
           path: apps/dwi-host/developer-work-intelligence-0.1.0.vsix
+
+  readme-replay:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+      - name: Replay README from a true fresh clone
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          rm -rf dwi
+          git clone https://github.com/vinodsalina-cpu/dwi.git
+          cd dwi
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+          node --version
+          pnpm --version
+          test "$(node --version)" = "v24.18.0"
+          test "$(pnpm --version)" = "11.17.0"
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm vsix
+          test -f apps/dwi-host/developer-work-intelligence-0.1.0.vsix
+          node --input-type=module -e "import { downloadAndUnzipVSCode } from '@vscode/test-electron'; console.log(await downloadAndUnzipVSCode('1.134.0'));"
+          export PATH="$PWD/.vscode-test/vscode-linux-x64-1.134.0/bin:$PATH"
+          mkdir -p "${RUNNER_TEMP}/readme-code-exts" "${RUNNER_TEMP}/readme-code-data"
+          code --install-extension apps/dwi-host/developer-work-intelligence-0.1.0.vsix --force --extensions-dir "${RUNNER_TEMP}/readme-code-exts" --user-data-dir "${RUNNER_TEMP}/readme-code-data"
+          stat -c 'README_REPLAY_VSIX_BYTES=%s' apps/dwi-host/developer-work-intelligence-0.1.0.vsix
