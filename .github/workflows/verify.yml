@@ -1,0 +1,58 @@
+name: Verify DWI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+      - name: Activate pinned pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+          test "$(node --version)" = "v24.18.0"
+          test "$(pnpm --version)" = "11.17.0"
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Tests
+        run: pnpm test
+      - name: Build and package
+        run: pnpm vsix
+      - name: Inspect VSIX
+        shell: bash
+        run: |
+          set -euo pipefail
+          V=apps/dwi-host/developer-work-intelligence-0.1.0.vsix
+          test -f "$V"
+          stat -c 'VSIX_BYTES=%s' "$V"
+          unzip -l "$V" | tee /tmp/vsix.txt
+          grep -q 'extension/dist/extension.js' /tmp/vsix.txt
+          grep -q 'extension/dist/dwi-webview.js' /tmp/vsix.txt
+          grep -q 'extension/dist/dwi-webview.css' /tmp/vsix.txt
+          grep -q 'extension/dist/node_modules/@platform/dwi-core/dist/index.js' /tmp/vsix.txt
+          grep -q 'extension/dist/node_modules/@platform/domain-prompt-optimizer/dist/index.js' /tmp/vsix.txt
+          grep -q 'extension/dist/node_modules/@platform/domain-workspace/dist/index.js' /tmp/vsix.txt
+          ! grep -Eq 'node_modules/.*/src/|\.spec\.|coverage/|\.cache/|\.env|\.d\.ts|tsconfig\.tsbuildinfo' /tmp/vsix.txt
+      - name: Install activate and open packaged extension
+        run: timeout --signal=KILL 240s xvfb-run -a pnpm verify:extension
+      - name: Repository independence and public hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t CHECK_FILES < <(find apps packages scripts tests -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' -o -name '*.cjs' -o -name 'package.json' -o -name '*.json' -o -name '*.yaml' -o -name '*.yml' \) ! -name '*.spec.ts' ! -name '*.spec.tsx' | sort)
+          CHECK_FILES+=(package.json pnpm-workspace.yaml tsconfig.base.json tsconfig.plugin.json)
+          ! grep -InE '(\.\./dwl|file:\.\./|link:\.\./|/Users/|/home/[A-Za-z0-9._-]+/|vinods-MacBook)' "${CHECK_FILES[@]}"
+          ! grep -InE '(^|[^A-Za-z])dwl([^A-Za-z]|$)' "${CHECK_FILES[@]}"
+          ! find . -type f \( -name '.env' -o -name '.env.local' -o -name '*.pem' -o -name '*.key' \) -print -quit | grep -q .
+          ! grep -RInE --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.vscode-test --exclude='pnpm-lock.yaml' '(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})' .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dwi-vsix
+          path: apps/dwi-host/developer-work-intelligence-0.1.0.vsix
