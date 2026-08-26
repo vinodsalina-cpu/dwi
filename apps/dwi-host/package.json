@@ -4,23 +4,76 @@
   "private": true,
   "type": "module",
   "displayName": "Developer Work Intelligence",
-  "description": "Local, consent-based project intelligence with project-aware Prompt Optimizer and optional provider refinement.",
+  "description": "Local, consent-based project intelligence with project-aware Prompt Optimizer and optional provider configuration.",
   "publisher": "dwi-poc",
   "preview": true,
-  "engines": {"vscode": "^1.125.0", "node": "22.16.0"},
+  "engines": {
+    "vscode": "^1.125.0",
+    "node": "24.18.0"
+  },
   "main": "./dist/extension.js",
-  "activationEvents": ["onCommand:dwi.open", "onView:dwi-view"],
+  "activationEvents": [
+    "onCommand:dwi.open",
+    "onView:dwi-view"
+  ],
   "contributes": {
-    "commands": [{"command": "dwi.open", "title": "Open Developer Work Intelligence", "category": "DWI"}],
-    "viewsContainers": {"activitybar": [{"id": "dwi-sidebar", "title": "Developer Work Intelligence", "icon": "media/dwi.svg"}]},
-    "views": {"dwi-sidebar": [{"type": "webview", "id": "dwi-view", "name": "Developer Work Intelligence"}]}
+    "commands": [
+      {
+        "command": "dwi.open",
+        "title": "Open Developer Work Intelligence",
+        "category": "DWI"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "dwi-sidebar",
+          "title": "Developer Work Intelligence",
+          "icon": "media/dwi.svg"
+        }
+      ]
+    },
+    "views": {
+      "dwi-sidebar": [
+        {
+          "type": "webview",
+          "id": "dwi-view",
+          "name": "Developer Work Intelligence"
+        }
+      ]
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/assemble.mjs",
-    "package:vsix": "pnpm build:deps && pnpm build && node scripts/package-vsix.mjs",
-    "build:deps": "pnpm --filter @platform/domain-prompt-optimizer build && pnpm --filter @platform/domain-workspace build && pnpm --filter @platform/dwi-core build && pnpm --filter @platform/dwi-webview build"
+    "lint": "eslint src scripts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "package:vsix": "pnpm build && node scripts/package-vsix.mjs"
   },
-  "dependencies": {"@platform/domain-workspace": "workspace:*", "@platform/dwi-core": "workspace:*"},
-  "devDependencies": {"@types/node": "^24.13.3", "@types/vscode": "^1.110.0", "@vscode/vsce": "^3.7.1", "typescript": "^5.9.3"},
-  "capabilities": {"untrustedWorkspaces": {"supported": true, "description": "DWI only reads bounded manifest/config evidence after its own explicit project consent and does not execute workspace code."}}
+  "dependencies": {
+    "@platform/domain-workspace": "workspace:*",
+    "@platform/dwi-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/vscode": "^1.110.0",
+    "@vscode/vsce": "^3.7.1",
+    "typescript": "^5.9.3",
+    "vitest": "~4.1.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vinodsalina-cpu/dwi.git"
+  },
+  "files": [
+    "dist/**",
+    "media/**",
+    "README.md"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "description": "DWI reads only bounded manifest/config evidence after explicit project consent and does not execute workspace code."
+    }
+  }
 }

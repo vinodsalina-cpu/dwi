@@ -1,0 +1,129 @@
+/* Compact module selection: labels remain selectable; local detail is progressive. */
+.compose .module-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-right: 0;
+}
+
+.compose .module {
+  position: relative;
+  align-items: center;
+  min-height: 44px;
+  padding: 7px 8px;
+}
+
+.module-choice {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.module-choice strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.module-detail-trigger {
+  display: grid;
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #80e1b24a;
+  border-radius: 50%;
+  background: #80e1b212;
+  color: #9af0c3;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.module-detail-trigger:hover,
+.module-detail-trigger[aria-expanded="true"] {
+  background: #80e1b22b;
+}
+
+.module-detail-trigger:focus-visible,
+.module-choice:focus-within {
+  outline: 2px solid var(--vscode-focusBorder, #80e1b2);
+  outline-offset: 2px;
+}
+
+.module-details {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 5px);
+  right: 0;
+  left: 0;
+  display: none;
+  padding: 10px;
+  border: 1px solid #80e1b24a;
+  border-radius: 8px;
+  background: var(--vscode-editorHoverWidget-background, #202627);
+  box-shadow: 0 8px 22px #0008;
+  color: var(--vscode-editorHoverWidget-foreground, #d9e1dd);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.module:hover .module-details,
+.module:focus-within .module-details,
+.module.details-open .module-details {
+  display: grid;
+  gap: 5px;
+}
+
+.module-details p,
+.module-details small {
+  margin: 0;
+  color: #b6c0bc;
+}
+
+.module-details-hint {
+  color: #8f9b96;
+  font-size: 10px;
+}
+
+.selection-summary {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  color: #aeb5b2;
+  font-size: 10px;
+}
+
+.selection-summary .count {
+  display: inline-grid;
+  min-width: 24px;
+  place-items: center;
+  line-height: 1;
+}
+
+@media (max-width: 560px) {
+  .compose .module-list {
+    grid-template-columns: 1fr;
+  }
+
+  .module-details {
+    right: 4px;
+    left: 4px;
+  }
+}
+
+.recovery-active > .hero:not(.resume-card) {
+  display: none;
+}
+
+.settings-active > :not(.settings-card) { display: none; }
+.header-actions { display: flex; align-items: center; gap: 7px; }
+.settings-gear { width: 26px; height: 26px; border: 1px solid #ffffff22; border-radius: 6px; background: transparent; color: var(--vscode-foreground, #dce5ee); cursor: pointer; font-size: 15px; }
+.settings-gear:hover, .settings-gear:focus-visible { border-color: var(--vscode-focusBorder, #5da9ff); background: #5da9ff22; outline: none; }
+.settings-card input, .settings-card select { width: 100%; border: 1px solid #ffffff1c; border-radius: 6px; background: var(--vscode-input-background, #101315); color: var(--vscode-input-foreground, #eef1f0); padding: 8px; }
+.root-choice { display: block; width: 100%; margin-top: 7px; text-align: left; }
+.generic-active .resume-card h1, .generic-active .resume-card p { font-size: 0; }
+.generic-active .resume-card h1::after { content: "No current project"; font-size: 20px; }
+.generic-active .resume-card p::after { content: "Open a folder to enable project context. DWI is available only in generic deterministic mode."; font-size: 13px; line-height: 1.45; }
+.generic-active .resume-card .consent-actions { display: none; }

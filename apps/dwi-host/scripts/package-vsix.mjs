@@ -1,9 +1,2 @@
-import { spawnSync } from "node:child_process";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const here = path.dirname(fileURLToPath(import.meta.url));
-const cwd = path.resolve(here, "..");
-const result = spawnSync("pnpm", ["exec", "vsce", "package", "--no-dependencies"], { cwd, stdio: "inherit", shell: process.platform === "win32" });
-if (result.error) throw result.error;
-if (result.status !== 0) process.exit(result.status ?? 1);
+import { createVSIX } from "@vscode/vsce"; import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises"; import { tmpdir } from "node:os"; import { join } from "node:path"; import { fileURLToPath } from "node:url";
+const app=fileURLToPath(new URL("..",import.meta.url));const stage=await mkdtemp(join(tmpdir(),"dwi-vsix-"));const manifest=JSON.parse(await readFile(join(app,"package.json"),"utf8"));manifest.name="developer-work-intelligence";delete manifest.scripts;delete manifest.dependencies;delete manifest.devDependencies;await writeFile(join(stage,"package.json"),JSON.stringify(manifest,null,2));await writeFile(join(stage,"README.md"),"# Developer Work Intelligence\n\nLocal, consent-based project intelligence. No provider calls or autonomous execution.\n");await mkdir(join(stage,"media"));await cp(join(app,"media"),join(stage,"media"),{recursive:true});await cp(join(app,"dist"),join(stage,"dist"),{recursive:true});await createVSIX({cwd:stage,packagePath:join(app,"developer-work-intelligence-0.1.0.vsix"),dependencies:false});

@@ -1,6 +1,3 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react-swc";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-const root = path.dirname(fileURLToPath(import.meta.url));
-export default defineConfig({ root, plugins: [react()], base: "./", build: { outDir: "dist", emptyOutDir: true, sourcemap: false }, resolve: { alias: { "@platform/dwi-core": path.resolve(root, "../../packages/dwi-core/src/index.ts") } } });
+export default defineConfig({ root: import.meta.dirname, cacheDir: "../../node_modules/.vite/apps/dwi-webview", plugins: [react()], resolve: { conditions: ["platform"] }, server: { port: 4310, host: "127.0.0.1", strictPort: true }, preview: { port: 4310, host: "127.0.0.1", strictPort: true }, build: { outDir: "../../dist/apps/dwi-webview", emptyOutDir: true, sourcemap: true, cssCodeSplit: false, rollupOptions: { input: "src/main.tsx", output: { entryFileNames: "dwi-webview.js", assetFileNames: (asset: { names?: string[] }) => asset.names?.some((name: string) => name.endsWith(".css")) ? "dwi-webview.css" : "assets/[name]-[hash][extname]" } } }, test: { watch: false, globals: true, environment: "jsdom", include: ["src/**/*.{test,spec}.{ts,tsx}"] } });

@@ -1,6 +1,6 @@
 {
-  "name": "@platform/dwi-webview", "version": "0.1.0", "private": true, "type": "module",
-  "scripts": {"build": "vite build --config vite.config.mts"},
-  "dependencies": {"@platform/dwi-core": "workspace:*", "react": "^19.2.8", "react-dom": "^19.2.8"},
-  "devDependencies": {"@vitejs/plugin-react-swc": "^4.3.2", "@types/react": "^19.2.17", "@types/react-dom": "^19.2.3", "typescript": "^5.9.3", "vite": "^8.1.5"}
+  "name": "@platform/dwi-webview", "version": "0.1.0", "private": true, "type": "module", "engines": { "node": "24.18.0" },
+  "scripts": { "dev": "vite --config vite.config.mts", "build": "vite build --config vite.config.mts", "lint": "eslint src vite.config.mts", "typecheck": "tsc -p tsconfig.app.json --noEmit", "test": "vitest run --config vite.config.mts" },
+  "dependencies": { "@platform/dwi-core": "workspace:*", "react": "^19.2.8", "react-dom": "^19.2.8" },
+  "devDependencies": { "@vitejs/plugin-react-swc": "^4.3.2", "@testing-library/react": "^16.3.2", "@types/react": "^19.2.17", "@types/react-dom": "^19.2.3", "jsdom": "^27.4.0", "typescript": "^5.9.3", "vite": "^8.1.5", "vitest": "~4.1.10" }
 }
