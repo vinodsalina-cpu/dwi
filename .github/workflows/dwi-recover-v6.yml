@@ -1,0 +1,87 @@
+name: DWI recover v6
+on:
+  push:
+    branches: [codex/dwi-authoritative-rebuild]
+permissions:
+  contents: write
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/dwi-authoritative-rebuild
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+      - run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+          test "$(node --version)" = "v24.18.0"
+          test "$(pnpm --version)" = "11.17.0"
+      - name: Recover and repair test portability
+        run: |
+          git show 97b4ef44d37fb2d456e806abad243b3a7d047370:.github/workflows/dwi-recover-v5.yml > /tmp/v5.yml
+          git show fcaaa092b7c39d6b5087137d46db0f64f94009d2:.github/workflows/dwi-recover-v2.yml > /tmp/v2.yml
+          ruby -e 'require "yaml"; y=YAML.load_file("/tmp/v5.yml", aliases: true); s=y["jobs"]["recover"]["steps"].find{|x| x["name"]=="Recover audited DWI closure"}; File.write("/tmp/recover.sh", s["run"])'
+          bash -euo pipefail /tmp/recover.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('apps/dwi-webview/src/compose-layout.spec.ts')
+          p.write_text(p.read_text().replace('readFile("apps/dwi-webview/src/compose.css", "utf8")','readFile("src/compose.css", "utf8")'))
+          p=Path('apps/dwi-webview/src/main.spec.tsx')
+          s=p.read_text()
+          s=s.replace('import React from "react";', 'import React, { act } from "react";')
+          s=s.replace('window.dispatchEvent(new MessageEvent("message", { data: { type: "dwi.error", message: "Open a workspace before creating a project brief." } }));', 'await act(async () => { window.dispatchEvent(new MessageEvent("message", { data: { type: "dwi.error", message: "Open a workspace before creating a project brief." } })); });')
+          p.write_text(s)
+          PY
+      - name: Clean install, full tests, build and package
+        run: |
+          rm -f pnpm-lock.yaml
+          pnpm install --lockfile-only
+          rm -rf node_modules dist apps/dwi-host/dist apps/dwi-webview/dist packages/dwi-core/dist packages/domain/prompt-optimizer/dist packages/domain/workspace/dist apps/dwi-host/*.vsix
+          pnpm install --frozen-lockfile
+          pnpm test
+          pnpm vsix
+      - name: Inspect VSIX
+        run: |
+          ruby -e 'require "yaml"; y=YAML.load_file("/tmp/v2.yml", aliases: true); s=y["jobs"]["recover"]["steps"].find{|x| x["name"]=="Inspect VSIX"}; File.write("/tmp/inspect.sh", s["run"])'
+          bash -euo pipefail /tmp/inspect.sh
+      - name: Install and activate VSIX
+        run: xvfb-run -a pnpm verify:extension
+      - name: Hygiene gates
+        run: |
+          set -euo pipefail
+          ! grep -RInE --exclude-dir=.git --exclude='dwi-recover-and-verify.yml' --exclude='dwi-recover-v2.yml' --exclude='dwi-recover-v3.yml' --exclude='dwi-recover-v4.yml' --exclude='dwi-recover-v5.yml' --exclude='dwi-recover-v6.yml' '(\.\./dwl|/Users/|/home/[A-Za-z0-9._-]+/|vinods-MacBook|file:\.\./|link:\.\./)' .
+          ! find . -type f \( -name '.env' -o -name '.env.local' -o -name '*.pem' -o -name '*.key' \) -print -quit | grep -q .
+          ! grep -RInE --exclude-dir=.git --exclude-dir=node_modules --exclude='pnpm-lock.yaml' '(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})' .
+      - name: Write verified README and CI
+        run: |
+          ruby -e 'require "yaml"; y=YAML.load_file("/tmp/v5.yml", aliases: true); %w[Write\ README Write\ permanent\ verification\ workflow].each{|n| s=y["jobs"]["recover"]["steps"].find{|x| x["name"]==n}; File.write("/tmp/#{n.gsub(" ","-")}.sh",s["run"])}'
+          bash -euo pipefail /tmp/Write-README.sh
+          bash -euo pipefail /tmp/Write-permanent-verification-workflow.sh
+      - name: Commit source-only repository
+        run: |
+          rm -rf node_modules dist apps/dwi-host/dist apps/dwi-webview/dist packages/dwi-core/dist packages/domain/prompt-optimizer/dist packages/domain/workspace/dist coverage apps/dwi-host/*.vsix
+          rm -f .github/workflows/dwi-recover-and-verify.yml .github/workflows/dwi-recover-v2.yml .github/workflows/dwi-recover-v3.yml .github/workflows/dwi-recover-v4.yml .github/workflows/dwi-recover-v5.yml .github/workflows/dwi-recover-v6.yml
+          git config user.name 'DWI repository recovery'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Recover complete self-contained DWI source'
+          git push origin HEAD:codex/dwi-authoritative-rebuild
+      - name: Fresh clone build gate
+        run: |
+          cd "$RUNNER_TEMP"
+          rm -rf dwi-fresh
+          git clone --depth 1 --branch codex/dwi-authoritative-rebuild https://github.com/vinodsalina-cpu/dwi.git dwi-fresh
+          cd dwi-fresh
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+          test "$(node --version)" = "v24.18.0"
+          test "$(pnpm --version)" = "11.17.0"
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm vsix
+          stat -c 'FRESH_CLONE_VSIX_BYTES=%s' apps/dwi-host/developer-work-intelligence-0.1.0.vsix
