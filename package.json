@@ -1,0 +1,22 @@
+{
+  "name": "@platform/dwi-root",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.17.0",
+  "engines": {"node": "22.16.0", "pnpm": "11.17.0"},
+  "scripts": {
+    "build": "pnpm --filter @platform/dwi-host build:deps && pnpm --filter @platform/dwi-host build",
+    "vsix": "pnpm --filter @platform/dwi-host package:vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "typescript": "^5.9.3"
+  },
+  "workspaces": [
+    "apps/dwi-host",
+    "apps/dwi-webview",
+    "packages/dwi-core",
+    "packages/domain/prompt-optimizer",
+    "packages/domain/workspace"
+  ]
+}
