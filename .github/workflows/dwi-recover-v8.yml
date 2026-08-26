@@ -1,0 +1,269 @@
+name: DWI recover v8
+
+on:
+  push:
+    branches: [codex/dwi-authoritative-rebuild]
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/dwi-authoritative-rebuild
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+      - name: Activate pinned runtime
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+          test "$(node --version)" = "v24.18.0"
+          test "$(pnpm --version)" = "11.17.0"
+
+      - name: Recover audited DWI closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show d31a141d98b44fabca7d495c293ab8db8eedc611:.github/workflows/dwi-recover-v7.yml > /tmp/v7.yml
+          ruby -e 'require "yaml"; y=YAML.load_file("/tmp/v7.yml", aliases: true); s=y["jobs"]["recover"]["steps"].find{|x| x["name"]=="Recover audited DWI dependency closure"}; File.write("/tmp/recover.sh", s["run"])'
+          bash -euo pipefail /tmp/recover.sh
+
+      - name: Remove package-only build metadata and support CI Electron sandbox boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > apps/dwi-host/scripts/assemble.mjs <<'EOF'
+          import { cp, copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+          import { dirname, join } from "node:path";
+          import { fileURLToPath } from "node:url";
+
+          const app = fileURLToPath(new URL("..", import.meta.url));
+          const root = fileURLToPath(new URL("../../..", import.meta.url));
+          const dist = join(app, "dist");
+
+          async function runtime(path, name) {
+            const source = join(root, path);
+            const target = join(dist, "node_modules", ...name.split("/"));
+            await rm(target, { recursive: true, force: true });
+            await mkdir(join(target, "dist"), { recursive: true });
+            await writeFile(join(target, "package.json"), await readFile(join(source, "package.json")));
+            await cp(join(source, "dist"), join(target, "dist"), {
+              recursive: true,
+              filter: (entry) => !entry.endsWith(".d.ts") && !entry.endsWith(".d.ts.map") && !entry.endsWith(".tsbuildinfo")
+            });
+          }
+
+          async function asset(name) {
+            const source = join(root, "dist/apps/dwi-webview", name);
+            const target = join(dist, name);
+            await mkdir(dirname(target), { recursive: true });
+            await copyFile(source, target);
+          }
+
+          async function pruneBuildMetadata(directory) {
+            for (const entry of await readdir(directory, { withFileTypes: true })) {
+              const path = join(directory, entry.name);
+              if (entry.isDirectory()) {
+                await pruneBuildMetadata(path);
+              } else if (entry.name.endsWith(".d.ts") || entry.name.endsWith(".d.ts.map") || entry.name.endsWith(".tsbuildinfo")) {
+                await rm(path, { force: true });
+              }
+            }
+          }
+
+          await Promise.all([
+            runtime("packages/dwi-core", "@platform/dwi-core"),
+            runtime("packages/domain/prompt-optimizer", "@platform/domain-prompt-optimizer"),
+            runtime("packages/domain/workspace", "@platform/domain-workspace"),
+            asset("dwi-webview.js"),
+            asset("dwi-webview.css")
+          ]);
+          await pruneBuildMetadata(dist);
+          EOF
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'apps/dwi-host/package.json';
+          const manifest = JSON.parse(fs.readFileSync(path, 'utf8'));
+          manifest.repository = { type: 'git', url: 'https://github.com/vinodsalina-cpu/dwi.git' };
+          manifest.files = ['dist/**', 'media/**', 'README.md'];
+          fs.writeFileSync(path, JSON.stringify(manifest, null, 2) + '\n');
+          NODE
+
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/verify-installed-extension.mjs')
+          s = p.read_text()
+          s = s.replace(
+              "const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');\n          const install = spawnSync(vscodeExecutablePath, [",
+              "const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');\n          const ciElectronArgs = process.platform === 'linux' && process.env.CI === 'true' ? ['--no-sandbox'] : [];\n          const install = spawnSync(vscodeExecutablePath, [...ciElectronArgs,"
+          )
+          s = s.replace(
+              "launchArgs: [workspaceDir, '--extensions-dir', extensionsDir, '--user-data-dir', userDataDir, '--disable-workspace-trust']",
+              "launchArgs: [workspaceDir, ...ciElectronArgs, '--extensions-dir', extensionsDir, '--user-data-dir', userDataDir, '--disable-workspace-trust']"
+          )
+          p.write_text(s)
+          PY
+
+      - name: Generate standalone lockfile
+        run: |
+          rm -f pnpm-lock.yaml
+          pnpm install --lockfile-only
+
+      - name: Fresh frozen install, tests, build and package
+        run: |
+          rm -rf node_modules dist apps/dwi-host/dist apps/dwi-webview/dist packages/dwi-core/dist packages/domain/prompt-optimizer/dist packages/domain/workspace/dist apps/dwi-host/*.vsix .vscode-test
+          pnpm install --frozen-lockfile
+          pnpm test
+          pnpm vsix
+
+      - name: Inspect runtime-only VSIX
+        shell: bash
+        run: |
+          set -euo pipefail
+          V=apps/dwi-host/developer-work-intelligence-0.1.0.vsix
+          test -f "$V"
+          stat -c 'VSIX_BYTES=%s' "$V"
+          unzip -l "$V" | tee /tmp/dwi-vsix.txt
+          grep -q 'extension/dist/extension.js' /tmp/dwi-vsix.txt
+          grep -q 'extension/dist/dwi-webview.js' /tmp/dwi-vsix.txt
+          grep -q 'extension/dist/dwi-webview.css' /tmp/dwi-vsix.txt
+          grep -q 'extension/dist/node_modules/@platform/dwi-core/dist/index.js' /tmp/dwi-vsix.txt
+          grep -q 'extension/dist/node_modules/@platform/domain-prompt-optimizer/dist/index.js' /tmp/dwi-vsix.txt
+          grep -q 'extension/dist/node_modules/@platform/domain-workspace/dist/index.js' /tmp/dwi-vsix.txt
+          ! grep -Eq 'node_modules/.*/src/|\.spec\.|coverage/|\.cache/|\.env|\.d\.ts|tsconfig\.tsbuildinfo' /tmp/dwi-vsix.txt
+
+      - name: Install, activate and open packaged DWI
+        run: xvfb-run -a pnpm verify:extension
+
+      - name: Repository independence and public hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -RInE --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.vscode-test --exclude='dwi-recover-and-verify.yml' --exclude='dwi-recover-v2.yml' --exclude='dwi-recover-v3.yml' --exclude='dwi-recover-v4.yml' --exclude='dwi-recover-v5.yml' --exclude='dwi-recover-v6.yml' --exclude='dwi-recover-v7.yml' --exclude='dwi-recover-v8.yml' '(\.\./dwl|/Users/|/home/[A-Za-z0-9._-]+/|vinods-MacBook|file:\.\./|link:\.\./)' .
+          ! find . -type f \( -name '.env' -o -name '.env.local' -o -name '*.pem' -o -name '*.key' \) -print -quit | grep -q .
+          ! grep -RInE --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.vscode-test --exclude='pnpm-lock.yaml' '(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})' .
+
+      - name: Write verified README
+        shell: bash
+        run: |
+          ruby -e 'require "yaml"; y=YAML.load_file("/tmp/v7.yml", aliases: true); s=y["jobs"]["recover"]["steps"].find{|x| x["name"]=="Write executable README"}; File.write("/tmp/readme.sh", s["run"])'
+          bash -euo pipefail /tmp/readme.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('README.md')
+          s=p.read_text()
+          s=s.replace('It downloads a disposable VS Code through `@vscode/test-electron`, installs the generated VSIX into an isolated extensions directory, activates DWI, verifies the `dwi.open` command, and opens the DWI view against a disposable workspace. On Linux, CI runs this command through `xvfb-run`.', 'It downloads a disposable VS Code through `@vscode/test-electron`, installs the generated VSIX into an isolated extensions directory, activates DWI, verifies the `dwi.open` command, and opens the DWI view against a disposable workspace. On Linux, CI runs this disposable Electron instance through `xvfb-run` and uses `--no-sandbox` only inside GitHub Actions because the downloaded Chromium setuid sandbox helper cannot have its required root ownership there; this does not change DWI runtime security or user installation settings.')
+          p.write_text(s)
+          PY
+
+      - name: Write permanent verification workflow
+        shell: bash
+        run: |
+          cat > .github/workflows/verify.yml <<'EOF'
+          name: Verify DWI
+
+          on:
+            push:
+            pull_request:
+
+          jobs:
+            build:
+              runs-on: ubuntu-latest
+              timeout-minutes: 40
+              steps:
+                - uses: actions/checkout@v4
+                - uses: actions/setup-node@v4
+                  with:
+                    node-version: 24.18.0
+                - name: Activate pinned runtime
+                  run: |
+                    corepack enable
+                    corepack prepare pnpm@11.17.0 --activate
+                    test "$(node --version)" = "v24.18.0"
+                    test "$(pnpm --version)" = "11.17.0"
+                - name: Frozen install
+                  run: pnpm install --frozen-lockfile
+                - name: Tests
+                  run: pnpm test
+                - name: Build and package
+                  run: pnpm vsix
+                - name: Inspect VSIX
+                  run: |
+                    set -euo pipefail
+                    V=apps/dwi-host/developer-work-intelligence-0.1.0.vsix
+                    unzip -l "$V" | tee /tmp/dwi-vsix.txt
+                    grep -q 'extension/dist/extension.js' /tmp/dwi-vsix.txt
+                    grep -q 'extension/dist/dwi-webview.js' /tmp/dwi-vsix.txt
+                    grep -q 'extension/dist/dwi-webview.css' /tmp/dwi-vsix.txt
+                    grep -q 'extension/dist/node_modules/@platform/dwi-core/dist/index.js' /tmp/dwi-vsix.txt
+                    grep -q 'extension/dist/node_modules/@platform/domain-prompt-optimizer/dist/index.js' /tmp/dwi-vsix.txt
+                    grep -q 'extension/dist/node_modules/@platform/domain-workspace/dist/index.js' /tmp/dwi-vsix.txt
+                    ! grep -Eq 'node_modules/.*/src/|\.spec\.|coverage/|\.cache/|\.env|\.d\.ts|tsconfig\.tsbuildinfo' /tmp/dwi-vsix.txt
+                    stat -c 'VSIX_BYTES=%s' "$V"
+                - name: Install, activate and open packaged DWI
+                  run: xvfb-run -a pnpm verify:extension
+                - uses: actions/upload-artifact@v4
+                  with:
+                    name: dwi-vsix
+                    path: apps/dwi-host/developer-work-intelligence-0.1.0.vsix
+
+            fresh-clone:
+              runs-on: ubuntu-latest
+              timeout-minutes: 35
+              steps:
+                - uses: actions/setup-node@v4
+                  with:
+                    node-version: 24.18.0
+                - name: Fresh clone and execute documented build path
+                  run: |
+                    git clone "https://github.com/${GITHUB_REPOSITORY}.git" dwi-fresh
+                    cd dwi-fresh
+                    git checkout "$GITHUB_SHA"
+                    corepack enable
+                    corepack prepare pnpm@11.17.0 --activate
+                    test "$(node --version)" = "v24.18.0"
+                    test "$(pnpm --version)" = "11.17.0"
+                    pnpm install --frozen-lockfile
+                    pnpm build
+                    pnpm vsix
+                    test -f apps/dwi-host/developer-work-intelligence-0.1.0.vsix
+                    stat -c 'FRESH_CLONE_VSIX_BYTES=%s' apps/dwi-host/developer-work-intelligence-0.1.0.vsix
+          EOF
+
+      - name: Commit source-only standalone repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf node_modules dist .vscode-test apps/dwi-host/dist apps/dwi-webview/dist packages/dwi-core/dist packages/domain/prompt-optimizer/dist packages/domain/workspace/dist coverage apps/dwi-host/*.vsix
+          rm -f .github/workflows/dwi-recover-and-verify.yml .github/workflows/dwi-recover-v2.yml .github/workflows/dwi-recover-v3.yml .github/workflows/dwi-recover-v4.yml .github/workflows/dwi-recover-v5.yml .github/workflows/dwi-recover-v6.yml .github/workflows/dwi-recover-v7.yml .github/workflows/dwi-recover-v8.yml
+          git config user.name 'DWI repository recovery'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git status --short
+          git commit -m 'Recover complete self-contained DWI source'
+          git push origin HEAD:codex/dwi-authoritative-rebuild
+
+      - name: Fresh-clone README build path
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          rm -rf dwi-fresh
+          git clone --depth 1 --branch codex/dwi-authoritative-rebuild https://github.com/vinodsalina-cpu/dwi.git dwi-fresh
+          cd dwi-fresh
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+          test "$(node --version)" = "v24.18.0"
+          test "$(pnpm --version)" = "11.17.0"
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm vsix
+          test -f apps/dwi-host/developer-work-intelligence-0.1.0.vsix
+          stat -c 'FRESH_CLONE_VSIX_BYTES=%s' apps/dwi-host/developer-work-intelligence-0.1.0.vsix
