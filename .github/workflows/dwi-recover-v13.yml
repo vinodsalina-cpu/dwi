@@ -1,0 +1,211 @@
+name: DWI recover v13
+
+on:
+  push:
+    branches: [codex/dwi-authoritative-rebuild]
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/dwi-authoritative-rebuild
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+
+      - name: Activate pinned runtime
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+          test "$(node --version)" = "v24.18.0"
+          test "$(pnpm --version)" = "11.17.0"
+
+      - name: Recreate the already-verified standalone source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show 7697fb073daa8c337bd6d0ef0fa77e912ab68e0d:.github/workflows/dwi-recover-v12.yml > /tmp/v12.yml
+          ruby -e 'require "yaml"; y=YAML.load_file("/tmp/v12.yml", aliases: true); ["Recover the already-audited DWI closure", "Replace packaged-extension verifier with bounded CLI install"].each_with_index{|n,i| s=y["jobs"]["recover"]["steps"].find{|x| x["name"]==n}; abort("missing #{n}") unless s; File.write("/tmp/step#{i}.sh",s["run"])}'
+          bash -euo pipefail /tmp/step0.sh
+          bash -euo pipefail /tmp/step1.sh
+
+      - name: Generate lock and prove source before persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f pnpm-lock.yaml
+          pnpm install --lockfile-only
+          rm -rf node_modules dist .vscode-test apps/dwi-host/dist apps/dwi-webview/dist packages/dwi-core/dist packages/domain/prompt-optimizer/dist packages/domain/workspace/dist apps/dwi-host/*.vsix
+          pnpm install --frozen-lockfile
+          pnpm test
+          pnpm build
+          pnpm vsix
+          timeout --signal=KILL 240s xvfb-run -a pnpm verify:extension
+
+      - name: Verify package and repository independence
+        shell: bash
+        run: |
+          set -euo pipefail
+          V=apps/dwi-host/developer-work-intelligence-0.1.0.vsix
+          test -f "$V"
+          stat -c 'PRECOMMIT_VSIX_BYTES=%s' "$V"
+          unzip -l "$V" > /tmp/vsix.txt
+          grep -q 'extension/dist/extension.js' /tmp/vsix.txt
+          grep -q 'extension/dist/dwi-webview.js' /tmp/vsix.txt
+          grep -q 'extension/dist/dwi-webview.css' /tmp/vsix.txt
+          grep -q 'extension/dist/node_modules/@platform/dwi-core/dist/index.js' /tmp/vsix.txt
+          grep -q 'extension/dist/node_modules/@platform/domain-prompt-optimizer/dist/index.js' /tmp/vsix.txt
+          grep -q 'extension/dist/node_modules/@platform/domain-workspace/dist/index.js' /tmp/vsix.txt
+          if grep -Eq 'node_modules/.*/src/|\.spec\.|coverage/|\.cache/|\.env|\.d\.ts|tsconfig\.tsbuildinfo' /tmp/vsix.txt; then
+            echo 'Development-only material found in VSIX' >&2
+            exit 1
+          fi
+          mapfile -t CHECK_FILES < <(find apps packages scripts tests -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' -o -name '*.cjs' -o -name 'package.json' -o -name '*.json' -o -name '*.yaml' -o -name '*.yml' \) ! -name '*.spec.ts' ! -name '*.spec.tsx' | sort)
+          CHECK_FILES+=(package.json pnpm-workspace.yaml tsconfig.base.json tsconfig.plugin.json)
+          if grep -InE '(\.\./dwl|file:\.\./|link:\.\./|/Users/|/home/[A-Za-z0-9._-]+/|vinods-MacBook)' "${CHECK_FILES[@]}"; then
+            echo 'Machine-specific or external-parent dependency found in build/runtime source' >&2
+            exit 1
+          fi
+          if grep -InE '(^|[^A-Za-z])dwl([^A-Za-z]|$)' "${CHECK_FILES[@]}"; then
+            echo 'DWL dependency/reference found in build/runtime source' >&2
+            exit 1
+          fi
+          if find . -type f \( -name '.env' -o -name '.env.local' -o -name '*.pem' -o -name '*.key' \) -print -quit | grep -q .; then
+            echo 'Secret-bearing file type found' >&2
+            exit 1
+          fi
+          if grep -RInE --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.vscode-test --exclude='pnpm-lock.yaml' '(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})' .; then
+            echo 'Credential-like token found' >&2
+            exit 1
+          fi
+
+      - name: Write executable README
+        shell: bash
+        run: |
+          cat > README.md <<'EOF'
+          # Developer Workspace Intelligence (DWI)
+
+          Developer Workspace Intelligence is a VS Code extension that creates a local, consent-based project brief from bounded workspace evidence and uses it to provide project-aware prompt and tool guidance. Core DWI operation is local; provider configuration is optional.
+
+          ## Prerequisites
+
+          - Node.js **24.18.0**
+          - pnpm **11.17.0**
+          - VS Code **1.125.0 or newer**
+          - Git
+
+          Node is pinned in `.nvmrc` and `.tool-versions`; pnpm is pinned in `package.json`. Select Node 24.18.0 with your normal Node version manager before continuing.
+
+          ## Clone
+
+          ```sh
+          git clone https://github.com/vinodsalina-cpu/dwi.git
+          cd dwi
+          ```
+
+          ## Activate the pinned package manager
+
+          ```sh
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+          node --version
+          pnpm --version
+          ```
+
+          The expected versions are Node `v24.18.0` and pnpm `11.17.0`.
+
+          ## Install dependencies
+
+          ```sh
+          pnpm install --frozen-lockfile
+          ```
+
+          ## Build DWI
+
+          ```sh
+          pnpm build
+          ```
+
+          This builds the Prompt Optimizer domain, workspace intelligence domain, DWI core, React/Vite webview and VS Code extension host in dependency order.
+
+          ## Build the VSIX
+
+          ```sh
+          pnpm vsix
+          ```
+
+          The installable package is created at:
+
+          ```text
+          apps/dwi-host/developer-work-intelligence-0.1.0.vsix
+          ```
+
+          ## Install in VS Code
+
+          In VS Code, open **Extensions**, open the `...` menu, choose **Install from VSIX...**, select `apps/dwi-host/developer-work-intelligence-0.1.0.vsix`, and reload if prompted.
+
+          If the `code` command is available on your PATH, the verified CLI form is:
+
+          ```sh
+          code --install-extension apps/dwi-host/developer-work-intelligence-0.1.0.vsix --force
+          ```
+
+          ## Start DWI
+
+          Open a project in VS Code. Select **Developer Work Intelligence** in the Activity Bar, or run **DWI: Open Developer Work Intelligence** / **Open Developer Work Intelligence** from the Command Palette.
+
+          ## What to expect
+
+          DWI begins at a project-scoped consent screen. It does not perform its bounded workspace inspection until consent is granted. After approval, DWI derives a local project brief from permitted project evidence. Confirm or correct the brief, select the DWI modules needed for the task, compose project-aware guidance, and review the resulting output. Provider settings are optional and stored through VS Code's secret/configuration facilities where applicable.
+
+          ## Troubleshooting
+
+          If `pnpm install --frozen-lockfile` reports a runtime mismatch, use Node 24.18.0 and pnpm 11.17.0 exactly. If packaging fails after a partial build, remove generated `dist` directories and rerun `pnpm build` followed by `pnpm vsix`. If VS Code does not show DWI after installation, confirm the VSIX installed successfully, reload VS Code, open a workspace, and run the DWI open command from the Command Palette. Build output, `.vscode-test`, and generated VSIX files are intentionally ignored and must be regenerated from source.
+
+          ## Agent Troubleshooting Context
+
+          DWI is a five-workspace pnpm repository: `apps/dwi-host`, `apps/dwi-webview`, `packages/dwi-core`, `packages/domain/prompt-optimizer`, and `packages/domain/workspace`. `dwi-host` is the VS Code extension entrypoint; it assembles the built webview and the three required local runtime packages into its `dist` tree before `vsce` packages the extension. `dwi-core` depends on Prompt Optimizer; the host depends on DWI core and workspace intelligence; the webview depends on DWI core. Build/runtime must never depend on the legacy monorepo, a sibling checkout, pre-existing `dist`, or uncommitted generated files. The canonical verification path is frozen install → tests → build → VSIX → archive inspection → packaged-extension install/activation/open.
+          EOF
+
+      - name: Persist verified ordinary repository files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf node_modules dist .vscode-test apps/dwi-host/dist apps/dwi-webview/dist packages/dwi-core/dist packages/domain/prompt-optimizer/dist packages/domain/workspace/dist coverage apps/dwi-host/*.vsix
+          git config user.name 'DWI repository recovery'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A -- . ':!.github/workflows'
+          git status --short
+          git commit -m 'Recover complete self-contained DWI source'
+          git push origin HEAD:codex/dwi-authoritative-rebuild
+
+      - name: Fresh-clone documented build and runtime path
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          rm -rf dwi-fresh
+          git clone --depth 1 --branch codex/dwi-authoritative-rebuild https://github.com/vinodsalina-cpu/dwi.git dwi-fresh
+          cd dwi-fresh
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+          test "$(node --version)" = "v24.18.0"
+          test "$(pnpm --version)" = "11.17.0"
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm vsix
+          test -f apps/dwi-host/developer-work-intelligence-0.1.0.vsix
+          unzip -l apps/dwi-host/developer-work-intelligence-0.1.0.vsix | grep -q 'extension/dist/extension.js'
+          timeout --signal=KILL 240s xvfb-run -a pnpm verify:extension
+          VSCODE_BIN="$PWD/.vscode-test/vscode-linux-x64-1.134.0/bin"
+          mkdir -p "$RUNNER_TEMP/readme-cli-exts" "$RUNNER_TEMP/readme-cli-data"
+          PATH="$VSCODE_BIN:$PATH" code --install-extension apps/dwi-host/developer-work-intelligence-0.1.0.vsix --force --extensions-dir "$RUNNER_TEMP/readme-cli-exts" --user-data-dir "$RUNNER_TEMP/readme-cli-data"
+          stat -c 'FRESH_CLONE_VSIX_BYTES=%s' apps/dwi-host/developer-work-intelligence-0.1.0.vsix
