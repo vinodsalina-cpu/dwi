@@ -1,0 +1,133 @@
+name: DWI recover v5
+on:
+  push:
+    branches: [codex/dwi-authoritative-rebuild]
+permissions:
+  contents: write
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/dwi-authoritative-rebuild
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+      - run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+          test "$(node --version)" = "v24.18.0"
+          test "$(pnpm --version)" = "11.17.0"
+      - name: Recover audited DWI closure
+        run: |
+          git show fcaaa092b7c39d6b5087137d46db0f64f94009d2:.github/workflows/dwi-recover-v2.yml > /tmp/v2.yml
+          ruby -e 'require "yaml"; y=YAML.load_file("/tmp/v2.yml", aliases: true); s=y["jobs"]["recover"]["steps"].find{|x| x["name"]=="Recover DWI source closure"}; File.write("/tmp/recover.sh", s["run"])'
+          bash -euo pipefail /tmp/recover.sh
+          cat >> pnpm-workspace.yaml <<'YAML'
+          allowBuilds:
+            '@swc/core': true
+            '@vscode/vsce-sign': true
+            keytar: true
+          YAML
+          node <<'NODE'
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('package.json','utf8'));
+          delete p.pnpm;
+          p.scripts.test='pnpm build:deps && pnpm --filter @platform/domain-prompt-optimizer exec vitest run --config vitest.config.ts && pnpm --filter @platform/domain-workspace exec vitest run && pnpm --filter @platform/dwi-core exec vitest run && pnpm --filter @platform/dwi-host test && pnpm --filter @platform/dwi-webview test';
+          fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n');
+          NODE
+      - name: Generate lock and prove clean build
+        run: |
+          rm -f pnpm-lock.yaml
+          pnpm install --lockfile-only
+          rm -rf node_modules dist apps/dwi-host/dist apps/dwi-webview/dist packages/dwi-core/dist packages/domain/prompt-optimizer/dist packages/domain/workspace/dist apps/dwi-host/*.vsix
+          pnpm install --frozen-lockfile
+          pnpm test
+          pnpm vsix
+      - name: Inspect package
+        run: |
+          ruby -e 'require "yaml"; y=YAML.load_file("/tmp/v2.yml", aliases: true); s=y["jobs"]["recover"]["steps"].find{|x| x["name"]=="Inspect VSIX"}; File.write("/tmp/inspect.sh", s["run"])'
+          bash -euo pipefail /tmp/inspect.sh
+      - name: Install and activate package
+        run: xvfb-run -a pnpm verify:extension
+      - name: Hygiene gates
+        run: |
+          set -euo pipefail
+          ! grep -RInE --exclude-dir=.git --exclude='dwi-recover-and-verify.yml' --exclude='dwi-recover-v2.yml' --exclude='dwi-recover-v3.yml' --exclude='dwi-recover-v4.yml' --exclude='dwi-recover-v5.yml' '(\.\./dwl|/Users/|/home/[A-Za-z0-9._-]+/|vinods-MacBook|file:\.\./|link:\.\./)' .
+          ! find . -type f \( -name '.env' -o -name '.env.local' -o -name '*.pem' -o -name '*.key' \) -print -quit | grep -q .
+          ! grep -RInE --exclude-dir=.git --exclude-dir=node_modules --exclude='pnpm-lock.yaml' '(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})' .
+      - name: Write README
+        run: |
+          ruby -e 'require "yaml"; y=YAML.load_file("/tmp/v2.yml", aliases: true); s=y["jobs"]["recover"]["steps"].find{|x| x["name"]=="Write executable README"}; File.write("/tmp/readme.sh", s["run"])'
+          bash -euo pipefail /tmp/readme.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('README.md'); s=p.read_text()
+          s=s.replace('pnpm is configured with a narrow build-script allowlist for the native/build-time packages required by the DWI toolchain (`@swc/core`, `@vscode/vsce-sign`, and `keytar`). Do not replace this with a global build-script bypass.', 'pnpm uses a narrow `allowBuilds` map for the reviewed native/build-time packages required by the DWI toolchain (`@swc/core`, `@vscode/vsce-sign`, and `keytar`). All other dependency build scripts remain denied by default.')
+          s=s.replace('The repository intentionally allows only the exact toolchain packages listed under `pnpm.onlyBuiltDependencies` in the root `package.json`.', 'The repository intentionally allows only the reviewed toolchain packages listed under `allowBuilds` in `pnpm-workspace.yaml`.')
+          p.write_text(s)
+          PY
+      - name: Write permanent verification workflow
+        run: |
+          cat > .github/workflows/verify.yml <<'EOF'
+          name: Verify DWI
+          on: [push, pull_request]
+          jobs:
+            build:
+              runs-on: ubuntu-latest
+              timeout-minutes: 30
+              steps:
+                - uses: actions/checkout@v4
+                - uses: actions/setup-node@v4
+                  with:
+                    node-version: 24.18.0
+                - run: |
+                    corepack enable
+                    corepack prepare pnpm@11.17.0 --activate
+                - run: pnpm install --frozen-lockfile
+                - run: pnpm test
+                - run: pnpm vsix
+                - name: Inspect VSIX
+                  run: |
+                    V=apps/dwi-host/developer-work-intelligence-0.1.0.vsix
+                    unzip -l "$V" | tee /tmp/vsix.txt
+                    grep -q 'extension/dist/extension.js' /tmp/vsix.txt
+                    grep -q 'extension/dist/dwi-webview.js' /tmp/vsix.txt
+                    grep -q 'extension/dist/dwi-webview.css' /tmp/vsix.txt
+                    grep -q 'extension/dist/node_modules/@platform/dwi-core/dist/index.js' /tmp/vsix.txt
+                    grep -q 'extension/dist/node_modules/@platform/domain-prompt-optimizer/dist/index.js' /tmp/vsix.txt
+                    grep -q 'extension/dist/node_modules/@platform/domain-workspace/dist/index.js' /tmp/vsix.txt
+                    ! grep -Eq 'node_modules/.*/src/|\.spec\.|coverage/|\.cache/|\.env' /tmp/vsix.txt
+                    stat -c 'VSIX_BYTES=%s' "$V"
+                - run: xvfb-run -a pnpm verify:extension
+                - uses: actions/upload-artifact@v4
+                  with:
+                    name: dwi-vsix
+                    path: apps/dwi-host/developer-work-intelligence-0.1.0.vsix
+          EOF
+      - name: Commit source-only repository
+        run: |
+          rm -rf node_modules dist apps/dwi-host/dist apps/dwi-webview/dist packages/dwi-core/dist packages/domain/prompt-optimizer/dist packages/domain/workspace/dist coverage apps/dwi-host/*.vsix
+          rm -f .github/workflows/dwi-recover-and-verify.yml .github/workflows/dwi-recover-v2.yml .github/workflows/dwi-recover-v3.yml .github/workflows/dwi-recover-v4.yml .github/workflows/dwi-recover-v5.yml
+          git config user.name 'DWI repository recovery'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Recover complete self-contained DWI source'
+          git push origin HEAD:codex/dwi-authoritative-rebuild
+      - name: Fresh clone build gate
+        run: |
+          cd "$RUNNER_TEMP"
+          rm -rf dwi-fresh
+          git clone --depth 1 --branch codex/dwi-authoritative-rebuild https://github.com/vinodsalina-cpu/dwi.git dwi-fresh
+          cd dwi-fresh
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+          test "$(node --version)" = "v24.18.0"
+          test "$(pnpm --version)" = "11.17.0"
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm vsix
+          stat -c 'FRESH_CLONE_VSIX_BYTES=%s' apps/dwi-host/developer-work-intelligence-0.1.0.vsix
