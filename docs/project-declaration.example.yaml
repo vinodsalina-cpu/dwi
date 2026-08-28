@@ -1,0 +1,44 @@
+apiVersion: dwi.dev/v1
+kind: Project
+metadata:
+  name: payments-api
+  namespace: commerce
+spec:
+  identity:
+    description: Processes and reconciles customer payments.
+    componentType: service
+    lifecycle: production
+    owners:
+      - commerce-payments
+    system: checkout
+    domain: commerce
+    tags:
+      - payments
+      - go
+  boundaries:
+    providesApis:
+      - payments-v1
+    consumesApis:
+      - fraud-score-v1
+    dependsOn:
+      - payments-database
+    componentRoots:
+      - .
+    generatedRoots:
+      - generated
+    excludedRoots:
+      - vendor
+  workflows:
+    - id: build
+      kind: build
+      argv: [go, build, ./...]
+      cwd: .
+    - id: test
+      kind: test
+      argv: [go, test, ./...]
+      cwd: .
+  constraints:
+    supportedPlatforms: [linux, darwin]
+    networkRequiredForBuild: false
+    architectureRules:
+      - Domain packages do not import transport adapters.

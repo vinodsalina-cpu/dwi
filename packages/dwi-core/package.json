@@ -11,8 +11,11 @@
     "build": "tsc -p tsconfig.json",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --coverage --coverage.thresholds.lines=90 --coverage.thresholds.branches=90"
+    "test": "vitest run --config vitest.config.ts --coverage --coverage.thresholds.lines=90 --coverage.thresholds.branches=90"
   },
-  "dependencies": { "@platform/domain-prompt-optimizer": "workspace:*" },
+  "dependencies": {
+    "@platform/domain-prompt-optimizer": "workspace:*",
+    "ajv": "^8.20.0"
+  },
   "devDependencies": { "typescript": "^5.9.3", "vitest": "~4.1.10" }
 }

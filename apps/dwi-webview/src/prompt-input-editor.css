@@ -1,0 +1,200 @@
+.prompt-input-editor {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.prompt-input-editor__textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 142px;
+  box-sizing: border-box;
+  border: 1px solid var(--vscode-input-border, var(--dwi-border, #3a414c));
+  border-radius: 8px;
+  padding: 42px 12px 40px 10px;
+  resize: vertical;
+  background: var(--vscode-input-background, var(--dwi-muted-surface, #252a32));
+  color: var(--vscode-input-foreground, var(--dwi-text, #e8eaed));
+  font: inherit;
+  line-height: 1.5;
+}
+
+.prompt-input-editor__textarea::placeholder,
+.prompt-input-editor__search::placeholder {
+  color: var(--vscode-input-placeholderForeground, var(--dwi-faint, #89919d));
+}
+
+.prompt-input-editor__textarea:focus-visible,
+.prompt-input-editor__search:focus-visible,
+.prompt-input-editor__trigger:focus-visible,
+.prompt-input-editor__list:focus-visible {
+  outline: 2px solid var(--vscode-focusBorder, var(--dwi-focus, #7aaeff));
+  outline-offset: 2px;
+}
+
+.prompt-input-editor__control {
+  position: absolute;
+  z-index: 4;
+  right: 7px;
+  max-width: calc(100% - 14px);
+}
+.prompt-input-editor__control.is-open { z-index: 8; }
+
+.prompt-input-editor__control--assignment { top: 7px; left: 7px; }
+.prompt-input-editor__control--output { bottom: 7px; }
+
+.prompt-input-editor__trigger {
+  display: flex;
+  min-width: 0;
+  min-height: 28px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  border: 1px solid var(--vscode-widget-border, var(--dwi-border, #3a414c));
+  border-radius: 6px;
+  padding: 4px 7px;
+  background: var(--vscode-editorWidget-background, var(--dwi-raised, #20252c));
+  color: var(--vscode-foreground, var(--dwi-text, #e8eaed));
+  box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
+  font: inherit;
+  font-size: 11px;
+}
+
+.prompt-input-editor__trigger:not(:disabled) { cursor: pointer; }
+.prompt-input-editor__trigger:disabled { cursor: not-allowed; opacity: .5; }
+.prompt-input-editor__trigger:hover:not(:disabled),
+.prompt-input-editor__trigger[aria-expanded="true"] {
+  background: var(--vscode-list-hoverBackground, var(--dwi-hover, #2b313a));
+}
+
+.prompt-input-editor__assignment-trigger { max-width: min(230px, 78vw); margin-left: auto; }
+.prompt-input-editor__output-trigger { max-width: 128px; }
+
+.prompt-input-editor__trigger strong {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-input-editor__trigger-prefix { color: var(--vscode-descriptionForeground, var(--dwi-muted, #a6adb8)); }
+.prompt-input-editor__chevron { flex: 0 0 auto; color: var(--vscode-descriptionForeground, var(--dwi-muted, #a6adb8)); }
+
+.prompt-input-editor__popover {
+  position: absolute;
+  z-index: 30;
+  right: 0;
+  display: grid;
+  width: min(280px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  gap: 6px;
+  border: 1px solid var(--vscode-widget-border, var(--dwi-border, #3a414c));
+  border-radius: 7px;
+  padding: 6px;
+  background: var(--vscode-editorWidget-background, var(--dwi-raised, #20252c));
+  box-shadow: 0 10px 28px var(--vscode-widget-shadow, rgb(0 0 0 / 36%));
+  color: var(--vscode-editorWidget-foreground, var(--dwi-text, #e8eaed));
+}
+
+.prompt-input-editor__assignment-popover { top: calc(100% + 5px); width: min(280px, 100%); max-width: 100%; }
+.prompt-input-editor__output-popover { bottom: calc(100% + 5px); width: 142px; }
+
+.prompt-input-editor__search {
+  width: 100%;
+  min-width: 0;
+  min-height: 30px;
+  box-sizing: border-box;
+  border: 1px solid var(--vscode-input-border, var(--dwi-border, #3a414c));
+  border-radius: 5px;
+  padding: 5px 7px;
+  background: var(--vscode-input-background, var(--dwi-muted-surface, #252a32));
+  color: var(--vscode-input-foreground, var(--dwi-text, #e8eaed));
+  font: inherit;
+  font-size: 11px;
+}
+
+.prompt-input-editor__list {
+  min-width: 0;
+  max-height: 190px;
+  overflow: auto;
+  border-radius: 5px;
+  scrollbar-color: var(--vscode-scrollbarSlider-background, var(--dwi-border, #3a414c)) transparent;
+}
+
+.prompt-input-editor__option {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 4px;
+  padding: 5px 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.prompt-input-editor__option:not(:disabled) { cursor: pointer; }
+.prompt-input-editor__option.active,
+.prompt-input-editor__option:hover {
+  background: var(--vscode-list-hoverBackground, var(--dwi-hover, #2b313a));
+}
+
+.prompt-input-editor__option[aria-selected="true"] {
+  color: var(--vscode-list-activeSelectionForeground, var(--dwi-text, #e8eaed));
+  box-shadow: inset 2px 0 var(--vscode-textLink-foreground, var(--dwi-accent, #78a9ff));
+}
+
+.prompt-input-editor__option > span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-input-editor__option > small {
+  overflow: hidden;
+  max-width: 104px;
+  border: 1px solid var(--vscode-widget-border, var(--dwi-border, #3a414c));
+  border-radius: 99px;
+  padding: 2px 5px;
+  color: var(--vscode-descriptionForeground, var(--dwi-muted, #a6adb8));
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-input-editor__output-list .prompt-input-editor__option {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.prompt-input-editor__empty {
+  padding: 9px 7px;
+  color: var(--vscode-descriptionForeground, var(--dwi-muted, #a6adb8));
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (max-width: 300px) {
+  .prompt-input-editor__assignment-trigger { max-width: calc(100vw - 76px); }
+  .prompt-input-editor__trigger-prefix { display: none; }
+  .prompt-input-editor__output-trigger { max-width: 82px; }
+  .prompt-input-editor__option > small { max-width: 72px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt-input-editor *,
+  .prompt-input-editor *::before,
+  .prompt-input-editor *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}

@@ -10,9 +10,13 @@ coverage/
 .vscode-test/
 *.tsbuildinfo
 *.vsix
+/artifacts/
+/.archives/
 .DS_Store
 .env
 .env.*
 !.env.example
-.dwi/
+.dwi/*
+!.dwi/project.yaml
 .dwi.*
+.dwi-catalog/

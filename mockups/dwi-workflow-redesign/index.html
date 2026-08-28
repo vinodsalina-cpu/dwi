@@ -1,0 +1,1337 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>DWI Prompt Workflow — Standalone UI Mock</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --page: #0b0d11;
+      --frame: #111419;
+      --rail: #0d1014;
+      --surface: #171b21;
+      --raised: #1d222a;
+      --muted-surface: #242a32;
+      --hover: #2a313b;
+      --border: #303743;
+      --border-soft: #242a33;
+      --text: #f3f5f7;
+      --muted: #9ea6b2;
+      --quiet: #697382;
+      --accent: #6d9eff;
+      --accent-strong: #3f73d5;
+      --accent-soft: #22345a;
+      --success: #69c48c;
+      --warning: #e0ad55;
+      --error: #e26f75;
+      --shadow: rgba(0, 0, 0, .38);
+      --button-text: #fff;
+      --focus: #86b0ff;
+      --mock-width: 420px;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+    }
+    html[data-theme="light"] {
+      --page: #e9edf3;
+      --frame: #f8f9fb;
+      --rail: #f0f2f6;
+      --surface: #fff;
+      --raised: #f6f7f9;
+      --muted-surface: #eef1f5;
+      --hover: #e5e9ef;
+      --border: #cbd1da;
+      --border-soft: #dfe3e9;
+      --text: #171a20;
+      --muted: #5f6772;
+      --quiet: #87909d;
+      --accent: #285ead;
+      --accent-strong: #366bc1;
+      --accent-soft: #dce8fb;
+      --success: #287846;
+      --warning: #a86d12;
+      --error: #b83c45;
+      --shadow: rgba(26, 35, 48, .18);
+      --button-text: #fff;
+      --focus: #215eb4;
+    }
+    html, body { width: 100%; min-width: 0; min-height: 100%; margin: 0; overflow-x: clip; }
+    body {
+      display: grid;
+      min-height: 100vh;
+      place-items: center;
+      padding: 16px 16px 16px 256px;
+      overflow-y: auto;
+      background: var(--page);
+      color: var(--text);
+    }
+    button, input, select, textarea { font: inherit; }
+    button { color: inherit; }
+    button, select { min-height: 28px; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+    .icon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+    .preview-tools {
+      position: fixed;
+      z-index: 50;
+      top: 16px;
+      left: 16px;
+      display: grid;
+      width: 220px;
+      min-width: 0;
+      max-width: 220px;
+      gap: 10px;
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--raised);
+      box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow) 65%, transparent);
+    }
+    .preview-tools > *, .preview-tools header > * { min-width: 0; max-width: 100%; }
+    .preview-tools header { position: relative; display: flex; align-items: center; gap: 8px; }
+    .preview-tools header strong { overflow-wrap: anywhere; font-size: 12px; }
+    .preview-help-trigger {
+      display: grid !important;
+      width: 28px !important;
+      height: 28px;
+      min-height: 28px;
+      flex: 0 0 auto;
+      place-items: center;
+      margin-left: auto;
+      padding: 0 !important;
+      color: var(--muted) !important;
+    }
+    .preview-help-trigger:hover, .preview-help-trigger[aria-expanded="true"] { background: var(--hover) !important; color: var(--text) !important; }
+    .preview-tools label { display: grid; width: 100%; min-width: 0; max-width: 100%; gap: 4px; overflow-wrap: anywhere; color: var(--muted); font-size: 10px; }
+    .preview-tools select, .preview-tools button {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 8px;
+      background: var(--muted-surface);
+      color: var(--text);
+      font-size: 11px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mock-window {
+      position: relative;
+      display: block;
+      box-sizing: content-box;
+      width: min(var(--mock-width), calc(100vw - 32px));
+      max-width: 100%;
+      height: min(720px, calc(100vh - 32px));
+      overflow-x: auto;
+      overflow-y: hidden;
+      overscroll-behavior-x: contain;
+      scrollbar-color: var(--border) transparent;
+      scrollbar-width: thin;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: var(--frame);
+      box-shadow: 0 14px 42px var(--shadow);
+      transition: width .18s ease;
+    }
+    .mock-surface {
+      position: relative;
+      display: grid;
+      container-name: dwi-frame;
+      container-type: inline-size;
+      grid-template-columns: 42px minmax(0, 1fr);
+      width: 100%;
+      height: 100%;
+      min-width: 350px;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--frame);
+    }
+    .activity-rail {
+      z-index: 7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      padding: 8px 5px;
+      border-right: 1px solid var(--border-soft);
+      background: var(--rail);
+    }
+    .rail-button {
+      position: relative;
+      display: grid;
+      width: 30px;
+      height: 30px;
+      min-height: 30px;
+      place-items: center;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .rail-button:hover, .rail-button[aria-expanded="true"] { background: var(--muted-surface); color: var(--text); }
+    .rail-button.selected { color: var(--accent); }
+    .rail-button.selected::before { content: ""; position: absolute; left: -6px; width: 2px; height: 18px; border-radius: 2px; background: var(--accent); }
+    .rail-spacer { flex: 1; }
+    .rail-badge { position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background: var(--warning); }
+
+    .app-shell { grid-column: 2; display: grid; grid-template-rows: 44px auto minmax(0, 1fr); min-width: 0; min-height: 0; }
+    .app-shell[hidden] { display: none; }
+    .app-shell.information-active { grid-template-rows: 44px minmax(0, 1fr); }
+    .app-shell.information-active .progress-strip { display: none; }
+    .app-header {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 0 11px;
+      border-bottom: 1px solid var(--border-soft);
+      background: var(--frame);
+    }
+    .app-header strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .app-product-title { visibility: hidden; }
+    .local-trigger { display: inline-flex; min-height: 25px; align-items: center; gap: 5px; border: 0; padding: 3px; background: transparent; color: var(--muted); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+    .local-trigger .icon { width: 12px; height: 12px; }
+    .provider-warning-trigger { display: inline-flex; min-width: 0; min-height: 25px; align-items: center; gap: 4px; overflow: hidden; border: 0; border-radius: 5px; padding: 3px 5px; background: transparent; color: var(--error); font-size: 10px; font-weight: 750; white-space: nowrap; cursor: pointer; }
+    .provider-warning-trigger:hover { background: color-mix(in srgb, var(--error) 10%, transparent); }
+    .provider-warning-trigger > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .warning-count { display: inline-grid; min-width: 16px; height: 16px; place-items: center; border-radius: 999px; background: var(--error); color: #fff; font-size: 10px; font-variant-numeric: tabular-nums; }
+    .local-trigger[hidden], .provider-warning-trigger[hidden], .settings-required-note[hidden] { display: none; }
+
+    .progress-strip {
+      z-index: 5;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      min-height: 48px;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-soft);
+      background: color-mix(in srgb, var(--frame) 96%, transparent);
+    }
+    .progress-current { display: flex; min-width: 0; align-items: baseline; gap: 7px; }
+    .progress-index { color: var(--muted); font-size: 10px; font-weight: 700; }
+    .progress-title { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .progress-dots { display: flex; align-items: center; gap: 4px; }
+    .progress-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--quiet); opacity: .6; }
+    .progress-dot.complete { background: var(--success); opacity: 1; }
+    .progress-dot.current { width: 13px; border-radius: 8px; background: var(--accent); opacity: 1; }
+    .reset-trigger { display: inline-flex; min-height: 28px; align-items: center; gap: 5px; border: 1px solid var(--border); border-radius: 6px; padding: 4px 7px; background: transparent; color: var(--muted); font-size: 10px; cursor: pointer; }
+    .reset-trigger:hover { background: var(--muted-surface); color: var(--text); }
+    .reset-trigger .icon { width: 12px; height: 12px; }
+
+    .content {
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+      scrollbar-color: var(--quiet) transparent;
+      scrollbar-width: thin;
+    }
+    .screen { display: none; min-height: 100%; padding: 0; }
+    .screen.active { display: block; }
+    .content[data-surface="information"] > .screen { display: none; }
+    .workflow-card { position: relative; min-height: 100%; border: 0; border-radius: 0; background: var(--surface); box-shadow: inset 0 1px 0 var(--border-soft); }
+    .card-section { padding: 12px; }
+    .card-section + .card-section { border-top: 1px solid var(--border-soft); }
+    .section-label { display: block; margin-bottom: 5px; color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    h1, h2, p { margin-top: 0; }
+    h1 { margin-bottom: 8px; font-size: 17px; line-height: 1.14; letter-spacing: -.015em; }
+    h2 { margin-bottom: 4px; font-size: 15px; line-height: 1.2; }
+    p { margin-bottom: 8px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .lede { max-width: 33ch; }
+    .project-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .project-heading h2 { max-width: 14ch; font-size: 16px; }
+    .status-trigger, .estimate-trigger {
+      display: inline-flex;
+      min-height: 27px;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 7px;
+      background: var(--muted-surface);
+      color: var(--warning);
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .status-trigger.status-ready { color: var(--success); }
+    .status-trigger.status-error { color: var(--error); }
+    .status-trigger.status-scanning { color: var(--accent); }
+    .inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-top: 8px; }
+    .text-button { display: inline-flex; min-height: 25px; align-items: center; gap: 5px; border: 0; padding: 3px 0; background: transparent; color: var(--muted); font-size: 11px; cursor: pointer; }
+    .text-button:hover { color: var(--text); }
+    .text-button .icon { width: 12px; height: 12px; }
+    .text-button.centered { justify-self: center; }
+
+    .scope-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 13px 0 0; padding: 0; list-style: none; }
+    .scope-list li { display: flex; min-width: 0; min-height: 36px; align-items: center; gap: 6px; border: 1px solid var(--border-soft); border-radius: 6px; padding: 7px; background: var(--muted-surface); color: var(--muted); font-size: 11px; }
+    .scope-list li span { min-width: 0; overflow: hidden; color: var(--text); font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+
+    .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+    .fact-tile { position: relative; display: grid; min-width: 0; min-height: 57px; grid-template-columns: minmax(0, 1fr) auto; align-content: center; gap: 2px 4px; border: 1px solid var(--border-soft); border-radius: 6px; padding: 8px; background: var(--muted-surface); }
+    .fact-tile > span { grid-column: 1 / -1; color: var(--quiet); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+    .fact-tile > strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .mini-info { display: grid; width: 24px; height: 24px; min-height: 24px; place-items: center; align-self: center; border: 0; border-radius: 4px; padding: 0; background: transparent; color: var(--muted); cursor: pointer; }
+    .mini-info:hover { background: var(--hover); color: var(--text); }
+    .mini-info .icon { width: 12px; height: 12px; }
+    textarea, input, select { border: 1px solid var(--border); border-radius: 6px; background: var(--muted-surface); color: var(--text); }
+    textarea { width: 100%; min-height: 62px; resize: vertical; padding: 8px; font-size: 13px; line-height: 1.4; }
+    textarea::placeholder { color: var(--quiet); }
+    .field-label { display: block; margin: 9px 0 5px; color: var(--muted); font-size: 11px; font-weight: 600; }
+    .questions-wrap, .status-wrap, .reset-wrap, .module-row { position: relative; }
+    .brief-meta { display: flex; justify-content: space-between; margin-top: 5px; }
+
+    .primary, .secondary, .danger {
+      display: inline-flex;
+      min-height: 34px;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-radius: 6px;
+      padding: 7px 11px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .primary { border: 1px solid transparent; background: var(--accent-strong); color: var(--button-text); }
+    .primary:hover { filter: brightness(1.08); }
+    .primary:disabled { cursor: wait; filter: none; opacity: .65; }
+    .secondary { border: 1px solid var(--border); background: var(--muted-surface); color: var(--text); }
+    .secondary:hover { background: var(--hover); }
+    .danger { border: 1px solid transparent; background: var(--error); color: #fff; }
+    .full-width { width: 100%; }
+    .primary-stack { display: grid; gap: 6px; margin-top: 11px; }
+    .button-row { display: flex; align-items: center; justify-content: flex-end; gap: 7px; margin-top: 10px; }
+    .button-row .primary { flex: 1; }
+
+    .module-grid { display: grid; gap: 5px; }
+    .module-row { display: grid; grid-template-columns: minmax(0, 1fr) 26px; min-height: 39px; align-items: center; border: 1px solid var(--border-soft); border-radius: 6px; background: var(--muted-surface); }
+    .module-row.selected { border-color: color-mix(in srgb, var(--accent) 65%, var(--border)); background: color-mix(in srgb, var(--accent-soft) 55%, var(--muted-surface)); }
+    .module-row label { display: flex; min-width: 0; align-items: center; gap: 7px; padding: 7px; cursor: pointer; }
+    .module-row label:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 5px; }
+    .module-row label strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .choice-mark { display: grid; width: 16px; height: 16px; flex: none; place-items: center; border: 1px solid var(--border); border-radius: 4px; color: transparent; }
+    .module-row.selected .choice-mark { border-color: var(--accent); background: var(--accent-strong); color: #fff; }
+    .choice-mark .icon { width: 11px; height: 11px; }
+    .selection-count { display: inline-flex; min-height: 22px; align-items: center; border: 1px solid var(--border); border-radius: 999px; padding: 3px 7px; background: var(--muted-surface); color: var(--muted); font-size: 10px; }
+    .section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+
+    .prompt-preview { max-height: 250px; overflow: auto; border: 1px solid var(--border-soft); border-radius: 6px; padding: 9px; background: var(--muted-surface); color: var(--muted); font: 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+    .estimate-trigger { min-height: 25px; border-radius: 6px; color: var(--success); }
+    .rating-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 9px; }
+    .rating-row button { border: 1px solid var(--border); border-radius: 5px; background: var(--muted-surface); color: var(--muted); font-size: 10px; cursor: pointer; }
+    .rating-row button:hover, .rating-row button[aria-pressed="true"] { border-color: var(--accent); color: var(--text); background: var(--accent-soft); }
+    .feedback-disclosure { margin-top: 8px; border: 1px solid var(--border-soft); border-radius: 6px; background: var(--muted-surface); }
+    .feedback-trigger, .diagnostic-disclosure { display: flex; width: 100%; min-height: 32px; align-items: center; justify-content: space-between; gap: 8px; border: 0; border-radius: 6px; padding: 6px 8px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 650; text-align: left; cursor: pointer; }
+    .feedback-trigger:hover, .feedback-trigger[aria-expanded="true"], .diagnostic-disclosure:hover, .diagnostic-disclosure[aria-expanded="true"] { background: var(--hover); color: var(--text); }
+    .feedback-panel { border-top: 1px solid var(--border-soft); padding: 8px; }
+    .feedback-panel textarea { min-height: 48px; }
+    .feedback-panel .secondary { margin-top: 7px; }
+
+    .mini-popover {
+      position: absolute;
+      z-index: 20;
+      display: none;
+      width: min(270px, calc(100vw - 66px));
+      width: min(270px, calc(100cqw - 66px));
+      gap: 5px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 10px;
+      background: var(--raised);
+      box-shadow: 0 10px 30px var(--shadow);
+      color: var(--text);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .mini-popover.open { display: grid; }
+    .mini-popover strong { font-size: 11px; }
+    .mini-popover p { margin: 0; }
+    .mini-popover small { color: var(--quiet); }
+    .preview-tools .preview-help-popover {
+      top: calc(100% + 6px);
+      right: 0;
+      left: auto;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+    }
+    .preview-help-popover code {
+      display: block;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      border-radius: 4px;
+      padding: 6px;
+      background: var(--muted-surface);
+      color: var(--text);
+      font: 10px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: normal;
+      word-break: break-word;
+    }
+    .status-popover { top: calc(100% + 5px); right: 0; }
+    .fact-popover { top: calc(100% + 4px); right: 0; }
+    .questions-popover { top: calc(100% + 4px); left: 0; }
+    .module-popover { top: calc(100% + 5px); right: 0; }
+    .coverage-row { display: flex; justify-content: space-between; margin-top: 5px; border-top: 1px solid var(--border-soft); padding-top: 6px; color: var(--muted); }
+
+    .information-surface, .settings-surface {
+      grid-column: 2;
+      display: grid;
+      min-width: 0;
+      min-height: 0;
+      grid-template-rows: 44px minmax(0, 1fr);
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .information-surface[hidden], .settings-surface[hidden] { display: none; }
+    .information-head {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-soft);
+      padding: 0 10px;
+    }
+    .back-button {
+      display: inline-flex;
+      width: max-content;
+      min-height: 28px;
+      align-items: center;
+      gap: 5px;
+      border: 0;
+      border-radius: 5px;
+      padding: 3px 5px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .back-button:hover { background: var(--hover); color: var(--text); }
+    .information-title { min-width: 0; }
+    .information-title h1 { margin: 0; overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+    .information-surface .panel-tabs { margin-top: 9px; }
+    .information-surface .panel-body { background: var(--surface); }
+    .privacy-heading { margin-bottom: 8px; }
+    .privacy-heading h2 { margin-bottom: 3px; }
+
+    .panel-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin: 0 11px; padding: 3px; border-radius: 6px; background: var(--muted-surface); }
+    .panel-tabs button { border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 10px; cursor: pointer; }
+    .panel-tabs button[aria-selected="true"] { background: var(--raised); color: var(--text); box-shadow: 0 1px 3px var(--shadow); }
+    .panel-body { min-height: 0; overflow: auto; padding: 10px 11px 12px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .summary-row { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-soft); border-radius: 6px; padding: 8px; background: var(--muted-surface); }
+    .summary-row > div { min-width: 0; flex: 1; }
+    .summary-row strong, .summary-row small { display: block; }
+    .summary-row strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .summary-row small { color: var(--muted); font-size: 10px; }
+    .summary-row b { font-size: 11px; }
+    .activity-list { display: grid; margin: 9px 0 0; padding: 0; list-style: none; }
+    .activity-toolbar { margin-top: 8px; }
+    .activity-toolbar .secondary { min-height: 29px; }
+    .activity-editor-actions { display: grid; gap: 5px; margin-top: 8px; }
+    .activity-list li { position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr) 24px; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--border-soft); }
+    .activity-list li.title-detail { grid-template-columns: 18px minmax(0, 1fr); }
+    .activity-list li:last-child { border-bottom: 0; }
+    .activity-marker { display: grid; width: 17px; height: 17px; place-items: center; border-radius: 50%; background: var(--muted-surface); color: var(--accent); }
+    .activity-marker .icon { width: 11px; height: 11px; }
+    .activity-list li.warning .activity-marker { color: var(--warning); }
+    .activity-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+    .activity-line strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .activity-title-group { display: flex; min-width: 0; align-items: center; gap: 2px; }
+    .activity-line time { color: var(--quiet); font-size: 10px; text-transform: uppercase; }
+    .activity-list p { margin: 2px 0; font-size: 11px; }
+    .activity-list small { color: var(--quiet); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+    .activity-detail-wrap { position: relative; display: grid; place-items: center; }
+    .activity-title-detail { display: inline-flex; flex: 0 0 auto; align-self: center; }
+    .activity-title-detail .mini-info { width: 18px; height: 18px; min-height: 18px; }
+    .activity-detail-popover { top: calc(100% + 4px); right: 0; }
+    .activity-list li:nth-last-child(-n + 2) .activity-detail-popover { top: auto; bottom: calc(100% + 4px); }
+    .diagnostic-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+    .diagnostic-heading strong { font-size: 11px; }
+    .data-badge, .provider-state { flex: none; border: 1px solid var(--border); border-radius: 999px; padding: 3px 6px; background: var(--muted-surface); color: var(--muted); font-size: 10px; font-weight: 600; }
+    .provider-state.configured { border-color: color-mix(in srgb, var(--success) 55%, var(--border)); color: var(--success); }
+    .provider-state.required { border-color: color-mix(in srgb, var(--error) 55%, var(--border)); color: var(--error); }
+    .diagnostic-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin: 0; overflow: hidden; border: 1px solid var(--border-soft); border-radius: 6px; background: var(--border-soft); }
+    .diagnostic-summary > div { display: grid; min-width: 0; gap: 2px; padding: 8px; background: var(--muted-surface); }
+    .diagnostic-summary dt { color: var(--muted); font-size: 10px; }
+    .diagnostic-summary dd { margin: 0; overflow: hidden; font-size: 11px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+    .diagnostic-disclosure { margin-top: 8px; border: 1px solid var(--border-soft); background: var(--muted-surface); }
+    .raw-dump { max-height: 210px; margin: 7px 0 0; overflow: auto; border: 1px solid var(--border-soft); border-radius: 6px; padding: 8px; background: var(--muted-surface); color: var(--muted); font: 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+    .privacy-note { display: grid; gap: 8px; }
+    .privacy-note article { border: 1px solid var(--border-soft); border-radius: 6px; padding: 9px; background: var(--muted-surface); }
+    .privacy-note article strong { display: block; margin-bottom: 3px; font-size: 11px; }
+    .privacy-note article p { margin: 0; }
+
+    .settings-section { display: grid; gap: 0; }
+    .settings-section + .settings-section { margin-top: 14px; border-top: 1px solid var(--border-soft); padding-top: 13px; }
+    .settings-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 1px; }
+    .settings-heading strong, .danger-zone strong { font-size: 11px; }
+    .settings-field { display: grid; gap: 5px; margin-top: 10px; color: var(--muted); font-size: 11px; font-weight: 550; }
+    .settings-field input, .settings-field select { width: 100%; min-width: 0; min-height: 32px; padding: 7px 8px; }
+    .settings-fields[hidden] { display: none; }
+    .settings-required-note { display: flex; align-items: flex-start; gap: 7px; margin-top: 8px; border: 1px solid color-mix(in srgb, var(--error) 50%, var(--border)); border-radius: 6px; padding: 8px; background: color-mix(in srgb, var(--error) 7%, var(--muted-surface)); color: var(--error); font-size: 11px; line-height: 1.35; }
+    .settings-required-note span { color: var(--muted); }
+    .settings-required-note strong { color: var(--error); }
+    .danger-zone { gap: 9px; }
+    .danger-zone > div { display: grid; gap: 2px; }
+    .danger-zone span { color: var(--muted); font-size: 10px; }
+
+    .modal-backdrop { position: absolute; z-index: 40; inset: 0; display: none; place-items: start end; padding: 55px 10px 10px 54px; background: color-mix(in srgb, var(--frame) 40%, transparent); backdrop-filter: blur(1px); }
+    .modal-backdrop.open { display: grid; }
+    .reset-dialog { width: min(270px, 100%); border: 1px solid var(--border); border-radius: 8px; padding: 11px; background: var(--raised); box-shadow: 0 14px 40px var(--shadow); }
+    .reset-dialog strong { display: block; margin-bottom: 5px; font-size: 11px; }
+    .reset-dialog p { margin-bottom: 9px; }
+    .reset-dialog .button-row { margin: 0; }
+    .reset-dialog .button-row button { flex: none; min-height: 30px; }
+    .state-banner { display: none; align-items: flex-start; gap: 7px; margin-bottom: 8px; border: 1px solid color-mix(in srgb, var(--error) 60%, var(--border)); border-radius: 6px; padding: 8px; background: color-mix(in srgb, var(--error) 9%, var(--surface)); }
+    .state-banner.show { display: flex; }
+    .state-banner .icon { color: var(--error); }
+    .state-banner strong { display: block; margin-bottom: 2px; font-size: 11px; }
+    .state-banner p { margin: 0; font-size: 11px; }
+    .project-recovery { display: grid; gap: 6px; margin-top: 10px; }
+    .project-recovery[hidden] { display: none; }
+    .project-recovery p { margin: 0; }
+    .project-recovery .text-button { justify-self: start; }
+    .skeleton { display: none; gap: 6px; }
+    .skeleton.show { display: grid; }
+    .skeleton i { display: block; height: 10px; border-radius: 4px; background: linear-gradient(90deg, var(--muted-surface), var(--hover), var(--muted-surface)); background-size: 200% 100%; animation: shimmer 1.3s infinite; }
+    .skeleton i:nth-child(2) { width: 72%; }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    @media (max-width: 760px) {
+      body {
+        min-height: 100vh;
+        place-items: start center;
+        padding: 176px 12px 12px;
+      }
+      .preview-tools {
+        top: 12px;
+        left: 12px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: min(420px, calc(100vw - 24px));
+        max-width: calc(100vw - 24px);
+        gap: 8px;
+        padding: 10px;
+      }
+      .preview-tools header { grid-column: 1 / -1; }
+      .mock-window { width: min(var(--mock-width), 100%); height: max(320px, calc(100vh - 188px)); }
+    }
+    @media (max-width: 420px) {
+      body { padding-top: 264px; }
+      .preview-tools { grid-template-columns: minmax(0, 1fr); }
+      .preview-tools header { grid-column: auto; }
+      .mock-window { height: max(300px, calc(100vh - 276px)); }
+    }
+    @container dwi-frame (max-width: 420px) {
+      .app-product-title { display: none; }
+      .screen { padding: 0; }
+      .card-section { padding: 10px; }
+      .project-heading { display: grid; }
+      .project-heading h2 { max-width: none; }
+      .status-trigger { justify-self: start; }
+      .status-popover { right: auto; left: 0; }
+      .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+      .fact-tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+      .fact-tile:nth-child(odd) .fact-popover { right: auto; left: 0; }
+      .fact-tile:nth-child(even) .fact-popover { right: 0; left: auto; }
+      textarea { min-height: 52px; }
+      .state-banner { margin-bottom: 6px; padding: 6px; }
+    }
+    .editor-document {
+      position: fixed;
+      z-index: 70;
+      inset: 16px 16px 16px 256px;
+      display: grid;
+      min-width: 0;
+      min-height: 0;
+      grid-template-rows: 38px minmax(0, 1fr);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--frame);
+      box-shadow: 0 18px 55px var(--shadow);
+    }
+    .editor-document[hidden] { display: none; }
+    .editor-document-head { display: flex; min-width: 0; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-soft); padding: 0 7px 0 13px; background: var(--raised); }
+    .editor-document-head span { flex: 0 0 auto; color: var(--accent); font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    .editor-document-head strong { min-width: 0; overflow: hidden; flex: 1; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .editor-document-close { display: grid; width: 28px; height: 28px; min-height: 28px; place-items: center; border: 0; border-radius: 5px; padding: 0; background: transparent; color: var(--muted); cursor: pointer; }
+    .editor-document-close:hover { background: var(--hover); color: var(--text); }
+    .editor-document-scroll { min-width: 0; min-height: 0; overflow: auto; padding: clamp(20px, 5vw, 52px); }
+    .editor-document-body { display: grid; width: min(720px, 100%); gap: 16px; margin: 0 auto; }
+    .editor-document-body > header { display: grid; gap: 5px; border-bottom: 1px solid var(--border-soft); padding-bottom: 14px; }
+    .editor-document-sections { display: grid; gap: 10px; }
+    .editor-document-body h1 { margin: 0; font-size: 24px; line-height: 1.2; }
+    .editor-document-body .editor-lede { max-width: 68ch; margin: 0; font-size: 12px; }
+    .editor-section { display: grid; gap: 5px; border: 1px solid var(--border-soft); border-radius: 7px; padding: 13px 14px; background: var(--surface); }
+    .editor-section h2 { margin: 0; font-size: 13px; }
+    .editor-section p { max-width: none; margin: 0; color: var(--muted); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .editor-section pre { margin: 0; overflow: auto; border-radius: 5px; padding: 10px; background: var(--muted-surface); color: var(--text); font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
+    @media (max-width: 760px) {
+      .editor-document { inset: 176px 12px 12px; }
+      .editor-document-scroll { padding: 20px; }
+    }
+    @media (max-width: 420px) {
+      .editor-document { inset: 264px 12px 12px; }
+      .editor-document-scroll { padding: 14px; }
+      .editor-document-body h1 { font-size: 19px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></symbol>
+    <symbol id="i-library" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5Z"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7.2 4l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 20 7.2l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.8.8Z"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></symbol>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-warning" viewBox="0 0 24 24"><path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v4m0 3h.01"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M13 5h6v6M19 5l-8 8"/><path d="M18 14v5H5V6h5"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></symbol>
+    <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6M4.5 11.5v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5h7l2 2h9v10H3v-12Z"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 2.5h8l4 4v15H6v-19Z"/><path d="M14 2.5v4h4M9 12h6M9 16h6"/></symbol>
+  </svg>
+
+  <aside class="preview-tools" aria-label="Mock preview controls">
+    <header>
+      <strong>Mock controls</strong>
+      <button class="preview-help-trigger" type="button" aria-label="About mock controls" data-popover="previewHelpPopover"><svg class="icon"><use href="#i-info"/></svg></button>
+      <span class="mini-popover preview-help-popover" id="previewHelpPopover" role="dialog" aria-label="Mock controls guidance"><strong>Preview query parameters</strong><p>Open a specific review state by adding these parameters to the local URL:</p><code>?surface=information&amp;theme=light&amp;width=compact</code></span>
+    </header>
+    <label>Workflow stage
+      <select id="stageControl">
+        <option value="access">1 · Access</option>
+        <option value="brief" selected>2 · Project brief</option>
+        <option value="compose">3 · Prompt content</option>
+        <option value="review">4 · Review</option>
+      </select>
+    </label>
+    <label>Fixture state
+      <select id="stateControl">
+        <option value="ready">Populated</option>
+        <option value="loading">Loading</option>
+        <option value="error">Error</option>
+        <option value="long">Longest content</option>
+        <option value="empty">Empty</option>
+      </select>
+    </label>
+    <label>Panel width
+      <select id="widthControl">
+        <option value="normal">420 px</option>
+        <option value="compact">350 px minimum</option>
+        <option value="narrow">240 px host · 350 px internal</option>
+      </select>
+    </label>
+    <button id="themeControl" type="button">Switch to light theme</button>
+  </aside>
+
+  <div class="mock-window" id="mockWindow" data-width="normal">
+    <div class="mock-surface" id="mockSurface">
+    <nav class="activity-rail" id="activityRail" aria-label="DWI activity bar">
+      <button class="rail-button selected" id="workflowTrigger" type="button" aria-label="Prompt workflow" aria-current="page"><svg class="icon"><use href="#i-home"/></svg></button>
+      <button class="rail-button" type="button" aria-label="Library"><svg class="icon"><use href="#i-library"/></svg></button>
+      <div class="rail-spacer"></div>
+      <button class="rail-button" id="infoTrigger" type="button" aria-label="Information, activity, and diagnostics; new attention"><svg class="icon"><use href="#i-info"/></svg><span class="rail-badge"></span></button>
+      <button class="rail-button" id="settingsTrigger" type="button" aria-label="DWI settings" aria-controls="settingsSurface"><svg class="icon"><use href="#i-gear"/></svg></button>
+    </nav>
+
+    <section class="app-shell" id="appShell">
+      <header class="app-header">
+        <strong class="app-product-title" id="appTitle" aria-hidden="true">Developer Work Intelligence</strong>
+        <button class="local-trigger" id="localTrigger" type="button" aria-label="Open Local data boundaries in editor" data-editor-doc="privacy" hidden><svg class="icon"><use href="#i-lock"/></svg>Local</button>
+        <button class="provider-warning-trigger" id="providerWarningTrigger" type="button" aria-label="Provider not configured; 1 warning. Open LLM provider settings" title="Provider not configured"><svg class="icon"><use href="#i-bell"/></svg><span class="warning-count">1</span><span>Provider not configured</span></button>
+      </header>
+
+      <div class="progress-strip" aria-label="Workflow progress">
+        <span class="progress-current"><span class="progress-index" id="progressIndex">2/4</span><strong class="progress-title" id="progressTitle">Project brief</strong></span>
+        <span class="progress-dots" aria-hidden="true">
+          <i class="progress-dot complete"></i><i class="progress-dot current"></i><i class="progress-dot"></i><i class="progress-dot"></i>
+        </span>
+        <span class="reset-wrap"><button class="reset-trigger" id="resetTrigger" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="resetBackdrop"><svg class="icon"><use href="#i-reset"/></svg>Reset</button></span>
+      </div>
+
+      <main class="content" id="content">
+        <section class="screen" data-screen="access" aria-labelledby="accessTitle">
+          <article class="workflow-card">
+            <div class="card-section">
+              <span class="section-label">Project initialization</span>
+              <h1 id="accessTitle">Initialize DWI for this project</h1>
+              <p class="lede">After login, confirm the active root and a bounded local check. You’ll review and correct the brief before DWI saves it for prompt work.</p>
+              <ul class="scope-list" aria-label="Project information included in the check">
+                <li><svg class="icon"><use href="#i-folder"/></svg><span>Active root</span></li>
+                <li><svg class="icon"><use href="#i-database"/></svg><span>Bounded evidence</span></li>
+                <li><svg class="icon"><use href="#i-file"/></svg><span>Approved brief</span></li>
+              </ul>
+              <div class="primary-stack">
+                <button class="primary full-width" type="button" data-next="brief">Allow bounded project check <svg class="icon"><use href="#i-arrow"/></svg></button>
+                <button class="text-button centered" type="button" aria-label="Review data boundaries in editor" data-editor-doc="privacy"><svg class="icon"><use href="#i-external"/></svg>Review data boundaries in editor</button>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="screen" data-screen="brief" aria-labelledby="briefTitle">
+          <div class="state-banner" id="errorBanner" role="alert"><svg class="icon"><use href="#i-warning"/></svg><div><strong id="errorTitle">Project check failed</strong><p id="errorCopy">Check the project again before continuing.</p></div></div>
+          <article class="workflow-card">
+            <div class="card-section">
+              <span class="section-label">Current project</span>
+              <div class="project-heading">
+                <h2 id="projectName">Developer Work Intelligence</h2>
+                <span class="status-wrap">
+                  <button class="status-trigger" id="statusTrigger" type="button" aria-label="Open project diagnostics in editor" data-editor-doc="diagnostics"><span class="status-dot"></span><span id="statusLabel">Approved with gaps</span><svg class="icon"><use href="#i-external"/></svg></button>
+                </span>
+              </div>
+              <div class="inline-actions" id="projectInlineActions"><button class="text-button" type="button" id="checkAgain"><svg class="icon"><use href="#i-reset"/></svg>Check again</button><button class="text-button add-details" type="button">Add missing details</button></div>
+              <div class="project-recovery" id="projectRecovery" hidden><p id="projectRecoveryCopy">Project details need attention before the brief can be confirmed.</p><button class="primary full-width" id="projectRecoveryAction" type="button">Check project again</button><button class="text-button add-details" type="button">Add missing details</button></div>
+            </div>
+            <div class="card-section">
+              <div class="skeleton" id="briefSkeleton" aria-live="polite"><i></i><i></i><i></i><i></i><button class="primary full-width" type="button" disabled aria-busy="true" style="margin-top:7px">Checking project…</button></div>
+              <div id="briefContent">
+                <span class="section-label">Project brief</span>
+                <h1 id="briefTitle">Confirm what the prompt should know</h1>
+                <div class="facts">
+                  <div class="fact-tile"><span>Workspace</span><strong id="workspaceFact" title="pnpm + Turborepo">pnpm + Turborepo</strong><button class="mini-info" type="button" aria-label="Open source for Workspace in editor" data-editor-doc="evidence" data-evidence="package.json · packageManager and workspace declaration"><svg class="icon"><use href="#i-external"/></svg></button></div>
+                  <div class="fact-tile"><span>UI</span><strong id="uiFact" title="React + Vite">React + Vite</strong><button class="mini-info" type="button" aria-label="Open source for UI in editor" data-editor-doc="evidence" data-evidence="apps/dwi-webview/package.json"><svg class="icon"><use href="#i-external"/></svg></button></div>
+                  <div class="fact-tile"><span>Runtime</span><strong id="runtimeFact" title="Node.js">Node.js</strong><button class="mini-info" type="button" aria-label="Open source for Runtime in editor" data-editor-doc="evidence" data-evidence="engines.node in the selected workspace"><svg class="icon"><use href="#i-external"/></svg></button></div>
+                </div>
+                <label class="field-label" for="corrections">Corrections or helpful context</label>
+                <textarea id="corrections" placeholder="Optional"></textarea>
+                <div class="brief-meta"><span class="questions-wrap"><button class="text-button" type="button" aria-label="Open project questions in editor" data-editor-doc="questions"><svg class="icon"><use href="#i-external"/></svg>Open questions <span class="selection-count" id="questionCount">2</span></button><span class="sr-only" id="questionsCopy">Confirm the deployment target and expected browser support.</span></span></div>
+                <div class="button-row"><button class="primary" id="confirmBrief" type="button" data-next="compose">Approve and save project brief <svg class="icon"><use href="#i-arrow"/></svg></button></div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="screen" data-screen="compose" aria-labelledby="composeTitle">
+          <article class="workflow-card">
+            <div class="card-section">
+              <div class="section-head"><div><span class="section-label">Prompt content</span><h1 id="composeTitle">Choose what matters</h1></div><span class="selection-count"><span id="selectedCount">5</span>&nbsp;selected</span></div>
+              <div class="module-grid" id="moduleGrid">
+                <div class="module-row selected"><label><input class="sr-only module-check" type="checkbox" checked><span class="choice-mark"><svg class="icon"><use href="#i-check"/></svg></span><strong>Project orientation</strong></label><button class="mini-info" type="button" aria-label="Open information about Project orientation in editor" data-editor-doc="module" data-description="Summarizes the verified workspace shape and essential commands." data-tokens="180"><svg class="icon"><use href="#i-external"/></svg></button></div>
+                <div class="module-row selected"><label><input class="sr-only module-check" type="checkbox" checked><span class="choice-mark"><svg class="icon"><use href="#i-check"/></svg></span><strong>Feature delivery</strong></label><button class="mini-info" type="button" aria-label="Open information about Feature delivery in editor" data-editor-doc="module" data-description="Frames the requested outcome, acceptance criteria, and scope." data-tokens="220"><svg class="icon"><use href="#i-external"/></svg></button></div>
+                <div class="module-row selected"><label><input class="sr-only module-check" type="checkbox" checked><span class="choice-mark"><svg class="icon"><use href="#i-check"/></svg></span><strong>Reuse before create</strong></label><button class="mini-info" type="button" aria-label="Open information about Reuse before create in editor" data-editor-doc="module" data-description="Directs the agent to inspect existing patterns and components first." data-tokens="120"><svg class="icon"><use href="#i-external"/></svg></button></div>
+                <div class="module-row selected"><label><input class="sr-only module-check" type="checkbox" checked><span class="choice-mark"><svg class="icon"><use href="#i-check"/></svg></span><strong>Architecture boundaries</strong></label><button class="mini-info" type="button" aria-label="Open information about Architecture boundaries in editor" data-editor-doc="module" data-description="Keeps changes inside the verified application and package boundaries." data-tokens="160"><svg class="icon"><use href="#i-external"/></svg></button></div>
+                <div class="module-row selected"><label><input class="sr-only module-check" type="checkbox" checked><span class="choice-mark"><svg class="icon"><use href="#i-check"/></svg></span><strong>Verification plan</strong></label><button class="mini-info" type="button" aria-label="Open information about Verification plan in editor" data-editor-doc="module" data-description="Requires proportionate automated, visual, and installed-host checks." data-tokens="190"><svg class="icon"><use href="#i-external"/></svg></button></div>
+                <div class="module-row"><label><input class="sr-only module-check" type="checkbox"><span class="choice-mark"><svg class="icon"><use href="#i-check"/></svg></span><strong>Migration &amp; rollout</strong></label><button class="mini-info" type="button" aria-label="Open information about Migration and rollout in editor" data-editor-doc="module" data-description="Adds compatibility, rollout, and rollback considerations when needed." data-tokens="140"><svg class="icon"><use href="#i-external"/></svg></button></div>
+              </div>
+              <div class="button-row"><button class="secondary" type="button" data-next="brief">Edit brief</button><button class="primary" id="createPrompt" type="button" data-next="review">Create prompt <svg class="icon"><use href="#i-arrow"/></svg></button></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="screen" data-screen="review" aria-labelledby="reviewTitle">
+          <article class="workflow-card">
+            <div class="card-section">
+              <div class="section-head"><div><span class="section-label">Prompt ready</span><h1 id="reviewTitle">Review the generated prompt</h1></div><button class="estimate-trigger" type="button" aria-label="Open token estimate details in editor" data-editor-doc="estimate"><span>31%</span> fewer tokens <svg class="icon"><use href="#i-external"/></svg></button></div>
+              <pre class="prompt-preview" id="promptPreview">You are working in Developer Work Intelligence, a pnpm + Turborepo workspace.
+
+Deliver the requested feature by reusing established React and Vite patterns. Preserve the local-only data boundary. Keep diagnostics and verbose activity out of the primary workflow.
+
+Verify focused tests, the full repository suite, compact light and dark frames, and an installed VS Code host.</pre>
+              <div class="button-row"><button class="secondary" type="button" data-next="compose">Edit content</button><button class="primary" id="copyPrompt" type="button"><svg class="icon"><use href="#i-copy"/></svg>Copy prompt</button></div>
+            </div>
+            <div class="card-section">
+              <section class="feedback-disclosure">
+                <button class="feedback-trigger" id="feedbackTrigger" type="button" aria-expanded="false" aria-controls="feedbackPanel"><span>Add feedback</span><span aria-hidden="true">+</span></button>
+                <div class="feedback-panel" id="feedbackPanel" role="region" aria-label="Prompt feedback" hidden>
+                  <label class="field-label" for="privateNote">Private session note</label>
+                  <textarea id="privateNote" placeholder="Optional" maxlength="500"></textarea>
+                  <span class="field-label">Was this useful?</span>
+                  <div class="rating-row" role="group" aria-label="Prompt usefulness"><button type="button" data-rating="helpful" aria-pressed="false">Yes</button><button type="button" data-rating="mixed" aria-pressed="false">Partly</button><button type="button" data-rating="not-helpful" aria-pressed="false">No</button></div>
+                  <button class="secondary full-width" id="saveFeedback" type="button" disabled>Save evaluation</button>
+                </div>
+              </section>
+            </div>
+          </article>
+        </section>
+      </main>
+    </section>
+
+    <section class="information-surface" id="infoSurface" role="region" aria-labelledby="infoTitle" hidden>
+      <header class="information-head">
+        <button class="back-button" id="returnWorkflow" type="button"><svg class="icon"><use href="#i-back"/></svg>Workflow</button>
+        <div class="information-title"><h1 id="infoTitle">Activity</h1></div>
+      </header>
+      <div class="panel-body">
+        <section class="tab-panel active" id="panel-activity" aria-label="Activity">
+          <div class="summary-row"><span class="status-dot" id="infoStatusDot" style="color:var(--warning)"></span><div><strong id="infoStatus">Approved with gaps</strong></div><b id="infoCoverage">50%</b></div>
+          <div class="activity-editor-actions"><button class="secondary full-width" type="button" data-editor-doc="activity-log"><svg class="icon"><use href="#i-external"/></svg>Open activity log in editor</button><button class="secondary full-width" type="button" data-editor-doc="diagnostics"><svg class="icon"><use href="#i-external"/></svg>Open diagnostics in editor</button><button class="secondary full-width" type="button" data-editor-doc="privacy"><svg class="icon"><use href="#i-external"/></svg>Open data boundaries in editor</button></div>
+          <ul class="activity-list">
+            <li class="warning title-detail"><span class="activity-marker"><svg class="icon"><use href="#i-info"/></svg></span><div><span class="activity-line"><span class="activity-title-group"><strong>Approved with gaps</strong><span class="activity-detail-wrap activity-title-detail"><button class="mini-info" type="button" aria-label="Open details for Approved with gaps in editor" data-editor-doc="activity-detail" data-title="Approved with gaps" data-detail="Two open questions remain visible." data-category="Project"><svg class="icon"><use href="#i-external"/></svg></button></span></span><time>Now</time></span><small>Project</small></div></li>
+            <li><span class="activity-marker"><svg class="icon"><use href="#i-check"/></svg></span><div><span class="activity-line"><strong>Prompt creation started</strong><time>01:57</time></span><small>Workflow</small></div><span class="activity-detail-wrap"><button class="mini-info" type="button" aria-label="Open details for Prompt creation started in editor" data-editor-doc="activity-detail" data-title="Prompt creation started" data-detail="Five content choices selected." data-category="Workflow"><svg class="icon"><use href="#i-external"/></svg></button></span></li>
+            <li><span class="activity-marker"><svg class="icon"><use href="#i-check"/></svg></span><div><span class="activity-line"><strong>Brief confirmation requested</strong><time>01:56</time></span><small>Workflow</small></div><span></span></li>
+            <li><span class="activity-marker"><svg class="icon"><use href="#i-check"/></svg></span><div><span class="activity-line"><strong>Project check started</strong><time>01:56</time></span><small>Workflow</small></div><span class="activity-detail-wrap"><button class="mini-info" type="button" aria-label="Open details for Project check started in editor" data-editor-doc="activity-detail" data-title="Project check started" data-detail="Bounded local inspection requested." data-category="Workflow"><svg class="icon"><use href="#i-external"/></svg></button></span></li>
+            <li><span class="activity-marker"><svg class="icon"><use href="#i-check"/></svg></span><div><span class="activity-line"><strong>DWI opened</strong><time>Now</time></span><small>Session</small></div><span class="activity-detail-wrap"><button class="mini-info" type="button" aria-label="Open details for DWI opened in editor" data-editor-doc="activity-detail" data-title="DWI opened" data-detail="Ready for a local project workflow." data-category="Session"><svg class="icon"><use href="#i-external"/></svg></button></span></li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <section class="settings-surface" id="settingsSurface" role="region" aria-labelledby="settingsTitle" hidden>
+      <header class="information-head"><button class="back-button" id="returnSettingsWorkflow" type="button"><svg class="icon"><use href="#i-back"/></svg>Workflow</button><div class="information-title"><h1 id="settingsTitle">Settings</h1></div></header>
+      <div class="panel-body">
+        <section class="settings-section" aria-labelledby="providerHeading">
+          <div class="settings-heading"><strong id="providerHeading">LLM provider</strong><span class="provider-state required" id="providerState">Required</span></div>
+          <div class="settings-required-note" id="providerRequiredNote" role="status"><svg class="icon"><use href="#i-bell"/></svg><span><strong>Provider not configured.</strong> LLM provider configuration is required.</span></div>
+          <label class="settings-field">Provider<select id="providerControl" required><option value="" selected disabled>Select provider</option><option value="gemini">Gemini</option><option value="openai-compatible">OpenAI-compatible</option></select></label>
+          <div class="settings-fields" id="providerFields" hidden>
+            <label class="settings-field">Model<input id="providerModel" value="gemini-2.5-flash"></label>
+            <label class="settings-field" id="baseUrlField" hidden>Base URL<input id="providerBaseUrl" placeholder="https://…"></label>
+            <label class="settings-field">API key<input id="providerKey" type="password" autocomplete="off" placeholder="Stored in VS Code"></label>
+          </div>
+          <button class="primary full-width" id="saveProvider" type="button" style="margin-top:10px" disabled>Save provider</button>
+          <button class="secondary full-width" id="removeProvider" type="button" hidden>Remove provider configuration</button>
+        </section>
+        <section class="settings-section danger-zone"><div><strong>Session</strong><span>Clear saved prompt progress for this project.</span></div><button class="secondary" id="settingsReset" type="button">Reset session</button></section>
+      </div>
+    </section>
+
+    <div class="modal-backdrop" id="resetBackdrop">
+      <section class="reset-dialog" role="alertdialog" aria-modal="true" aria-labelledby="resetTitle" aria-describedby="resetDescription">
+        <strong id="resetTitle">Reset this session?</strong><p id="resetDescription">Saved project knowledge and prompt progress will be cleared. Project files stay unchanged.</p>
+        <div class="button-row"><button class="secondary" id="cancelReset" type="button">Cancel</button><button class="danger" id="confirmReset" type="button">Reset now</button></div>
+      </section>
+    </div>
+    <div class="sr-only" id="toast" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <section class="editor-document" id="editorDocument" role="region" aria-labelledby="editorDocumentTitle" hidden>
+    <header class="editor-document-head"><span>VS Code editor</span><strong id="editorDocumentTab">DWI</strong><button class="editor-document-close" id="closeEditorDocument" type="button" aria-label="Close editor document"><svg class="icon"><use href="#i-close"/></svg></button></header>
+    <div class="editor-document-scroll"><article class="editor-document-body" id="editorDocumentBody" tabindex="-1"><header><span class="section-label">DWI</span><h1 id="editorDocumentTitle">Information</h1><p class="editor-lede" id="editorDocumentLede"></p></header><div class="editor-document-sections" id="editorDocumentSections"></div></article></div>
+  </section>
+
+  <script>
+    const stages = ["access", "brief", "compose", "review"];
+    const titles = { access: "Access", brief: "Project brief", compose: "Prompt content", review: "Review" };
+    const widths = { normal: "420px", compact: "350px", narrow: "240px" };
+    const params = new URLSearchParams(location.search);
+    const valid = (value, list, fallback) => list.includes(value) ? value : fallback;
+    const byId = (id) => document.getElementById(id);
+    let stage = valid(params.get("stage"), stages, "brief");
+    let fixture = valid(params.get("state"), ["ready", "loading", "error", "long", "empty"], "ready");
+    let theme = valid(params.get("theme"), ["dark", "light"], matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    let width = valid(params.get("width"), Object.keys(widths), "normal");
+    let surface = valid(params.get("surface"), ["workflow", "information", "settings"], "workflow");
+    let surfaceReturnFocus = null;
+    let editorReturnFocus = null;
+    let popoverReturnFocus = null;
+    let providerConfigured = false;
+
+    function showToast(message) {
+      byId("toast").textContent = message;
+    }
+
+    function closePopovers(except = null) {
+      document.querySelectorAll(".mini-popover.open").forEach((popover) => {
+        if (popover !== except) popover.classList.remove("open");
+      });
+      document.querySelectorAll("[data-popover][aria-expanded='true']").forEach((button) => button.setAttribute("aria-expanded", "false"));
+    }
+
+    function backgroundShouldBeInert() {
+      return byId("resetBackdrop").classList.contains("open");
+    }
+
+    function syncBackgroundInert() {
+      const inert = backgroundShouldBeInert();
+      document.querySelector(".preview-tools").inert = inert;
+      byId("activityRail").inert = inert;
+      byId("appShell").inert = inert;
+      byId("infoSurface").inert = inert;
+      byId("settingsSurface").inert = inert;
+    }
+
+    function isVisible(element) {
+      if (element.hidden || element.closest("[hidden]")) return false;
+      for (let current = element; current instanceof HTMLElement; current = current.parentElement) {
+        const style = getComputedStyle(current);
+        if (style.display === "none" || style.visibility === "hidden") return false;
+      }
+      return true;
+    }
+
+    function focusableControls(container) {
+      const selector = "button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
+      return [...container.querySelectorAll(selector)].filter(isVisible);
+    }
+
+    function diagnosticSnapshot() {
+      const selectedCount = document.querySelectorAll(".module-check:checked").length;
+      return {
+        version: "dwi.diagnostics.v1",
+        session: { stage, restored: true, selectedModuleCount: selectedCount },
+        project: { name: byId("projectName").textContent, status: fixture, reviewed: fixture === "ready" || fixture === "long", coverage: byId("infoCoverage").textContent },
+        provider: { mode: byId("providerControl").value, configured: providerConfigured },
+        candidate: { present: stage === "review" },
+      };
+    }
+
+    function updateDiagnostics() {
+      // The real plugin resolves this redacted snapshot into an editor-area document.
+    }
+
+    function appendEditorSection(title, body, code = false) {
+      const section = document.createElement("section");
+      section.className = "editor-section";
+      const heading = document.createElement("h2");
+      heading.textContent = title;
+      const content = document.createElement(code ? "pre" : "p");
+      content.textContent = body;
+      section.append(heading, content);
+      byId("editorDocumentSections").append(section);
+    }
+
+    function openEditorDocument(kind, trigger = document.activeElement) {
+      const title = byId("editorDocumentTitle");
+      const lede = byId("editorDocumentLede");
+      byId("editorDocumentSections").replaceChildren();
+      editorReturnFocus = trigger instanceof HTMLElement ? trigger : null;
+
+      if (kind === "privacy") {
+        title.textContent = "Data boundaries";
+        lede.textContent = "How DWI keeps project initialization local, bounded, and consent-based.";
+        appendEditorSection("Local by default", "Nothing is sent unless you explicitly copy or export it. Saving provider settings alone makes no request.");
+        appendEditorSection("What DWI reads", "Supported manifests, workspace structure, selected README files, ownership files, and declared command names.");
+        appendEditorSection("What stays excluded", "Secrets, environment files, dependencies, caches, build output, unrestricted source code, and provider credentials.");
+      } else if (kind === "diagnostics") {
+        title.textContent = "Session diagnostics";
+        lede.textContent = "A redacted snapshot of the current project-initialization session.";
+        appendEditorSection("Current status", `${byId("statusLabel").textContent} · ${byId("infoCoverage").textContent} coverage`);
+        appendEditorSection("Redacted diagnostic snapshot", JSON.stringify(diagnosticSnapshot(), null, 2), true);
+      } else if (kind === "evidence") {
+        const tile = trigger.closest(".fact-tile");
+        const label = tile?.querySelector(":scope > span")?.textContent || "Project fact";
+        title.textContent = `${label} source`;
+        lede.textContent = "Project evidence used to support this brief fact.";
+        appendEditorSection("Value", tile?.querySelector(":scope > strong")?.textContent || "Unavailable");
+        appendEditorSection("Evidence", trigger.dataset.evidence || "Check the project again to restore this source.");
+      } else if (kind === "questions") {
+        title.textContent = "Open project questions";
+        lede.textContent = "Items DWI keeps explicit instead of filling with assumptions.";
+        appendEditorSection("Questions", byId("questionsCopy").textContent || "No open questions were found.");
+      } else if (kind === "module") {
+        const row = trigger.closest(".module-row");
+        const moduleTitle = row?.querySelector("strong")?.textContent || "Prompt content";
+        title.textContent = moduleTitle;
+        lede.textContent = "Prompt-content guidance available for this project workflow.";
+        appendEditorSection("Purpose", trigger.dataset.description || "No description is available.");
+        appendEditorSection("Estimate", `${trigger.dataset.tokens || "—"} estimated tokens`);
+      } else if (kind === "estimate") {
+        title.textContent = "Token estimate";
+        lede.textContent = "A directional comparison for the generated prompt, not a billing measurement.";
+        appendEditorSection("Estimated avoided duplication", "31% fewer repeated tokens");
+        appendEditorSection("Method", "Compares the project-aware prompt with a baseline that repeats the same context in each request.");
+      } else if (kind === "activity-detail") {
+        title.textContent = trigger.dataset.title || "Activity detail";
+        lede.textContent = `${trigger.dataset.category || "DWI"} activity`;
+        appendEditorSection("Details", trigger.dataset.detail || "No additional detail is available.");
+      } else {
+        title.textContent = "Activity log";
+        lede.textContent = "Recent bounded DWI status events. Prompt text, credentials, and private notes stay excluded.";
+        document.querySelectorAll("#infoSurface .activity-list > li").forEach((item) => {
+          const itemTitle = item.querySelector("strong")?.textContent || "DWI activity";
+          const category = item.querySelector("small")?.textContent || "General";
+          const time = item.querySelector("time")?.textContent || "Now";
+          const detail = item.querySelector("[data-detail]")?.dataset.detail;
+          appendEditorSection(itemTitle, `${category} · ${time}${detail ? `\n${detail}` : ""}`);
+        });
+      }
+
+      byId("editorDocumentTab").textContent = `DWI — ${title.textContent}`;
+      byId("editorDocument").hidden = false;
+      requestAnimationFrame(() => byId("editorDocumentBody").focus());
+    }
+
+    function closeEditorDocument(restoreFocus = true) {
+      byId("editorDocument").hidden = true;
+      const returnFocus = editorReturnFocus;
+      editorReturnFocus = null;
+      if (restoreFocus && returnFocus?.isConnected) requestAnimationFrame(() => returnFocus.focus());
+    }
+
+    function renderProgress() {
+      const index = stages.indexOf(stage);
+      byId("progressIndex").textContent = `${index + 1}/4`;
+      byId("progressTitle").textContent = titles[stage];
+      document.querySelector(".progress-strip").setAttribute("aria-label", `Step ${index + 1} of 4: ${titles[stage]}`);
+      document.querySelectorAll(".progress-dot").forEach((dot, dotIndex) => {
+        dot.className = `progress-dot${dotIndex < index ? " complete" : dotIndex === index ? " current" : ""}`;
+      });
+      document.querySelectorAll(".screen").forEach((screen) => screen.classList.toggle("active", screen.dataset.screen === stage));
+      byId("stageControl").value = stage;
+      byId("content").scrollTop = 0;
+      closePopovers();
+      updateDiagnostics();
+    }
+
+    function renderFixture() {
+      const loading = fixture === "loading";
+      const error = fixture === "error";
+      const empty = fixture === "empty";
+      const blocked = loading || error || empty;
+      byId("stateControl").value = fixture;
+      byId("briefSkeleton").classList.toggle("show", loading);
+      byId("briefContent").hidden = blocked;
+      byId("errorBanner").classList.toggle("show", error);
+      byId("confirmBrief").disabled = blocked;
+      byId("checkAgain").disabled = loading;
+      byId("projectInlineActions").hidden = blocked;
+      byId("projectRecovery").hidden = loading || (!error && !empty);
+      const status = byId("statusTrigger");
+      status.className = `status-trigger${loading ? " status-scanning" : error ? " status-error" : ""}`;
+      const stateCopy = loading ? ["Checking", "Reading only the project details you allowed.", "—"]
+        : error ? ["Check failed", "The project check could not finish. Check the project again before continuing.", "0%"]
+        : empty ? ["More details needed", "Add the required project details before continuing.", "0%"]
+        : ["Approved with gaps", "Open questions will remain explicit in the prompt.", "50%"];
+      byId("statusLabel").textContent = stateCopy[0];
+      byId("statusTrigger").dataset.detail = stateCopy[1];
+      byId("infoStatus").textContent = stateCopy[0];
+      byId("infoCoverage").textContent = stateCopy[2];
+      byId("infoStatusDot").style.color = loading ? "var(--accent)" : error ? "var(--error)" : "var(--warning)";
+      byId("projectRecoveryCopy").textContent = error ? "The project check failed. Retry before confirming a brief." : "Declare or review the missing project details before continuing.";
+      byId("projectRecoveryAction").textContent = error ? "Check project again" : "Review and approve";
+      if (fixture === "long") {
+        byId("projectName").textContent = "Developer Work Intelligence and Project Prompt Operations";
+        byId("workspaceFact").textContent = "pnpm multi-package Turborepo workspace";
+        byId("uiFact").textContent = "React, Vite, VS Code webview, responsive theme tokens";
+        byId("runtimeFact").textContent = "Node.js 24 with extension-host boundaries";
+        byId("questionsCopy").textContent = "Confirm the deployment target, supported VS Code versions, browser compatibility, rollout ownership, telemetry policy, and rollback expectations.";
+        byId("questionCount").textContent = "6";
+      } else if (empty) {
+        byId("projectName").textContent = "Untitled workspace";
+        byId("workspaceFact").textContent = "Not declared";
+        byId("uiFact").textContent = "Not detected";
+        byId("runtimeFact").textContent = "Not detected";
+        byId("questionsCopy").textContent = "Add project details to improve the generated prompt.";
+        byId("questionCount").textContent = "1";
+      } else {
+        byId("projectName").textContent = "Developer Work Intelligence";
+        byId("workspaceFact").textContent = "pnpm + Turborepo";
+        byId("uiFact").textContent = "React + Vite";
+        byId("runtimeFact").textContent = "Node.js";
+        byId("questionsCopy").textContent = "Confirm the deployment target and expected browser support.";
+        byId("questionCount").textContent = "2";
+      }
+      ["workspaceFact", "uiFact", "runtimeFact"].forEach((id) => { byId(id).title = byId(id).textContent; });
+      updateDiagnostics();
+    }
+
+    function renderPreview() {
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.style.setProperty("--mock-width", widths[width]);
+      byId("mockWindow").dataset.width = width;
+      byId("themeControl").textContent = `Switch to ${theme === "dark" ? "light" : "dark"} theme`;
+      byId("widthControl").value = width;
+      renderProgress();
+      renderFixture();
+      renderSurface();
+    }
+
+    function resolvedReturnFocus(trigger) {
+      if (trigger instanceof HTMLElement && trigger.closest(".mini-popover") && popoverReturnFocus instanceof HTMLElement) return popoverReturnFocus;
+      return trigger instanceof HTMLElement ? trigger : null;
+    }
+
+    function renderSurface() {
+      const informationActive = surface === "information";
+      const settingsActive = surface === "settings";
+      const workflowActive = surface === "workflow";
+      byId("appShell").hidden = !workflowActive;
+      byId("infoSurface").hidden = !informationActive;
+      byId("settingsSurface").hidden = !settingsActive;
+      byId("workflowTrigger").classList.toggle("selected", workflowActive);
+      byId("infoTrigger").classList.toggle("selected", informationActive);
+      byId("settingsTrigger").classList.toggle("selected", settingsActive);
+      [["workflowTrigger", workflowActive], ["infoTrigger", informationActive], ["settingsTrigger", settingsActive]].forEach(([id, active]) => {
+        if (active) byId(id).setAttribute("aria-current", "page");
+        else byId(id).removeAttribute("aria-current");
+      });
+      byId("content").scrollTop = 0;
+    }
+
+    function openInfo(trigger = document.activeElement) {
+      closePopovers();
+      surfaceReturnFocus = resolvedReturnFocus(trigger);
+      surface = "information";
+      renderSurface();
+      requestAnimationFrame(() => byId("returnWorkflow").focus());
+    }
+
+    function returnToWorkflow(restoreFocus = true) {
+      const returnFocus = surfaceReturnFocus;
+      surfaceReturnFocus = null;
+      surface = "workflow";
+      renderSurface();
+      if (restoreFocus) requestAnimationFrame(() => (returnFocus instanceof HTMLElement ? returnFocus : byId("workflowTrigger")).focus());
+    }
+
+    function openSettings(trigger = document.activeElement) {
+      closePopovers();
+      surfaceReturnFocus = resolvedReturnFocus(trigger);
+      surface = "settings";
+      renderSurface();
+      requestAnimationFrame(() => byId("returnSettingsWorkflow").focus());
+    }
+
+    function openReset() {
+      closePopovers();
+      byId("resetBackdrop").classList.add("open");
+      byId("resetTrigger").setAttribute("aria-expanded", "true");
+      syncBackgroundInert();
+      requestAnimationFrame(() => byId("cancelReset").focus());
+    }
+
+    function closeReset(restoreFocus = true) {
+      byId("resetBackdrop").classList.remove("open");
+      byId("resetTrigger").setAttribute("aria-expanded", "false");
+      syncBackgroundInert();
+      if (restoreFocus) requestAnimationFrame(() => byId("resetTrigger").focus());
+    }
+
+    function closeFeedback(restoreFocus = false) {
+      byId("feedbackPanel").hidden = true;
+      byId("feedbackTrigger").setAttribute("aria-expanded", "false");
+      byId("feedbackTrigger").lastElementChild.textContent = "+";
+      if (restoreFocus) requestAnimationFrame(() => byId("feedbackTrigger").focus());
+    }
+
+    function simulateProjectCheck() {
+      fixture = "loading";
+      renderFixture();
+      setTimeout(() => {
+        fixture = "ready";
+        renderFixture();
+        showToast("Project check complete");
+      }, 900);
+    }
+
+    function renderProviderFields() {
+      const mode = byId("providerControl").value;
+      byId("providerFields").hidden = !mode;
+      byId("baseUrlField").hidden = mode !== "openai-compatible";
+      byId("saveProvider").disabled = !mode;
+      if (mode === "gemini" && !byId("providerModel").value) byId("providerModel").value = "gemini-2.5-flash";
+    }
+
+    function renderProviderState() {
+      byId("providerState").textContent = providerConfigured ? "Saved" : "Required";
+      byId("providerState").classList.toggle("configured", providerConfigured);
+      byId("providerState").classList.toggle("required", !providerConfigured);
+      byId("providerRequiredNote").hidden = providerConfigured;
+      byId("providerWarningTrigger").hidden = providerConfigured;
+      byId("localTrigger").hidden = !providerConfigured;
+      byId("removeProvider").hidden = !providerConfigured;
+    }
+
+    document.addEventListener("click", (event) => {
+      if (!(event.target instanceof Element)) return;
+      const target = event.target.closest("button, label");
+      if (!target) return;
+      const editorKind = target.dataset?.editorDoc;
+      if (editorKind) {
+        openEditorDocument(editorKind, target);
+        return;
+      }
+      const next = target.dataset?.next;
+      if (next) {
+        stage = next;
+        renderProgress();
+        showToast(`${titles[stage]} opened`);
+      }
+      const popoverId = target.dataset?.popover;
+      if (popoverId) {
+        const popover = byId(popoverId);
+        const willOpen = !popover.classList.contains("open");
+        closePopovers(popover);
+        popover.classList.toggle("open", willOpen);
+        target.setAttribute("aria-expanded", String(willOpen));
+        popoverReturnFocus = willOpen ? target : null;
+        if (willOpen) requestAnimationFrame(() => popover.focus());
+      }
+    });
+
+    document.querySelectorAll("[data-popover]").forEach((button) => {
+      const popover = byId(button.dataset.popover);
+      button.setAttribute("aria-expanded", "false");
+      button.setAttribute("aria-controls", popover.id);
+      button.setAttribute("aria-haspopup", "dialog");
+      if (!popover.hasAttribute("aria-label") && !popover.hasAttribute("aria-labelledby")) {
+        popover.setAttribute("aria-label", button.getAttribute("aria-label") || popover.querySelector("strong")?.textContent || "Details");
+      }
+    });
+    document.querySelectorAll(".mini-popover").forEach((popover) => { popover.tabIndex = -1; });
+    document.querySelectorAll(".module-row strong").forEach((label) => { label.title = label.textContent; });
+
+    byId("infoTrigger").addEventListener("click", (event) => openInfo(event.currentTarget));
+    byId("workflowTrigger").addEventListener("click", () => returnToWorkflow(false));
+    byId("returnWorkflow").addEventListener("click", () => returnToWorkflow(false));
+    byId("settingsTrigger").addEventListener("click", (event) => openSettings(event.currentTarget));
+    byId("providerWarningTrigger").addEventListener("click", (event) => openSettings(event.currentTarget));
+    byId("returnSettingsWorkflow").addEventListener("click", () => returnToWorkflow(false));
+
+    byId("resetTrigger").addEventListener("click", openReset);
+    byId("cancelReset").addEventListener("click", () => closeReset());
+    byId("confirmReset").addEventListener("click", () => {
+      closeReset(false);
+      stage = "access";
+      fixture = "ready";
+      renderProgress();
+      renderFixture();
+      showToast("Session reset");
+      requestAnimationFrame(() => byId("resetTrigger").focus());
+    });
+    byId("settingsReset").addEventListener("click", () => {
+      returnToWorkflow(false);
+      openReset();
+    });
+
+    byId("copyPrompt").addEventListener("click", async () => {
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+        await navigator.clipboard.writeText(byId("promptPreview").textContent);
+        showToast("Prompt copied");
+      } catch {
+        showToast("Copy is unavailable in this preview");
+      }
+    });
+    byId("closeEditorDocument").addEventListener("click", () => closeEditorDocument());
+    byId("feedbackTrigger").addEventListener("click", () => {
+      const open = byId("feedbackPanel").hidden;
+      byId("feedbackPanel").hidden = !open;
+      byId("feedbackTrigger").setAttribute("aria-expanded", String(open));
+      byId("feedbackTrigger").lastElementChild.textContent = open ? "−" : "+";
+    });
+    byId("feedbackPanel").addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      closeFeedback(true);
+    });
+    document.querySelectorAll(".rating-row button").forEach((button) => button.addEventListener("click", () => {
+      document.querySelectorAll(".rating-row button").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+      byId("saveFeedback").disabled = false;
+    }));
+    byId("saveFeedback").addEventListener("click", () => {
+      byId("feedbackTrigger").firstElementChild.textContent = "Feedback saved";
+      closeFeedback(true);
+      showToast("Evaluation saved locally");
+    });
+
+    byId("checkAgain").addEventListener("click", simulateProjectCheck);
+    byId("projectRecoveryAction").addEventListener("click", () => {
+      if (fixture === "error") simulateProjectCheck();
+      else showToast("Mock: project review would open in VS Code");
+    });
+    document.querySelectorAll(".add-details").forEach((button) => button.addEventListener("click", () => showToast("Mock: project declaration would open in VS Code")));
+    document.querySelectorAll(".module-check").forEach((input) => input.addEventListener("change", () => {
+      input.closest(".module-row").classList.toggle("selected", input.checked);
+      const count = document.querySelectorAll(".module-check:checked").length;
+      byId("selectedCount").textContent = count;
+      byId("createPrompt").disabled = count === 0;
+      updateDiagnostics();
+    }));
+
+    byId("providerControl").addEventListener("change", () => {
+      providerConfigured = false;
+      renderProviderState();
+      renderProviderFields();
+      updateDiagnostics();
+    });
+    byId("saveProvider").addEventListener("click", () => {
+      providerConfigured = Boolean(byId("providerControl").value);
+      renderProviderState();
+      byId("providerKey").value = "";
+      updateDiagnostics();
+      showToast("Provider settings saved");
+    });
+    byId("removeProvider").addEventListener("click", () => {
+      providerConfigured = false;
+      byId("providerControl").value = "";
+      byId("providerModel").value = "gemini-2.5-flash";
+      byId("providerBaseUrl").value = "";
+      byId("providerKey").value = "";
+      renderProviderState();
+      renderProviderFields();
+      updateDiagnostics();
+      showToast("Provider configuration removed");
+    });
+
+    byId("stageControl").addEventListener("change", (event) => { stage = event.target.value; renderProgress(); });
+    byId("stateControl").addEventListener("change", (event) => { fixture = event.target.value; renderFixture(); });
+    byId("widthControl").addEventListener("change", (event) => { width = event.target.value; renderPreview(); });
+    byId("themeControl").addEventListener("click", () => { theme = theme === "dark" ? "light" : "dark"; renderPreview(); });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        if (!byId("editorDocument").hidden) {
+          closeEditorDocument();
+          return;
+        }
+        if (byId("resetBackdrop").classList.contains("open")) {
+          closeReset();
+          return;
+        }
+        const openPopover = document.querySelector(".mini-popover.open");
+        if (openPopover) {
+          const returnFocus = popoverReturnFocus;
+          closePopovers();
+          popoverReturnFocus = null;
+          if (returnFocus instanceof HTMLElement) returnFocus.focus();
+          return;
+        }
+        if (surface !== "workflow") {
+          returnToWorkflow();
+          return;
+        }
+      }
+      if (event.key !== "Tab") return;
+      if (byId("resetBackdrop").classList.contains("open")) {
+        const controls = focusableControls(byId("resetBackdrop"));
+        const first = controls[0], last = controls.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        return;
+      }
+    });
+    document.addEventListener("pointerdown", (event) => {
+      if (!(event.target instanceof Element)) return;
+      if (!event.target.closest(".mini-popover, [data-popover]")) {
+        closePopovers();
+        popoverReturnFocus = null;
+      }
+    });
+
+    renderProviderFields();
+    renderProviderState();
+    renderPreview();
+  </script>
+</body>
+</html>

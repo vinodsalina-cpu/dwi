@@ -1,6 +1,7 @@
 packages:
   - apps/dwi-host
   - apps/dwi-webview
+  - apps/dwi-catalog
   - packages/dwi-core
   - packages/domain/prompt-optimizer
   - packages/domain/workspace

@@ -82,7 +82,8 @@ describe("Prompt Optimizer domain characterization", () => {
       compiledPrompt: compilePromptDraft(draft).compiledPrompt,
     };
     const body = buildGeminiGenerateContentBody(request);
-    expect(body.generationConfig.temperature).toBe(0.2);
+    expect(body.generationConfig.temperature).toBeUndefined();
+    expect(body.generationConfig.maxOutputTokens).toBe(8_192);
     const response = {
       candidates: [{
         content: { parts: [{ text: JSON.stringify({

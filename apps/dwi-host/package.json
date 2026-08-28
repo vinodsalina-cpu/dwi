@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "displayName": "Developer Work Intelligence",
-  "description": "Local, consent-based project intelligence with project-aware Prompt Optimizer and optional provider configuration.",
+  "displayName": "Developer Workspace Intelligence",
+  "description": "Local, consent-based project intelligence with project-aware Prompt Optimizer and required LLM provider configuration.",
   "publisher": "dwi-poc",
   "preview": true,
   "engines": {
@@ -22,13 +22,23 @@
         "command": "dwi.open",
         "title": "Open Developer Work Intelligence",
         "category": "DWI"
+      },
+      {
+        "command": "dwi.exportProjectSnapshot",
+        "title": "Export Project Snapshot",
+        "category": "DWI"
+      },
+      {
+        "command": "dwi.exportBackstageComponent",
+        "title": "Export Backstage Component",
+        "category": "DWI"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
           "id": "dwi-sidebar",
-          "title": "Developer Work Intelligence",
+          "title": "Developer Workspace Intelligence",
           "icon": "media/dwi.svg"
         }
       ]
@@ -38,21 +48,23 @@
         {
           "type": "webview",
           "id": "dwi-view",
-          "name": "Developer Work Intelligence"
+          "name": "Home"
         }
       ]
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && node scripts/assemble.mjs",
+    "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.json && node scripts/assemble.mjs",
     "lint": "eslint src scripts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "package:vsix": "pnpm build && node scripts/package-vsix.mjs"
   },
   "dependencies": {
+    "@platform/domain-prompt-optimizer": "workspace:*",
     "@platform/domain-workspace": "workspace:*",
-    "@platform/dwi-core": "workspace:*"
+    "@platform/dwi-core": "workspace:*",
+    "yaml": "^2.8.1"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",

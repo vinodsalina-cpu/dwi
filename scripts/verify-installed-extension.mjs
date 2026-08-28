@@ -28,10 +28,15 @@ await mkdir(join(workspaceDir, 'src'));
 await writeFile(join(workspaceDir, 'src/index.ts'), 'export const answer = 42;\n');
 await writeFile(join(workspaceDir, 'README.md'), '# DWI smoke workspace\nA small TypeScript workspace used to verify packaged DWI activation.\n');
 
-const vscodeExecutablePath = await downloadAndUnzipVSCode('1.134.0');
+const downloadedExecutablePath = await downloadAndUnzipVSCode('1.134.0');
+const vscodeExecutablePath = process.platform === 'darwin'
+  ? join(dirname(downloadedExecutablePath), 'Code')
+  : downloadedExecutablePath;
 const vscodeCliPath = process.platform === 'win32'
   ? vscodeExecutablePath
-  : join(dirname(vscodeExecutablePath), 'bin', 'code');
+  : process.platform === 'darwin'
+    ? join(dirname(dirname(vscodeExecutablePath)), 'Resources', 'app', 'bin', 'code')
+    : join(dirname(vscodeExecutablePath), 'bin', 'code');
 const ciElectronArgs = process.platform === 'linux' && process.env.CI === 'true' ? ['--no-sandbox'] : [];
 
 console.log('DWI_SMOKE_INSTALL_BEGIN');

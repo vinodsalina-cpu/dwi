@@ -31,10 +31,10 @@
   height: 19px;
   flex: 0 0 auto;
   place-items: center;
-  border: 1px solid #80e1b24a;
+  border: 1px solid var(--dwi-border);
   border-radius: 50%;
-  background: #80e1b212;
-  color: #9af0c3;
+  background: var(--dwi-surface-muted);
+  color: var(--dwi-accent);
   cursor: pointer;
   font-size: 11px;
   font-weight: 700;
@@ -43,12 +43,12 @@
 
 .module-detail-trigger:hover,
 .module-detail-trigger[aria-expanded="true"] {
-  background: #80e1b22b;
+  background: var(--dwi-surface-raised);
 }
 
 .module-detail-trigger:focus-visible,
 .module-choice:focus-within {
-  outline: 2px solid var(--vscode-focusBorder, #80e1b2);
+  outline: 2px solid var(--dwi-focus);
   outline-offset: 2px;
 }
 
@@ -60,11 +60,11 @@
   left: 0;
   display: none;
   padding: 10px;
-  border: 1px solid #80e1b24a;
+  border: 1px solid var(--dwi-border);
   border-radius: 8px;
-  background: var(--vscode-editorHoverWidget-background, #202627);
-  box-shadow: 0 8px 22px #0008;
-  color: var(--vscode-editorHoverWidget-foreground, #d9e1dd);
+  background: var(--vscode-editorHoverWidget-background, var(--dwi-surface-raised));
+  box-shadow: 0 8px 22px var(--vscode-widget-shadow, rgb(0 0 0 / 35%));
+  color: var(--vscode-editorHoverWidget-foreground, var(--dwi-text));
   font-size: 11px;
   line-height: 1.4;
 }
@@ -79,11 +79,11 @@
 .module-details p,
 .module-details small {
   margin: 0;
-  color: #b6c0bc;
+  color: var(--dwi-muted);
 }
 
 .module-details-hint {
-  color: #8f9b96;
+  color: var(--dwi-muted);
   font-size: 10px;
 }
 
@@ -91,7 +91,7 @@
   display: grid;
   justify-items: end;
   gap: 3px;
-  color: #aeb5b2;
+  color: var(--dwi-muted);
   font-size: 10px;
 }
 
@@ -119,11 +119,28 @@
 
 .settings-active > :not(.settings-card) { display: none; }
 .header-actions { display: flex; align-items: center; gap: 7px; }
-.settings-gear { width: 26px; height: 26px; border: 1px solid #ffffff22; border-radius: 6px; background: transparent; color: var(--vscode-foreground, #dce5ee); cursor: pointer; font-size: 15px; }
-.settings-gear:hover, .settings-gear:focus-visible { border-color: var(--vscode-focusBorder, #5da9ff); background: #5da9ff22; outline: none; }
-.settings-card input, .settings-card select { width: 100%; border: 1px solid #ffffff1c; border-radius: 6px; background: var(--vscode-input-background, #101315); color: var(--vscode-input-foreground, #eef1f0); padding: 8px; }
+.settings-gear { width: 28px; height: 28px; border: 1px solid var(--dwi-border); border-radius: 6px; background: transparent; color: var(--dwi-text); cursor: pointer; font-size: 14px; }
+.settings-gear:hover { border-color: var(--dwi-focus); background: var(--dwi-surface-muted); }
+.settings-card input, .settings-card select { width: 100%; min-width: 0; border: 1px solid var(--vscode-input-border, var(--dwi-border)); border-radius: 6px; background: var(--vscode-input-background, var(--dwi-surface-muted)); color: var(--vscode-input-foreground, var(--dwi-text)); padding: 8px; }
 .root-choice { display: block; width: 100%; margin-top: 7px; text-align: left; }
 .generic-active .resume-card h1, .generic-active .resume-card p { font-size: 0; }
 .generic-active .resume-card h1::after { content: "No current project"; font-size: 20px; }
 .generic-active .resume-card p::after { content: "Open a folder to enable project context. DWI is available only in generic deterministic mode."; font-size: 13px; line-height: 1.45; }
 .generic-active .resume-card .consent-actions { display: none; }
+
+.provider-notice {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--dwi-border);
+  border-radius: 6px;
+  background: var(--vscode-inputValidation-infoBackground, var(--dwi-surface-muted));
+  color: var(--vscode-inputValidation-infoForeground, var(--dwi-text));
+  font-size: 11px;
+  line-height: 1.3;
+}
+.provider-notice button { min-width: 24px; min-height: 24px; border: 0; border-radius: 5px; background: transparent; color: var(--dwi-accent); cursor: pointer; font: inherit; font-weight: 600; }
+.provider-notice button:focus-visible { outline: 2px solid var(--dwi-focus); outline-offset: 1px; }

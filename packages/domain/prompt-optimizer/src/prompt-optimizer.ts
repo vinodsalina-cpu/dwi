@@ -33,6 +33,7 @@ import {
   parsePromptDraft,
   parsePromptRecentUpsertInput,
   parsePromptRecordSaveInput,
+  parsePromptTemplate,
   parsePromptTemplateInput,
 } from "./validation.js";
 import {
@@ -48,12 +49,12 @@ import {
   PROMPT_FOLLOW_UP_MESSAGE_LIMIT_CHARS,
   PROMPT_OPTIMIZED_LIMIT_BYTES,
   PROMPT_RECENT_RECORD_LIMIT,
-  PROMPT_TEXT_LIMIT_CHARS,
   promptTypes,
 } from "./types.js";
 import { EMPTY_PROMPT_DRAFT_FIELDS } from "./catalog.js";
 import { compilePromptDocumentV2 } from "./v2/compiler.js";
 import { promptDocumentFromDraftV1 } from "./v2/document.js";
+import { evaluateStandalonePromptReadiness } from "./runtime.js";
 
 export const PROMPT_PROVIDER_DEFAULT_MODELS: Readonly<
   Record<PromptProvider, string>
@@ -562,7 +563,7 @@ export interface GeminiGenerateContentBody {
   systemInstruction: { parts: Array<{ text: string }> };
   contents: Array<{ role: "user"; parts: Array<{ text: string }> }>;
   generationConfig: {
-    temperature: number;
+    temperature?: number;
     maxOutputTokens: number;
     responseMimeType: "application/json";
     responseSchema: GeminiResponseSchema;
@@ -654,53 +655,9 @@ export function validatePromptDraft(candidate: unknown): PromptDraft {
 }
 
 export function validatePromptTemplate(candidate: unknown): PromptTemplate {
-  if (
-    !isRecord(candidate) ||
-    !exactKeysWithOptional(
-      candidate,
-      [
-        "id",
-        "builtIn",
-        "name",
-        "description",
-        "promptType",
-        "prompt",
-        "fields",
-        "recommendedGuidancePackIds",
-      ],
-      ["createdAt", "updatedAt"],
-    )
-  ) {
-    throw new PromptOptimizerError("validation");
-  }
-  if (
-    !isEntityId(candidate.id) ||
-    typeof candidate.builtIn !== "boolean" ||
-    (candidate.createdAt !== undefined &&
-      !isIsoTimestamp(candidate.createdAt)) ||
-    (candidate.updatedAt !== undefined && !isIsoTimestamp(candidate.updatedAt))
-  ) {
-    throw new PromptOptimizerError("validation");
-  }
-  const input = validatePromptTemplateInput({
-    name: candidate.name,
-    description: candidate.description,
-    promptType: candidate.promptType,
-    prompt: candidate.prompt,
-    fields: candidate.fields,
-    recommendedGuidancePackIds: candidate.recommendedGuidancePackIds,
-  });
-  return {
-    id: candidate.id,
-    builtIn: candidate.builtIn,
-    ...input,
-    ...(candidate.createdAt !== undefined
-      ? { createdAt: candidate.createdAt as string }
-      : {}),
-    ...(candidate.updatedAt !== undefined
-      ? { updatedAt: candidate.updatedAt as string }
-      : {}),
-  };
+  const parsed = parsePromptTemplate(candidate);
+  if (!parsed) throw new PromptOptimizerError("validation");
+  return parsed;
 }
 
 export function validatePromptTemplateInput(
@@ -1337,129 +1294,14 @@ export function validatePromptContexts(contexts: unknown): PromptContext[] {
   return normalized;
 }
 
-function promptChars(draft: PromptDraft): number {
-  return (
-    draft.prompt.length +
-    Object.values(draft.fields).reduce(
-      (total, value) => total + value.length,
-      0,
-    )
-  );
-}
-
 export function evaluatePromptReadiness(draft: PromptDraft): PromptReadiness {
-  const issues: PromptReadiness["issues"] = [];
-  const totalPromptChars = promptChars(draft);
-  const contexts = Array.isArray(draft.contexts) ? draft.contexts : [];
-  const contextBytes = contexts.reduce(
-    (total, context) =>
-      total +
-      (typeof context.content === "string" ? utf8Bytes(context.content) : 0),
-    0,
-  );
-
-  if (typeof draft.prompt !== "string" || draft.prompt.trim().length === 0) {
-    issues.push({
-      code: "prompt_required",
-      message: "Enter a prompt before optimizing.",
-    });
-  }
-  if (totalPromptChars > PROMPT_TEXT_LIMIT_CHARS) {
-    issues.push({
-      code: "prompt_too_long",
-      message: `Prompt text must be ${PROMPT_TEXT_LIMIT_CHARS} characters or fewer.`,
-    });
-  }
-  if (contexts.length > PROMPT_CONTEXT_MAX_ITEMS) {
-    issues.push({
-      code: "too_many_contexts",
-      message: `Attach no more than ${PROMPT_CONTEXT_MAX_ITEMS} context items.`,
-    });
-  }
-  for (const context of contexts) {
-    if (
-      typeof context.content === "string" &&
-      utf8Bytes(context.content) > PROMPT_CONTEXT_ITEM_LIMIT_BYTES
-    ) {
-      issues.push({
-        code: "context_too_large",
-        message: "An attached context item is too large.",
-        ...(typeof context.id === "string" ? { contextId: context.id } : {}),
-      });
-    }
-  }
-  if (contextBytes > PROMPT_CONTEXT_TOTAL_LIMIT_BYTES) {
-    issues.push({
-      code: "context_total_too_large",
-      message: "Attached context is too large in total.",
-    });
-  }
-
   const builtInGuidance =
     draft.templateId === undefined
       ? undefined
       : BUILT_IN_PROMPT_TEMPLATES.find(
           (template) => template.builtIn && template.id === draft.templateId,
         )?.fields;
-  const fieldIsExplicit = (key: keyof PromptDraftFields) => {
-    const value = draft.fields[key].trim();
-    return value.length > 0 && value !== builtInGuidance?.[key].trim();
-  };
-
-  const dimensions: PromptReadiness["dimensions"] = [
-    {
-      id: "outcome",
-      ready: fieldIsExplicit("desiredOutcome"),
-      message: fieldIsExplicit("desiredOutcome")
-        ? "Desired outcome is explicit."
-        : "Add the observable outcome this work should produce.",
-    },
-    {
-      id: "scope",
-      ready: fieldIsExplicit("inScope") || fieldIsExplicit("outOfScope"),
-      message:
-        fieldIsExplicit("inScope") || fieldIsExplicit("outOfScope")
-          ? "Scope boundaries are present."
-          : "Name what is in scope or must remain out of scope.",
-    },
-    {
-      id: "constraints",
-      ready: fieldIsExplicit("hardConstraints"),
-      message: fieldIsExplicit("hardConstraints")
-        ? "Hard constraints are explicit."
-        : "Add any non-negotiable limits or state that none are known.",
-    },
-    {
-      id: "verification",
-      ready: fieldIsExplicit("verification"),
-      message: fieldIsExplicit("verification")
-        ? "Verification is defined."
-        : "Describe the checks that should verify the work.",
-    },
-    {
-      id: "output_shape",
-      ready: fieldIsExplicit("outputFormat"),
-      message: fieldIsExplicit("outputFormat")
-        ? "Output shape is defined."
-        : "Describe the response or deliverable format.",
-    },
-    {
-      id: "acceptance_criteria",
-      ready: fieldIsExplicit("acceptanceCriteria"),
-      message: fieldIsExplicit("acceptanceCriteria")
-        ? "Acceptance criteria are present."
-        : "Add observable criteria that prove the task is complete.",
-    },
-  ];
-
-  return {
-    ready: issues.length === 0,
-    issues,
-    dimensions,
-    promptChars: totalPromptChars,
-    contextCount: contexts.length,
-    contextBytes,
-  };
+  return evaluateStandalonePromptReadiness(draft, builtInGuidance);
 }
 
 export interface CompiledPromptDraft {
@@ -1620,17 +1462,20 @@ export function buildGeminiGenerateContentBody(
   ) {
     throw new PromptOptimizerError("validation");
   }
+  const generationConfig: GeminiGenerateContentBody["generationConfig"] = {
+    maxOutputTokens: GEMINI_OPTIMIZER_MAX_OUTPUT_TOKENS,
+    responseMimeType: "application/json",
+    responseSchema: GEMINI_OPTIMIZER_RESPONSE_SCHEMA,
+  };
+  // Gemini 3.x rejects legacy sampling parameters. Older stable models still
+  // accept the low-temperature setting used for deterministic rewrites.
+  if (!request.model.startsWith("gemini-3")) generationConfig.temperature = GEMINI_OPTIMIZER_TEMPERATURE;
   return {
     systemInstruction: {
       parts: [{ text: PROMPT_OPTIMIZER_SYSTEM_INSTRUCTION }],
     },
     contents: [{ role: "user", parts: [{ text: request.compiledPrompt }] }],
-    generationConfig: {
-      temperature: GEMINI_OPTIMIZER_TEMPERATURE,
-      maxOutputTokens: GEMINI_OPTIMIZER_MAX_OUTPUT_TOKENS,
-      responseMimeType: "application/json",
-      responseSchema: GEMINI_OPTIMIZER_RESPONSE_SCHEMA,
-    },
+    generationConfig,
   };
 }
 

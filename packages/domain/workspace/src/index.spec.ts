@@ -169,6 +169,8 @@ describe("workspace assessment policy", () => {
     expect(shouldIgnoreAssessmentEntry(".env", ".env")).toBe(true);
     expect(shouldIgnoreAssessmentEntry("src/index.ts", "index.ts")).toBe(false);
     expect(shouldIgnoreRetrievalPath("src/index.ts")).toBe(false);
+    expect(shouldIgnoreRetrievalPath(".dwi.recovered-20260826/catalog-info.yaml")).toBe(true);
+    expect(shouldIgnoreRetrievalPath("nested/.dwi.staging-123/package.json")).toBe(true);
     for (const privatePath of [
       ".env.local",
       "packages/app/node_modules/library/index.js",

@@ -45,8 +45,18 @@ export const manifestFileNames = new Set([
   "composer.lock",
   "go.sum",
   "poetry.lock",
+  "uv.lock",
   "Gemfile.lock",
   "pubspec.yaml",
+  "go.work",
+  "Cargo.lock",
+  "gradle-wrapper.properties",
+  "global.json",
+  "Directory.Build.props",
+  "Directory.Packages.props",
+  "meson.build",
+  ".shellcheckrc",
+  ".terraform.lock.hcl",
 ]);
 
 export const WORKSPACE_MAX_FILES = 1_000;
@@ -149,8 +159,22 @@ const hasControlCharacter = (value: string) =>
 const retrievalPrivateName =
   /(^|\/)(?:\.npmrc|\.pypirc|\.netrc|\.git-credentials|\.aws(?:\/|$)|\.ssh(?:\/|$)|[^/]*(?:token|auth|secret|credential|private.?key)[^/]*|[^/]+\.(?:pem|key|p12|pfx|jks|keystore))$/i;
 
+/** Serializable description of every path-level exclusion used by bounded retrieval. */
+export const workspaceRetrievalPolicyDescriptor = Object.freeze({
+  normalization: "forward-slash-relative-paths-only",
+  rejectControlCharacters: true,
+  rejectEmptyDotAndTraversalSegments: true,
+  ignoredSegments: [...inventoryIgnoreList].sort(),
+  managedStateSegments: [".dwi", ".dwi.*"],
+  sensitiveDirectorySegments: [".aws", ".ssh"],
+  assessmentPrivatePattern: privateName.source,
+  generatedNamePattern: generatedName.source,
+  cacheDirectoryPattern: cacheDirectoryName.source,
+  retrievalPrivatePattern: retrievalPrivateName.source,
+});
+
 export function shouldIgnoreRootEntry(name: string): boolean {
-  return inventoryIgnoreList.has(name);
+  return inventoryIgnoreList.has(name) || name === ".dwi" || name.startsWith(".dwi.");
 }
 
 export function isManifestName(name: string): boolean {
@@ -183,7 +207,7 @@ export function shouldIgnoreRetrievalPath(relativePath: string): boolean {
     segments.some(
       (segment) => !segment || segment === "." || segment === "..",
     ) ||
-    segments.some((segment) => inventoryIgnoreList.has(segment)) ||
+    segments.some((segment) => inventoryIgnoreList.has(segment) || segment === ".dwi" || segment.startsWith(".dwi.")) ||
     segments.some((segment) => segment === ".ssh" || segment === ".aws") ||
     shouldIgnoreAssessmentEntry(normalized, segments.at(-1) ?? "") ||
     retrievalPrivateName.test(normalized)
@@ -367,7 +391,7 @@ export interface RepositoryAssessmentManifest {
 export interface RepositoryInspection {
   rootEntries: string[];
   workspaceRoots: string[];
-  manifests: Array<{ path: string; name: string; content?: string }>;
+  manifests: Array<{ path: string; name: string; content?: string; contentSha256?: string }>;
 }
 
 function parseScripts(scripts: Record<string, unknown>) {
@@ -516,3 +540,6 @@ export function buildRepositoryAssessment(input: {
     })),
   };
 }
+
+export * from "./project-intelligence.js";
+export * from "./safe-probes.js";

@@ -14,6 +14,7 @@ import {
   type PromptGuidancePackId,
   type PromptRecentUpsertInput,
   type PromptRecordSaveInput,
+  type PromptTemplate,
   type PromptTemplateInput,
 } from "./types.js";
 
@@ -53,6 +54,12 @@ export function isSafePromptRelativePath(value: unknown): value is string {
 
 function utf8Bytes(value: string): number {
   return new TextEncoder().encode(value).byteLength;
+}
+
+function isIsoTimestamp(value: unknown): value is string {
+  return typeof value === "string" && value.length <= 100 &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value) &&
+    Number.isFinite(Date.parse(value));
 }
 
 function parseDraftFields(value: unknown): PromptDraftFields | undefined {
@@ -127,6 +134,31 @@ export function parsePromptTemplateInput(value: unknown): PromptTemplateInput | 
     prompt: value.prompt,
     fields,
     recommendedGuidancePackIds,
+  } : undefined;
+}
+
+export function parsePromptTemplate(value: unknown): PromptTemplate | undefined {
+  if (!isRecord(value) || !hasExactKeys(value, [
+    "id", "builtIn", "name", "description", "promptType", "prompt", "fields",
+    "recommendedGuidancePackIds",
+  ], ["createdAt", "updatedAt"])) return undefined;
+  if (!isEntityId(value.id) || typeof value.builtIn !== "boolean" ||
+      (value.createdAt !== undefined && !isIsoTimestamp(value.createdAt)) ||
+      (value.updatedAt !== undefined && !isIsoTimestamp(value.updatedAt))) return undefined;
+  const input = parsePromptTemplateInput({
+    name: value.name,
+    description: value.description,
+    promptType: value.promptType,
+    prompt: value.prompt,
+    fields: value.fields,
+    recommendedGuidancePackIds: value.recommendedGuidancePackIds,
+  });
+  return input ? {
+    id: value.id,
+    builtIn: value.builtIn,
+    ...input,
+    ...(value.createdAt !== undefined ? { createdAt: value.createdAt } : {}),
+    ...(value.updatedAt !== undefined ? { updatedAt: value.updatedAt } : {}),
   } : undefined;
 }
 

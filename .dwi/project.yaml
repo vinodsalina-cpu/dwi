@@ -1,0 +1,12 @@
+# Declare only stable, human-owned project invariants here.
+# Detected toolchains, component roots, and workflows remain evidence-derived
+# unless their optional sections are explicitly added.
+apiVersion: dwi.dev/v1
+kind: Project
+metadata:
+  name: "dwi"
+spec:
+  identity: {}
+  # Optional identity keys: description, componentType, lifecycle, owners,
+  # system, domain, and tags.
+  # Optional sections intentionally omitted: boundaries, workflows, constraints.
