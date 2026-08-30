@@ -1,5 +1,12 @@
 import type { PromptDraftFields, PromptType } from "../types.js";
-import type { PromptAnswerV2, PromptDocumentV2 } from "./types.js";
+import { PROMPT_QUESTION_POLICY_V2 } from "./question-policy.js";
+import {
+  promptDraftFieldSectionIdsV2,
+  promptQuestionTargetSectionIdV2,
+  type PromptAnswerV2,
+  type PromptDocumentV2,
+  type PromptSectionId,
+} from "./types.js";
 
 export interface PromptQuestionOptionV2 {
   readonly id: string;
@@ -12,7 +19,8 @@ export interface PromptQuestionOptionV2 {
 export interface PromptQuestionDefinitionV2 {
   readonly id: string;
   readonly version: "2.0.0";
-  readonly target: keyof PromptDraftFields;
+  readonly field: keyof PromptDraftFields;
+  readonly target: PromptSectionId;
   readonly question: string;
   readonly options: readonly PromptQuestionOptionV2[];
   readonly defaultOptionId?: string;
@@ -35,7 +43,8 @@ export const PROMPT_QUESTION_BANK_V2: readonly PromptQuestionDefinitionV2[] = [
   {
     id: "outcome-observable",
     version: "2.0.0",
-    target: "desiredOutcome",
+    field: "desiredOutcome",
+    target: promptDraftFieldSectionIdsV2.desiredOutcome,
     question: "Which outcome should be observable when this task is complete?",
     options: options([
       [
@@ -63,7 +72,8 @@ export const PROMPT_QUESTION_BANK_V2: readonly PromptQuestionDefinitionV2[] = [
   {
     id: "scope-boundary",
     version: "2.0.0",
-    target: "inScope",
+    field: "inScope",
+    target: promptDraftFieldSectionIdsV2.inScope,
     question: "What is the narrowest boundary this task may change?",
     options: options([
       [
@@ -91,7 +101,8 @@ export const PROMPT_QUESTION_BANK_V2: readonly PromptQuestionDefinitionV2[] = [
   {
     id: "constraint-priority",
     version: "2.0.0",
-    target: "hardConstraints",
+    field: "hardConstraints",
+    target: promptDraftFieldSectionIdsV2.hardConstraints,
     question: "Which constraint must win if implementation tradeoffs appear?",
     options: options([
       [
@@ -119,7 +130,8 @@ export const PROMPT_QUESTION_BANK_V2: readonly PromptQuestionDefinitionV2[] = [
   {
     id: "verification-depth",
     version: "2.0.0",
-    target: "verification",
+    field: "verification",
+    target: promptDraftFieldSectionIdsV2.verification,
     question: "What evidence should prove the result?",
     options: options([
       [
@@ -147,7 +159,8 @@ export const PROMPT_QUESTION_BANK_V2: readonly PromptQuestionDefinitionV2[] = [
   {
     id: "output-shape",
     version: "2.0.0",
-    target: "outputFormat",
+    field: "outputFormat",
+    target: promptDraftFieldSectionIdsV2.outputFormat,
     question: "Which response shape is most useful after the work?",
     options: options([
       [
@@ -175,7 +188,8 @@ export const PROMPT_QUESTION_BANK_V2: readonly PromptQuestionDefinitionV2[] = [
   {
     id: "acceptance-proof",
     version: "2.0.0",
-    target: "acceptanceCriteria",
+    field: "acceptanceCriteria",
+    target: promptDraftFieldSectionIdsV2.acceptanceCriteria,
     question: "What must be true before the work can be called complete?",
     options: options([
       [
@@ -241,7 +255,8 @@ export function selectPromptQuestionsV2(
   const answeredTargets = new Set(
     document.answers
       .filter(({ state }) => state === "answered")
-      .map(({ target }) => target),
+      .map(({ target }) => promptQuestionTargetSectionIdV2(target))
+      .filter((target): target is PromptSectionId => Boolean(target)),
   );
   const allowlist = allowlistedQuestionIds
     ? new Set(allowlistedQuestionIds)
@@ -249,7 +264,7 @@ export function selectPromptQuestionsV2(
   const candidates = PROMPT_QUESTION_BANK_V2.filter(
     (definition) =>
       (!allowlist || allowlist.has(definition.id)) &&
-      !document.fields[definition.target].trim() &&
+      !document.fields[definition.field].trim() &&
       !answeredTargets.has(definition.target),
   ).sort((left, right) => {
     const leftType = left.requiredForTypes.includes(document.promptType)
@@ -264,14 +279,14 @@ export function selectPromptQuestionsV2(
       left.id.localeCompare(right.id)
     );
   });
-  const seenTargets = new Set<keyof PromptDraftFields>();
+  const seenTargets = new Set<PromptSectionId>();
   const questionIds = candidates
     .filter((definition) => {
       if (seenTargets.has(definition.target)) return false;
       seenTargets.add(definition.target);
       return true;
     })
-    .slice(0, 3)
+    .slice(0, PROMPT_QUESTION_POLICY_V2.maxQuestions)
     .map(({ id }) => id);
   return {
     questionIds,

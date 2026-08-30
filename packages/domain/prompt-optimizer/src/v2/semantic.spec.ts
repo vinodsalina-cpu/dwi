@@ -73,6 +73,8 @@ describe("bounded provider-generated clarification questions", () => {
       promptGeneratedQuestionTargetsV2,
     );
     expect(request.allowlistedQuestionTargets).not.toContain("title");
+    expect(request.allowlistedQuestionTargets).toContain("desired-outcome");
+    expect(request.allowlistedQuestionTargets).not.toContain("desiredOutcome");
 
     const input = buildPromptSemanticProviderInputV2(request);
     const prompt = JSON.parse(input.prompt) as Record<string, unknown>;
@@ -265,7 +267,7 @@ describe("bounded provider-generated clarification questions", () => {
         question(),
         question({
           id: "retry-scope-owner",
-          target: "inScope",
+          target: "scope",
           question: "  Which layer owns retry verification?  ".trim(),
         }),
       ],

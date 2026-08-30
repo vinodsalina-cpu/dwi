@@ -1,6 +1,5 @@
 import {
   PROMPT_OPTIMIZED_LIMIT_BYTES,
-  type PromptDraftFields,
   type PromptProvider,
 } from "../types.js";
 import type {
@@ -11,24 +10,24 @@ import type {
 } from "./types.js";
 import { promptSectionIds } from "./types.js";
 import { hashPromptSemanticBaseV2 } from "./document.js";
+import { PROMPT_QUESTION_POLICY_V2 } from "./question-policy.js";
 
 export type PromptSemanticOperation = "analyze" | "enhance" | "validate";
 
 export const promptGeneratedQuestionTargetsV2 = Object.freeze([
-  "desiredOutcome",
-  "inScope",
-  "outOfScope",
+  "desired-outcome",
+  "scope",
+  "constraints",
+  "acceptance-criteria",
+  "output-contract",
   "verification",
-  "outputFormat",
-  "hardConstraints",
-  "acceptanceCriteria",
-] as const satisfies readonly (keyof PromptDraftFields)[]);
+] as const satisfies readonly PromptSectionId[]);
 
 export type PromptGeneratedQuestionTargetV2 =
   (typeof promptGeneratedQuestionTargetsV2)[number];
 
 export const PROMPT_GENERATED_QUESTION_LIMITS_V2 = Object.freeze({
-  maxQuestions: 5,
+  maxQuestions: PROMPT_QUESTION_POLICY_V2.maxQuestions,
   minOptions: 2,
   maxOptions: 4,
   id: Object.freeze({ maxChars: 64, maxBytes: 64 }),
@@ -438,12 +437,9 @@ export function validatePromptSemanticResultV2(
           `Semantic operation targets unknown section ${operation.sectionId}.`,
         );
       }
-      if (
-        operation.operation === "remove-section" &&
-        request.lockedSectionIds.includes(operation.sectionId)
-      ) {
+      if (request.lockedSectionIds.includes(operation.sectionId)) {
         throw new Error(
-          `Semantic operation cannot remove locked section ${operation.sectionId}.`,
+          `Semantic operation cannot target locked section ${operation.sectionId}.`,
         );
       }
       if (operation.operation !== "remove-section")

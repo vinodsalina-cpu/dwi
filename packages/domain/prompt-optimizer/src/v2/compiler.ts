@@ -5,6 +5,7 @@ import {
 import { canonicalHash } from "./canonical.js";
 import { hashPromptSemanticBaseV2 } from "./document.js";
 import {
+  promptQuestionTargetSectionIdV2,
   promptSectionIds,
   type CompiledPromptDocumentV2,
   type PromptDocumentV2,
@@ -166,9 +167,10 @@ function baseSections(
 
   for (const answer of document.answers) {
     if (answer.state !== "answered" || !answer.detail?.trim()) continue;
-    const section = sections.find((candidate) =>
-      answer.target.startsWith(candidate.id),
-    );
+    const target = promptQuestionTargetSectionIdV2(answer.target);
+    const section = target
+      ? sections.find((candidate) => candidate.id === target)
+      : undefined;
     if (!section) continue;
     section.text = nonEmpty([section.text, answer.detail]);
     section.omitted = false;
@@ -200,12 +202,9 @@ function applySemanticPatches(
     for (const operation of patch.operations) {
       const section = sections.find(({ id }) => id === operation.sectionId);
       if (!section) continue;
-      if (
-        operation.operation === "remove-section" &&
-        document.lockedSections.includes(operation.sectionId)
-      ) {
+      if (document.lockedSections.includes(operation.sectionId)) {
         warnings.push(
-          `Semantic patch ${patch.id} cannot remove locked section ${operation.sectionId}.`,
+          `Semantic patch ${patch.id} cannot target locked section ${operation.sectionId}.`,
         );
         continue;
       }

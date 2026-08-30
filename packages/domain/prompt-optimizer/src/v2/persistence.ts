@@ -1,4 +1,5 @@
 import { compilePromptDocumentV2 } from "./compiler.js";
+import { canonicalHash, type CanonicalValue } from "./canonical.js";
 import {
   finalizePromptDocumentV2,
   promptDocumentFromDraftV1,
@@ -227,7 +228,14 @@ function candidate(
     sourceDocumentHash: document.canonicalHash,
     sourceRevision: document.revision,
     text,
-    compiledHash: compilePromptDocumentV2(document).compiledHash,
+    compiledHash:
+      choice === "local"
+        ? compilePromptDocumentV2(document).compiledHash
+        : canonicalHash({
+            sourceDocumentHash: document.canonicalHash,
+            sourceRevision: document.revision,
+            text,
+          } as unknown as CanonicalValue),
     ...(provider ? { provider } : {}),
     ...(model ? { model } : {}),
     createdAt,
@@ -331,21 +339,27 @@ export function createPromptRecentRecordV2(
     safeLabel: context.safeLabel,
     byteCount: context.byteCount,
   }));
-  const document = {
-    ...record.document,
+  const { canonicalHash: _canonicalHash, ...source } = record.document;
+  const document = finalizePromptDocumentV2({
+    ...source,
     contexts: [] as const,
-  };
+  }) as PromptRecentRecordV2["document"];
+  const localCompiled = compilePromptDocumentV2(document);
+  const localCandidate = candidate(
+    record.localCandidate.id,
+    "local",
+    document,
+    localCompiled.text,
+    record.localCandidate.createdAt,
+  );
   return {
     schemaVersion: PROMPT_RECENT_RECORD_V2_SCHEMA,
     id: record.id,
     document,
     contextState: contextSummaries.length ? "needs-recapture" : "none",
     contextSummaries,
-    localCandidate: record.localCandidate,
-    ...(record.optimizedCandidate
-      ? { optimizedCandidate: record.optimizedCandidate }
-      : {}),
-    chosenCandidate: record.chosenCandidate,
+    localCandidate,
+    chosenCandidate: "local",
     updatedAt: record.updatedAt,
   };
 }
