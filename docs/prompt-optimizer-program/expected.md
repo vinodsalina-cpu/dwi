@@ -66,7 +66,7 @@ Completion is observable when a packaged extension can initialize/review a proje
 - [x] Prove corruption, limits, partial write, downgrade tolerance, reset preservation, and isolation.
 - [x] Prove no recovery/navigation egress and deterministic preservation on provider failure.
 - [x] Run focused, repository, typecheck, schema, build, VSIX, archive, and diff gates.
-- [x] Run an isolated installed Phase 5 functional flow and clean reinstall/activation checks.
+- [x] Run an isolated same-process installed Phase 5 functional flow and clean reinstall/activation checks; packaged restart/resume remains the unchecked acceptance item below.
 - [x] Review the final diff and archive the outcome.
 - [ ] Create an exact local review commit only if separately authorized; otherwise report that gate pending.
 

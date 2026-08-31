@@ -367,14 +367,14 @@ Append consequential decisions and evidence. Supersede entries explicitly; do no
 - Consequence: Phase 5 is not complete and Phase 6 qualification is not complete. No provider/fixed-executor call, credential use, push, merge, tag, release, or promotion occurred.
 - Owner: Codex local session
 
-### DWI-PO-0031 — Phase 5 POC and broad local Phase 6 qualification complete
+### DWI-PO-0031 — Broad local matrix executed; packaged restart gate remains open
 
 - Date: 2026-09-01
 - Type: implementation and local qualification evidence
-- Status: accepted local POC completion; promotion authority remains closed
+- Status: blocked after independent evidence review
 - Context: The user explicitly authorized atomic local commits and a broad local Phase 6 POC matrix while preserving all provider, remote, merge, tag, release, and promotion boundaries.
-- Decision or finding: Consolidate recents under workspace session authority, add a production-fail-closed confirmation port for the installed test environment, and drive the packaged extension through consent, Project Meta Context approval, deterministic Resolve/Review, save, and optimizer-only reset. Phase 5 POC and the broad local Phase 6 matrix are complete at `afbd113` plus this evidence commit.
-- Evidence: 419 repository tests; six typechecks; schema export; build; installed VS Code 1.134.0 functional journey; 388-file VSIX SHA-256 `cf6b400512e113d945512abce8acc93e3c93227b1eb9379cce7e5d6bf6f4adf6`; 16 proxy syntax checks, 20 proxy tests, recovered simulator; focused 51 semantic/source/projection tests, 52 provider/fallback/snapshot/storage tests, and 18 session/protocol tests; responsive and keyboard evidence recorded in Phase 5/6 outcomes.
-- Boundary: Direct storage and lifecycle suites prove restart/resume. The Electron installed runner cannot survive an intentional window reload, so no separate cross-process installed restart claim is made. The preserved Phase 4 14,531-token failure is unchanged; no provider/fixed-executor call occurred.
-- Consequence: Local POC qualification is complete. Real-provider compatibility, held-out semantics, fixed-executor comparison, promotion, merge, baseline tag, release, and any remote mutation require later explicit authority.
+- Decision or finding: Consolidate recents under workspace session authority, add a production-fail-closed confirmation port for the installed test environment, and drive the packaged extension through consent, Project Meta Context approval, deterministic Resolve/Review, save, and optimizer-only reset. Independent review rejected the initial completion claim because this all occurs in one process and does not satisfy the frozen packaged restart/resume item.
+- Evidence: 419 repository tests; six typechecks; schema export; build; installed VS Code 1.134.0 functional journey under a development-mode automatic-confirmation port whose production guard is tested fail-closed; 388-file VSIX SHA-256 `cf6b400512e113d945512abce8acc93e3c93227b1eb9379cce7e5d6bf6f4adf6`; 16 proxy syntax checks, 20 proxy tests, recovered simulator; focused 51 semantic/source/projection tests, 52 provider/fallback/snapshot/storage tests, and 18 session/protocol tests; responsive and keyboard evidence recorded in Phase 5/6 outcomes.
+- Boundary: Direct storage and lifecycle suites prove persistence units but cannot substitute for the packaged restart gate. The Electron installed runner cannot survive an intentional window reload, and separate launches isolate Memento state. The preserved Phase 4 14,531-token failure is unchanged; no provider/fixed-executor call occurred.
+- Consequence: Phase 5 and Phase 6 POC completion remain blocked. Real-provider compatibility, held-out semantics, fixed-executor comparison, promotion, merge, baseline tag, release, and any remote mutation also require later explicit authority.
 - Owner: Codex local session

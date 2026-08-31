@@ -1,17 +1,17 @@
 # Current progress
 
-- Active phase: Phase 6 — broad local POC qualification complete; awaiting later authority decisions
+- Active phase: Phase 5 — implemented and broadly locally qualified; packaged restart/resume gate remains open
 - Phase owner: Codex
 - Starting SHA: `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`
-- Review SHA / current HEAD: `afbd113`
-- State: Phase 5 POC and broad local Phase 6 POC qualification complete; real-provider semantics, fixed-executor comparison, promotion, merge, and tag remain pending separate authority
+- Review SHA: `c8d1723`; current HEAD advances only evidence corrections after independent review
+- State: Phase 5 and Phase 6 POC completion remain blocked on a packaged restart/resume → reset → Project Meta Context preservation journey
 
 ## Completed
 
 - Consolidated optimizer recents under the workspace-scoped session authority and purged legacy global recents after one-time import (`3b45b60`).
-- Added a production-fail-closed installed-smoke confirmation port and CDP-driven packaged journey (`afbd113`). VS Code 1.134.0 now proves initialization/consent, Project Meta Context review and confirmation, provider-free deterministic Resolve/Review, save-to-recents, and optimizer-only reset.
-- Final full suite: 419 tests; all six typechecks; schema export; build; 388-file VSIX SHA-256 `cf6b400512e113d945512abce8acc93e3c93227b1eb9379cce7e5d6bf6f4adf6`; installed functional flow; 16 proxy syntax checks, 20 proxy tests, and recovered simulator scenarios.
-- Broad local Phase 6 failure/structural qualification passes malformed response, timeout, cancellation, stale revision/result, auth, quota/rate limit, refusal/truncation, connectivity, policy/safety, hash mismatch, locked section, migration/downgrade, privacy, call ceiling, provenance/conflict, rollback, and repository-independence coverage.
+- Added a production-fail-closed installed-smoke confirmation port and CDP-driven packaged journey (`afbd113`). VS Code 1.134.0 proves initialization, Project Meta Context review/confirmation, provider-free deterministic Resolve/Review, save-to-recents, and optimizer-only reset from the installed artifact under development-mode automatic confirmations; it does not exercise production modal consent UI.
+- Final full suite: 419 tests; all six typechecks; schema export; build; 388-file VSIX SHA-256 `cf6b400512e113d945512abce8acc93e3c93227b1eb9379cce7e5d6bf6f4adf6`; same-process installed functional flow; 16 proxy syntax checks, 20 proxy tests, and recovered simulator scenarios.
+- Broad local Phase 6 failure/structural matrix passes malformed response, timeout, cancellation, stale revision/result, auth, quota/rate limit, refusal/truncation, connectivity, policy/safety, hash mismatch, locked section, migration/downgrade, privacy, call ceiling, provenance/conflict, rollback, and repository-independence coverage. Phase 6 completion is not claimed while the packaged restart gate is open.
 
 - Preserved Phase 4 as blocked and created a verified compact checkpoint containing a complete Git bundle at `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`, local program/evaluation records, approval boundaries, and SHA-256 verification.
 - Created local branch `feature/po-05-product-hardening` at the exact Phase 4 functional SHA and froze the Phase 5 contract without changing product code.
@@ -62,14 +62,14 @@
 
 ## Pending / blockers
 
-- A Phase 5-specific installed flow must still drive initialization/review → optimizer save → restart/resume → optimizer-only reset → approved-project preservation inside the packaged webview. The current installed harness proves activation/open only.
-- Local commit authority was supplied by the 2026-09-01 POC request; commits `25d11b3`, `79a0510`, and `c2c3a7b` are local only.
+- The installed harness now proves initialization/review → optimizer save → optimizer-only reset → approved-project preservation in one VS Code process. It must still prove restart/resume between save and reset against the same installed profile.
+- Local commit authority was supplied by the 2026-09-01 POC request; commits through `c8d1723` and the evidence correction are local only.
 
 - Production semantic-plus-projection calibration remains pending: the readiness response exceeded the immutable per-call token ceiling before the semantic request.
 - The 30-run fixed A/B/C comparison remains pending because the calibration stop condition fired first.
 - Any second attempt requires explicit authorization to supersede the no-retry contract and preserve the failed lock/evidence. Do not delete the lock, change the existing evidence, or silently raise thresholds.
 - Phase 4 semantic-plus-projection calibration and fixed-executor comparison remain blocked and cannot be silently retried or waived.
-- Any provider/fixed-executor transmission, cost, credentials, push, merge, tag, release, or Phase 6 work remains explicitly unauthorized.
+- Any provider/fixed-executor transmission, cost, credentials, push, merge, tag, release, or promotion remains explicitly unauthorized. Broad local Phase 6 evidence collection was authorized.
 - The single authorized desktop Rewrite click on 2026-09-01 was stopped by the current-project review gate before provider dispatch; it was not retried. The final standard-window nested control could be read but not activated through macOS accessibility (`elementHasNoFrame`), so no packaged functional-flow claim is inferred from that UI attempt.
 
 ## Known deviations
@@ -80,6 +80,6 @@
 
 ## Next agent entry point
 
-Preserve exact Phase 4 SHA `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`, the failed live lock, checkpoint, and raw evidence. Do not claim Phase 5 complete until the packaged functional flow and exact review-SHA gate are satisfied. Do not retry Phase 4, transmit provider/fixed-executor input, use credentials, or perform remote/promotion actions without explicit authorization.
+Preserve exact Phase 4 SHA `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`, the failed live lock, checkpoint, and raw evidence. Do not claim Phase 5 or Phase 6 complete until a packaged installed restart/resume flow passes and the resulting exact SHA is reviewed. Do not retry Phase 4, transmit provider/fixed-executor input, use credentials, or perform remote/promotion actions without explicit authorization.
 
-Phase status: Phase 0 DONE; Phases 1–3 DONE locally; Phase 4 BLOCKED — immutable no-retry calibration budget exceeded and fixed evaluation not started; Phase 5 BLOCKED — local candidate complete but packaged functional journey and exact review SHA pending; Phases 6–7 not started.
+Phase status: Phase 0 DONE; Phases 1–3 DONE locally; Phase 4 BLOCKED — immutable no-retry calibration budget exceeded and fixed evaluation not started; Phase 5 BLOCKED — packaged restart/resume gate pending; Phase 6 BLOCKED — broad local matrix executed but inherited packaged restart gate pending; Phase 7 not started.

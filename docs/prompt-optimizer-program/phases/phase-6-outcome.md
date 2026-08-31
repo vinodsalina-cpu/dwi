@@ -1,11 +1,11 @@
 # Phase 6 local POC qualification outcome
 
-State: broad local qualification complete; real-provider, held-out semantics, promotion, merge, and tag remain pending separate authority
+State: broad local matrix executed; POC qualification incomplete because the packaged restart/resume gate remains open
 
 ## Qualified matrix
 
 - Fresh build, schema export, six typechecks, 419 repository tests, VSIX package/inspection, install, activation, `dwi.open`, and Prompt Optimizer open pass.
-- The installed package completes initialization and consent, Project Meta Context review/approval, local deterministic Resolve and Review, save-to-recents, and scoped optimizer reset without a configured provider.
+- The installed package completes initialization, Project Meta Context review/approval, local deterministic Resolve and Review, save-to-recents, and scoped optimizer reset without a configured provider. The extension-test environment uses the production-fail-closed development confirmation port, so production modal consent interaction is not part of this proof.
 - Persistence tests cover restart/resume units, exact Input/Resolve/Review recovery, stale result rejection, optimistic revision conflict, corruption, serialized UTF-8 limits, one-time migration, unknown-version downgrade refusal, workspace isolation, and reset preservation.
 - Semantic/failure tests cover malformed JSON/schema, timeout, cancellation, delayed/stale completion, wrong hash, locked section, secret-like patch, authentication, rate limit, truncation, invalid telemetry, refusal/safety boundaries, quota/model/transport/connectivity mappings, and the three-call ceiling with no fourth reservation.
 - Source and privacy tests cover consent, stale reviewed knowledge, conflicts/contradictions, provenance, secret/absolute-path rejection, invalid encoding, bounded inspection, provider credential isolation, redirect refusal, and provider-unavailable deterministic fallback. Navigation and deterministic compilation do not invoke the provider port.
@@ -15,7 +15,7 @@ State: broad local qualification complete; real-provider, held-out semantics, pr
 
 ## Evidence boundary
 
-The installed harness proves the full functional flow in one VS Code process. Restart/resume is proved by direct storage and lifecycle integration suites because `@vscode/test-electron` exits with failure when the test intentionally reloads its window; no separate cross-process installed-runtime claim is made. Reinstall activation is qualified, but reinstall-with-session-retention is not claimed.
+The installed harness proves the functional flow in one VS Code process. Direct storage and lifecycle integration suites prove persistence units, but they do not satisfy the frozen packaged restart/resume acceptance item. `@vscode/test-electron` exits with failure when the test intentionally reloads its window, and separate launches isolate the relevant Memento state. Phase 6 completion is therefore not claimed. Reinstall activation is qualified; reinstall-with-session-retention is not.
 
 The Phase 4 readiness response remains preserved at 14,531 tokens against the immutable 12,000 ceiling. This phase neither retries nor alters that evidence. Real-provider compatibility, held-out semantic evaluation, fixed-executor comparison, merge, baseline promotion, and tagging remain later authority decisions.
 
