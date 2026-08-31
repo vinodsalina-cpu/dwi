@@ -42,7 +42,7 @@ export function isPromptComposeInput(value: unknown): value is PromptComposeInpu
     !containsUnsafeControlText(task) &&
     isEntityId(value.assignmentId) &&
     (promptTypes as readonly unknown[]).includes(value.promptType) &&
-    (value.outputSize === "low" || value.outputSize === "medium" || value.outputSize === "high");
+    (value.outputSize === "low" || value.outputSize === "medium" || value.outputSize === "high" || value.outputSize === "auto");
 }
 
 /** Strictly validates the prompt editor payload before it crosses from the

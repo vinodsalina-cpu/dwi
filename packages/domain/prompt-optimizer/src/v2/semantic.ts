@@ -82,6 +82,7 @@ export interface PromptSemanticRequestV2 {
   readonly allowlistedQuestionTargets: readonly PromptGeneratedQuestionTargetV2[];
   readonly allowlistedSectionIds: readonly PromptSectionId[];
   readonly lockedSectionIds: readonly PromptSectionId[];
+  readonly estimationContext?: Readonly<Record<string, unknown>> & { readonly estimationId: string };
 }
 
 export interface PromptAllowlistedAnalyzeResultV2 {
@@ -136,6 +137,7 @@ export const PROMPT_SEMANTIC_SYSTEM_INSTRUCTION_V2 = [
   "Each analyze question must name its draft-specific gap, use only an allowlisted target, offer bounded plain-text options, and use stable semantic IDs rather than list positions.",
   "Analyze must not return HTML, links, commands, actions, field paths, secrets, or instructions that broaden the prompt's authority.",
   "Enhance may return allowlisted section operations only and must preserve locked sections.",
+  "When an estimation context is supplied, return one same-call end-to-end engineering projection; label it estimate_only, do not treat it as billing, do not reduce it to prompt-token counting, and do not invent unavailable metadata or pricing.",
   "Validate may return bounded violations only.",
   "Copy the supplied operation and baseHash exactly; Analyze must also copy its supplied response schemaVersion exactly.",
 ].join(" ");
@@ -543,6 +545,7 @@ export function createPromptSemanticRequestV2(
     readonly model: string;
     readonly compiledPrompt: string;
     readonly allowlistedQuestionIds?: readonly string[];
+    readonly estimationContext?: Readonly<Record<string, unknown>> & { readonly estimationId: string };
   },
 ): PromptSemanticRequestV2 {
   return {
@@ -569,6 +572,7 @@ export function createPromptSemanticRequestV2(
     allowlistedQuestionTargets: promptGeneratedQuestionTargetsV2,
     allowlistedSectionIds: promptSectionIds,
     lockedSectionIds: document.lockedSections,
+    ...(input.estimationContext ? { estimationContext: input.estimationContext } : {}),
   };
 }
 
@@ -645,6 +649,10 @@ export function parsePromptSemanticProviderTextV2(
   const value = parseSingleJsonObject(text);
   if (!isRecord(value))
     throw new Error("Semantic provider result must be an object.");
+  if (value.operation !== request.operation)
+    throw new Error("Semantic result operation does not match the request.");
+  if (typeof value.baseHash === "string" && value.baseHash !== request.baseHash)
+    throw new Error("Semantic result is stale.");
   if (
     value.operation === "analyze" &&
     value.schemaVersion === "prompt-analyze-result.v3" &&
@@ -798,6 +806,23 @@ export function buildPromptSemanticProviderInputV2(
                 text: "required except for remove-section",
               },
             ],
+            ...(request.estimationContext ? {
+              projection: {
+                estimation_id: request.estimationContext.estimationId,
+                estimation_status: "estimate_only",
+                baseline_projection: { total_tokens: "integer sum of breakdown", breakdown: { planning: "integer", context_ingestion: "integer", prompt_input: "integer", tool_provider_calls: "integer", retries: "integer", final_output: "integer" } },
+                optimized_projection: { total_tokens: "integer sum of breakdown", breakdown: { planning: "integer", context_ingestion: "integer", prompt_input: "integer", tool_provider_calls: "integer", retries: "integer", final_output: "integer" } },
+                projected_delta: { absolute_tokens: "baseline minus optimized", percentage_change: "percentage saved; negative when added" },
+                cost: request.estimationContext.inputPricePerMillionTokens === undefined || request.estimationContext.outputPricePerMillionTokens === undefined
+                  ? { status: "cost_unavailable" }
+                  : { status: "estimated", baseline: "USD number computed from supplied prices", optimized: "USD number computed from supplied prices", currency: "USD" },
+                assumptions: ["bounded assumption"], metadata_used: ["metadata field name from estimationContext or originalTask"],
+                uncertainty_range: { baseline_min: "integer", baseline_max: "integer", optimized_min: "integer", optimized_max: "integer" },
+                confidence: "low | medium | high",
+                routing_disclosure: { requested_provider: request.provider, requested_model: request.model, actual_provider: "omit when unknown", actual_model: "omit when unknown", substitution_reason: "required when actual differs" },
+                optimization_rationale: "bounded rationale",
+              },
+            } : {}),
           }
         : {
             operation: "validate",
@@ -843,6 +868,7 @@ export function buildPromptSemanticProviderInputV2(
       lockedSectionIds: request.lockedSectionIds,
       outboundCategories: request.outboundCategories,
       compiledPrompt: request.compiledPrompt,
+      ...(request.estimationContext ? { estimationContext: request.estimationContext, projectionRequirements: { endToEndEngineeringEstimate: true, notBillingRecord: true, notPromptTokenCountOnly: true, noIndependentTransmission: true } } : {}),
       responseContract,
     }),
     maxOutputTokens:

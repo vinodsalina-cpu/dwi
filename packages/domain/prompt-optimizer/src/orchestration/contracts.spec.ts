@@ -172,5 +172,17 @@ describe("Phase 1 orchestration contracts", () => {
         expectedFailureCode: "RATE_LIMITED",
       }),
     ).toThrow("RATE_LIMITED");
+
+    const failures = [
+      ["delay", "TIMEOUT"], ["malformed-json", "INVALID_RESPONSE"], ["invalid-patch", "INVALID_RESPONSE"],
+      ["timeout", "TIMEOUT"], ["cancelled", "CANCELLED"], ["stale-completion", "STALE_RESULT"],
+      ["truncated", "TRUNCATED"], ["refused", "INVALID_RESPONSE"], ["unauthorized", "AUTHENTICATION"],
+      ["forbidden", "AUTHENTICATION"], ["quota", "RATE_LIMITED"], ["server-error", "PROVIDER_ERROR"],
+      ["disconnect", "PROVIDER_ERROR"], ["connection-failure", "PROVIDER_ERROR"],
+    ] as const;
+    for (const [kind, expectedFailureCode] of failures) {
+      const scenario = validateProviderWireScenarioV1({ schemaVersion: DWI_PROVIDER_WIRE_SCENARIO_SCHEMA_V1, id: `matrix:${kind}`, kind, expectedFailureCode });
+      expect(() => simulateOpenAiCompatibleSemanticV1(request, scenario)).toThrow(expectedFailureCode);
+    }
   });
 });

@@ -13,6 +13,7 @@ describe("DWI core", () => {
     expect(low.text).toContain("Keep supporting prose compact.");
     expect(high.text).toContain("detailed implementation report");
     expect(high.text).not.toEqual(low.text);
+    expect(compileDwiCandidate(brief, ["orientation"], { task: "Repair checkout retries.", template, outputSize: "auto" }).text).toContain("Adapt response detail to task criticality");
   });
   it("requires confirmation and selection", () => { expect(() => compileDwiCandidate({ ...brief, confirmed: false }, ["orientation"])).toThrow(/Confirm/); expect(() => compileDwiCandidate(brief, [])).toThrow(/Select/); });
   it("bounds feedback and filters unknown modules", () => { const event = createFeedback({ rating: "helpful", tags: Array(12).fill("tag"), selectedModuleIds: ["orientation", "bad"], estimate: { baselineTokens: 10, optimizedTokens: 5, estimatedAvoidedDuplication: 5, method: "test" }, elapsedMs: 10 }, "2026-01-01T00:00:00.000Z"); expect(event.tags).toHaveLength(8); expect(event.selectedModuleIds).toEqual(["orientation"]); expect(() => createFeedback({ ...event, note: "x".repeat(501) })).toThrow(/500/); });

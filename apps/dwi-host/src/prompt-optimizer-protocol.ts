@@ -66,7 +66,7 @@ function optimizerInput(value: unknown, allowEmptyTask = false): value is Prompt
   if (!record(value) || !exact(value, ["task", "assignmentId", "promptType", "outputSize"])) return false;
   return typeof value.task === "string" && (allowEmptyTask || value.task.trim().length > 0) && value.task.length <= PROMPT_TEXT_LIMIT_CHARS &&
     isEntityId(value.assignmentId) && (promptTypes as readonly unknown[]).includes(value.promptType) &&
-    (value.outputSize === "low" || value.outputSize === "medium" || value.outputSize === "high");
+    (value.outputSize === "low" || value.outputSize === "medium" || value.outputSize === "high" || value.outputSize === "auto");
 }
 
 export function parsePromptOptimizerCommand(value: unknown): PromptOptimizerCommand | undefined {

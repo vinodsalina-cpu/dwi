@@ -7,7 +7,7 @@ import {
   evaluationMarkdown,
   type DwiBrief,
 } from "@platform/dwi-core";
-import { resolvePromptSourcesV2, type PromptSourcePlanV2 } from "@platform/domain-prompt-optimizer";
+import { resolvePromptSourcesV2, type EngineeringTokenProjectionV1, type OptimizationTraceV1, type PromptSourcePlanV2 } from "@platform/domain-prompt-optimizer";
 import { EMPTY_PROMPT_DRAFT_FIELDS } from "@platform/domain-prompt-optimizer/catalog";
 import type {
   PromptTemplate,
@@ -42,6 +42,16 @@ type ActivityLevel = "info" | "warning" | "error";
 type FeedbackRating = "helpful" | "mixed" | "not-helpful";
 type ActiveSurface = "home" | "initializer" | "optimizer" | "library" | "activity" | "settings" | "docs";
 type OptimizerStep = "input" | "resolve" | "review";
+
+export function initialActiveSurface(value: string | undefined): "home" | "optimizer" {
+  return value === "optimizer" ? "optimizer" : "home";
+}
+
+export function projectedTokenDeltaLabel(delta: { absoluteTokens: number; percentageChange: number }): string {
+  if (delta.absoluteTokens > 0) return `${delta.absoluteTokens.toLocaleString()} saved · ${Math.abs(delta.percentageChange)}% decrease`;
+  if (delta.absoluteTokens < 0) return `${Math.abs(delta.absoluteTokens).toLocaleString()} added · ${Math.abs(delta.percentageChange)}% increase`;
+  return "No projected token change";
+}
 type OptimizerReview =
   | { source: "local" }
   | { source: "provider"; provider?: "gemini" | "openai"; model?: string; title?: string; summary?: string };
@@ -156,6 +166,9 @@ type HostMessage = {
   recents?: OptimizerRecent[];
   view?: OptimizerStep;
   sourcePlan?: PromptSourcePlanV2;
+  trace?: OptimizationTraceV1;
+  failureCode?: string;
+  semantic?: { provider: "gemini" | "openai"; model: string; finishReason: string; appliedOperations: number; projection?: EngineeringTokenProjectionV1; refinedPrompt?: string };
 };
 type PendingLibraryOperation =
   | { kind: "save"; templateId?: string; resolve(detail: LibraryTemplateDetail): void; reject(error: Error): void }
@@ -700,7 +713,9 @@ export function App() {
   const [optimizedResult, setOptimizedResult] = useState<PromptOptimizeResult>();
   const [optimizerStep, setOptimizerStep] = useState<OptimizerStep>(() => previewStage() === "evaluate" ? "review" : "input");
   const [optimizerSourcePlan, setOptimizerSourcePlan] = useState<PromptSourcePlanV2>();
+  const [optimizerTrace, setOptimizerTrace] = useState<OptimizationTraceV1>();
   const [optimizerReview, setOptimizerReview] = useState<OptimizerReview | undefined>(() => previewStage() === "evaluate" ? { source: "local" } : undefined);
+  const [tokenProjection, setTokenProjection] = useState<EngineeringTokenProjectionV1>();
   const [optimizerRecents, setOptimizerRecents] = useState<OptimizerRecent[]>([]);
   const [optimizerSaveNotice, setOptimizerSaveNotice] = useState("");
   const [note, setNote] = useState("");
@@ -726,7 +741,9 @@ export function App() {
   const [restoreNotice, setRestoreNotice] = useState(false);
   const [resetPending, setResetPending] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const [activeSurface, setActiveSurface] = useState<ActiveSurface>("home");
+  const [activeSurface, setActiveSurface] = useState<ActiveSurface>(() =>
+    initialActiveSurface(document.documentElement.dataset.dwiInitialSurface),
+  );
   const [railExpanded, setRailExpanded] = useState(false);
   const [libraryState, setLibraryState] = useState<LibraryState>(initialLibraryState);
   const [libraryRevision, setLibraryRevision] = useState(0);
@@ -802,6 +819,8 @@ export function App() {
     setOptimizerStep("input");
     setOptimizerReview(undefined);
     setOptimizerSourcePlan(undefined);
+    setOptimizerTrace(undefined);
+    setTokenProjection(undefined);
     setOptimizerSaveNotice("");
     setPromptText("");
     setAssignmentId(DEFAULT_ASSIGNMENT_ID);
@@ -835,6 +854,7 @@ export function App() {
     setOutputSize(input?.outputSize ?? "low");
     const review = snapshot.optimizerReview;
     setOptimizerReview(review);
+    setTokenProjection(undefined);
     setOptimizedResult(undefined);
     setOptimizerStep(restoredOptimizerStep.current === "review" && snapshot.candidate && review ? "review" : "input");
     setDraft(snapshot.evaluationMarkdown ?? "");
@@ -857,6 +877,8 @@ export function App() {
       if (data.type === "prompt.v2.compiled" && data.candidate) {
         setCandidate(data.candidate);
         setOptimizerSourcePlan(data.sourcePlan);
+        setOptimizerTrace(undefined);
+        setTokenProjection(undefined);
         setOptimizerReview({ source: "local" });
         setIsCompiling(false);
         setWorkflowError("");
@@ -865,14 +887,30 @@ export function App() {
         setOptimizerStep("resolve");
         setActiveSurface("optimizer");
       }
-      if (data.type === "prompt.v2.semantic.result" && data.candidate && data.localCandidate && data.result) {
+      if (data.type === "prompt.v2.semantic.result" && data.candidate && data.localCandidate && (data.semantic || data.result)) {
         setCandidate(data.candidate);
         setOptimizerSourcePlan(data.sourcePlan);
+        setOptimizerTrace(data.trace);
         setOptimizedResult(data.result);
-        const reviewProvider = data.result.provider === "gemini" || data.result.provider === "openai" ? data.result.provider : undefined;
-        setOptimizerReview({ source: "provider", provider: reviewProvider, model: data.result.model, title: data.result.title, summary: data.result.summary });
+        const reviewProvider = data.semantic?.provider ?? (data.result?.provider === "gemini" || data.result?.provider === "openai" ? data.result.provider : undefined);
+        setOptimizerReview({ source: "provider", provider: reviewProvider, model: data.semantic?.model ?? data.result?.model, title: data.semantic ? "Validated semantic enhancement" : data.result?.title, summary: data.semantic ? `${data.semantic.appliedOperations} current hash-bound section operation(s) compiled locally.` : data.result?.summary });
+        setTokenProjection(data.semantic?.projection);
         setOptimizerSaveNotice("");
         setIsCompiling(false);
+        setStage("evaluate");
+        optimizerFocusPending.current = "review";
+        setOptimizerStep("review");
+        setActiveSurface("optimizer");
+      }
+      if (data.type === "prompt.v2.semantic.fallback" && data.localCandidate) {
+        setCandidate(data.localCandidate);
+        setOptimizerSourcePlan(data.sourcePlan);
+        setOptimizerTrace(data.trace);
+        setOptimizedResult(undefined);
+        setTokenProjection(undefined);
+        setOptimizerReview({ source: "local" });
+        setIsCompiling(false);
+        setWorkflowError(data.message ?? "The provider result was rejected. The local candidate remains available.");
         setStage("evaluate");
         optimizerFocusPending.current = "review";
         setOptimizerStep("review");
@@ -1230,6 +1268,8 @@ export function App() {
     setOptimizedResult(undefined);
     setOptimizerReview(undefined);
     setOptimizerSourcePlan(undefined);
+    setOptimizerTrace(undefined);
+    setTokenProjection(undefined);
     setOptimizerSaveNotice("");
     setCopyNotice("");
     setStage("compose");
@@ -1765,8 +1805,7 @@ export function App() {
         {sessionMode !== "generic" && sessionMode !== "recovery" && (stage === "compose" || stage === "evaluate") && <OptimizerStepNavigation step={optimizerStep} candidateAvailable={Boolean(candidate && optimizerReview)} onSelect={selectOptimizerStep} />}
 
         {sessionMode !== "generic" && sessionMode !== "recovery" && (stage === "compose" || stage === "evaluate") && optimizerStep === "input" && <article className="work-card compose-card">
-          <div className="section-head"><div className="card-heading compact-heading"><span className="section-label">Step 1 · Input</span><h1>Shape the task</h1></div><button type="button" className="mini-info" aria-label="Open project context in Project Initializer" onClick={activateInitializer}><Icon name="database" size={13} /></button></div>
-          <div className="optimizer-context-row"><Icon name="check" size={13} /><span><strong>Reviewed project context</strong> and the selected template are included automatically.</span></div>
+          <div className="section-head"><div className="card-heading compact-heading"><span className="section-label">Step 1 · Input</span><div className="task-heading-with-info"><h1>Shape the task</h1><span className="task-context-info"><button type="button" className="mini-info" aria-label="About included project context" aria-describedby="task-context-help"><Icon name="info" size={13} /></button><span id="task-context-help" className="task-context-tooltip" role="tooltip">Reviewed project context and the selected template are included automatically.</span></span></div></div><button type="button" className="mini-info" aria-label="Open project context in Project Initializer" onClick={activateInitializer}><Icon name="database" size={13} /></button></div>
           <div className="compose-input"><PromptInputEditor
             text={promptText}
             onTextChange={changePromptText}
@@ -1798,9 +1837,11 @@ export function App() {
         </article>}
 
         {sessionMode !== "generic" && sessionMode !== "recovery" && optimizerStep === "review" && candidate && <article className="work-card review-card">
-          <div className="section-head"><div className="card-heading compact-heading"><span className="section-label">Step 3 · {optimizerReview?.source === "local" ? "Local preview" : "LLM rewrite"}</span><h1 ref={optimizerReviewHeadingRef} tabIndex={-1}>{optimizerReview?.source === "provider" ? optimizerReview.title || optimizedResult?.title || "Review the optimized prompt" : "Review the local preview"}</h1>{optimizerReview?.source === "provider" && (optimizerReview.summary || optimizedResult?.summary) && <p>{optimizerReview.summary || optimizedResult?.summary}</p>}</div><span className="review-source" aria-label={optimizerReview?.source === "local" ? "Result source: Local preview" : `Result source: ${optimizerReview?.model || provider.model || "verified provider"}`}><Icon name={optimizerReview?.source === "local" ? "lock" : "sparkle"} size={12} />{optimizerReview?.source === "local" ? "Local" : optimizerReview?.model || provider.model || "Provider"}</span></div>
+          <div className="section-head review-heading"><div className="card-heading compact-heading review-heading-copy"><span className="section-label">Step 3 · {optimizerReview?.source === "local" ? "Local preview" : "LLM rewrite"}</span><h1 ref={optimizerReviewHeadingRef} tabIndex={-1} title={optimizerReview?.source === "provider" ? optimizerReview.title || optimizedResult?.title || "Review the optimized prompt" : "Review the local preview"}>{optimizerReview?.source === "provider" ? optimizerReview.title || optimizedResult?.title || "Review the optimized prompt" : "Review the local preview"}</h1>{optimizerReview?.source === "provider" && (optimizerReview.summary || optimizedResult?.summary) && <p title={optimizerReview.summary || optimizedResult?.summary}>{optimizerReview.summary || optimizedResult?.summary}</p>}</div><span className="review-source" aria-label={optimizerReview?.source === "local" ? "Result source: Local preview" : `Result source: ${optimizerReview?.model || provider.model || "verified provider"}`}><Icon name={optimizerReview?.source === "local" ? "lock" : "sparkle"} size={12} />{optimizerReview?.source === "local" ? "Local" : optimizerReview?.model || provider.model || "Provider"}</span></div>
           <div className="prompt-output" role="region" aria-label="Generated prompt"><pre tabIndex={0} aria-label="Generated prompt text">{candidate.text}</pre></div>
+          {tokenProjection && <details className="review-source-plan token-projection" open><summary>Estimated engineering token cost · {tokenProjection.estimationStatus.replace("_", " ")}</summary><p className="projection-disclaimer">Projection only—not a billing record or deterministic token count.</p><div className="projection-totals"><div><span>Without refinement</span><strong>{tokenProjection.baselineProjection.totalTokens.toLocaleString()}</strong></div><div><span>With refined prompt</span><strong>{tokenProjection.optimizedProjection.totalTokens.toLocaleString()}</strong></div><div><span>Projected change</span><strong>{projectedTokenDeltaLabel(tokenProjection.projectedDelta)}</strong></div></div><dl className="projection-breakdown">{(["planning", "contextIngestion", "promptInput", "toolProviderCalls", "retries", "finalOutput"] as const).map((part) => <div key={part}><dt>{part.replace(/([A-Z])/g, " $1")}</dt><dd>{tokenProjection.baselineProjection.breakdown[part].toLocaleString()} → {tokenProjection.optimizedProjection.breakdown[part].toLocaleString()}</dd></div>)}</dl><p>Confidence: {tokenProjection.confidence} · Range: {tokenProjection.optimizedProjection.totalTokens.toLocaleString()} ({tokenProjection.uncertainty.optimizedMin.toLocaleString()}–{tokenProjection.uncertainty.optimizedMax.toLocaleString()})</p><p>Cost: {tokenProjection.cost.status === "cost_unavailable" ? "unavailable—no validated provider price supplied" : `$${tokenProjection.cost.optimized.toFixed(4)} estimated`}</p><p>Routing: requested {tokenProjection.routing.requestedProvider}/{tokenProjection.routing.requestedModel}{tokenProjection.routing.actualProvider || tokenProjection.routing.actualModel ? `; actual ${tokenProjection.routing.actualProvider ?? "provider unknown"}/${tokenProjection.routing.actualModel ?? "model unknown"}` : "; actual route not reported"}{tokenProjection.routing.substitutionReason ? `; ${tokenProjection.routing.substitutionReason}` : ""}.</p>{tokenProjection.telemetry && <p>{tokenProjection.telemetry.scope === "task_execution" ? "Reconciled task-execution telemetry" : "Measured optimizer-call telemetry"}: {tokenProjection.telemetry.totalTokens.toLocaleString()} tokens{tokenProjection.telemetry.scope === "optimizer_call" ? "; this does not measure downstream task execution" : ""}.</p>}<details><summary>Assumptions and metadata</summary><ul>{tokenProjection.assumptions.map((assumption) => <li key={assumption}>{assumption}</li>)}</ul><p>Metadata used: {tokenProjection.metadataUsed.length ? tokenProjection.metadataUsed.join(", ") : "none declared"}</p><p>{tokenProjection.optimizationRationale}</p><small>Estimation ID: {tokenProjection.estimationId}</small></details></details>}
           {optimizerSourcePlan && <details className="review-source-plan"><summary>Source provenance · {optimizerSourcePlan.decisions.filter(({ disposition }) => disposition !== "exclude").length} active sources</summary><ul>{optimizerSourcePlan.decisions.filter(({ disposition }) => disposition !== "exclude").map((decision) => <li key={decision.id}><strong>{decision.label}</strong><span>{decision.disposition} · {decision.provenance.join(" · ")}</span></li>)}</ul></details>}
+          {optimizerTrace && <details className="review-source-plan semantic-evidence"><summary>{optimizerTrace.outcome === "candidate" ? "Validated semantic execution" : "Local fallback retained"} · {optimizerTrace.calls.length} call</summary><ul>{optimizerTrace.calls.map((call) => <li key={`${call.ordinal}-${call.purpose}`}><strong>{call.purpose} · {call.result}</strong><span>{call.provider}/{call.model} · {call.latencyMs ?? 0} ms{call.inputTokens === undefined ? "" : ` · ${call.inputTokens} input tokens`}{call.outputTokens === undefined ? "" : ` · ${call.outputTokens} output tokens`}{call.failureCode ? ` · ${call.failureCode}` : ""}</span></li>)}</ul></details>}
           {isCompiling && <div className="inline-alert optimizer-progress" role="status"><Icon name="refresh" /><span>Rewriting with the verified provider…</span></div>}
           {workflowError && <div className="inline-alert" role="alert"><Icon name="warning" /><span>{workflowError}</span></div>}
           <div className="actions prompt-actions"><button className="secondary" type="button" onClick={() => selectOptimizerStep("resolve")} disabled={isCompiling}><Icon name="back" size={13} />Back to resolve</button><button className="primary" type="button" onClick={() => void copyCandidate()} disabled={isCompiling}>{copyNotice === "Prompt copied." ? <><Icon name="check" size={14} />Copied</> : "Copy prompt"}</button></div>

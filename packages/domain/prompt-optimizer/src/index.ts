@@ -18,3 +18,5 @@ export * from "./v2/question-policy.js";
 export * from "./v2/source-resolution.js";
 export * from "./orchestration/contracts.js";
 export * from "./orchestration/simulator.js";
+export * from "./orchestration/execute.js";
+export * from "./orchestration/token-projection.js";

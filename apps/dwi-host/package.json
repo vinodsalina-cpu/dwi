@@ -14,13 +14,20 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "onCommand:dwi.open",
-    "onView:dwi-view"
+    "onCommand:dwi.openPromptOptimizer",
+    "onView:dwi-view",
+    "onView:dwi-prompt-optimizer-view"
   ],
   "contributes": {
     "commands": [
       {
         "command": "dwi.open",
         "title": "Open Developer Work Intelligence",
+        "category": "DWI"
+      },
+      {
+        "command": "dwi.openPromptOptimizer",
+        "title": "Open Prompt Optimizer",
         "category": "DWI"
       },
       {
@@ -40,6 +47,11 @@
           "id": "dwi-sidebar",
           "title": "Developer Workspace Intelligence",
           "icon": "media/dwi.svg"
+        },
+        {
+          "id": "dwi-prompt-optimizer-sidebar",
+          "title": "Prompt Optimizer",
+          "icon": "media/prompt-optimizer.svg"
         }
       ]
     },
@@ -49,6 +61,13 @@
           "type": "webview",
           "id": "dwi-view",
           "name": "Home"
+        }
+      ],
+      "dwi-prompt-optimizer-sidebar": [
+        {
+          "type": "webview",
+          "id": "dwi-prompt-optimizer-view",
+          "name": "Prompt Optimizer"
         }
       ]
     }

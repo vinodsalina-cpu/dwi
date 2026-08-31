@@ -1,18 +1,21 @@
 .prompt-input-editor {
-  position: relative;
+  display: grid;
   width: 100%;
   min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
 }
 
 .prompt-input-editor__textarea {
   display: block;
   width: 100%;
   min-width: 0;
-  min-height: 142px;
+  min-height: 190px;
   box-sizing: border-box;
   border: 1px solid var(--vscode-input-border, var(--dwi-border, #3a414c));
   border-radius: 8px;
-  padding: 42px 12px 40px 10px;
+  grid-column: 1 / -1;
+  padding: 10px 12px;
   resize: vertical;
   background: var(--vscode-input-background, var(--dwi-muted-surface, #252a32));
   color: var(--vscode-input-foreground, var(--dwi-text, #e8eaed));
@@ -34,15 +37,15 @@
 }
 
 .prompt-input-editor__control {
-  position: absolute;
+  position: relative;
   z-index: 4;
-  right: 7px;
-  max-width: calc(100% - 14px);
+  min-width: 0;
+  max-width: 100%;
 }
 .prompt-input-editor__control.is-open { z-index: 8; }
 
-.prompt-input-editor__control--assignment { top: 7px; left: 7px; }
-.prompt-input-editor__control--output { bottom: 7px; }
+.prompt-input-editor__control--assignment { grid-column: 1; }
+.prompt-input-editor__control--output { grid-column: 2; }
 
 .prompt-input-editor__trigger {
   display: flex;
@@ -68,8 +71,8 @@
   background: var(--vscode-list-hoverBackground, var(--dwi-hover, #2b313a));
 }
 
-.prompt-input-editor__assignment-trigger { max-width: min(230px, 78vw); margin-left: auto; }
-.prompt-input-editor__output-trigger { max-width: 128px; }
+.prompt-input-editor__assignment-trigger { width: 100%; max-width: min(280px, 100%); justify-content: space-between; }
+.prompt-input-editor__output-trigger { max-width: 150px; }
 
 .prompt-input-editor__trigger strong {
   min-width: 0;
@@ -98,8 +101,8 @@
   color: var(--vscode-editorWidget-foreground, var(--dwi-text, #e8eaed));
 }
 
-.prompt-input-editor__assignment-popover { top: calc(100% + 5px); width: min(280px, 100%); max-width: 100%; }
-.prompt-input-editor__output-popover { bottom: calc(100% + 5px); width: 142px; }
+.prompt-input-editor__assignment-popover { top: calc(100% + 5px); left: 0; right: auto; width: min(280px, calc(100vw - 32px)); }
+.prompt-input-editor__output-popover { top: calc(100% + 5px); width: 160px; }
 
 .prompt-input-editor__search {
   width: 100%;

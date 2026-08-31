@@ -34,7 +34,7 @@ export interface OptimizationSessionIdentityV1 {
   readonly baseHash: string;
 }
 
-const SAFE_ID = /^[a-z0-9][a-z0-9._-]{0,127}$/iu;
+const SAFE_ID = /^[a-z0-9][a-z0-9._:-]{0,127}$/iu;
 const HASH = /^[a-f0-9]{64}$/iu;
 
 function hasExactKeys(
@@ -232,12 +232,21 @@ export interface EvaluationCorpusV1 {
 
 export type ProviderWireScenarioKindV1 =
   | "success"
+  | "delay"
   | "malformed-json"
+  | "invalid-patch"
   | "timeout"
   | "cancelled"
+  | "stale-completion"
+  | "truncated"
+  | "refused"
   | "unauthorized"
+  | "forbidden"
   | "rate-limited"
-  | "server-error";
+  | "quota"
+  | "server-error"
+  | "disconnect"
+  | "connection-failure";
 
 export interface ProviderWireScenarioV1 {
   readonly schemaVersion: typeof DWI_PROVIDER_WIRE_SCENARIO_SCHEMA_V1;
@@ -255,12 +264,21 @@ export function validateProviderWireScenarioV1(
     !SAFE_ID.test(scenario.id) ||
     ![
       "success",
+      "delay",
       "malformed-json",
+      "invalid-patch",
       "timeout",
       "cancelled",
+      "stale-completion",
+      "truncated",
+      "refused",
       "unauthorized",
+      "forbidden",
       "rate-limited",
+      "quota",
       "server-error",
+      "disconnect",
+      "connection-failure",
     ].includes(scenario.kind) ||
     (scenario.expectedFailureCode !== undefined &&
       !/^[A-Z][A-Z0-9_]{0,63}$/.test(scenario.expectedFailureCode))

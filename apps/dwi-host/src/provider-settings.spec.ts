@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { PROVIDER_SECRET_KEY, PROVIDER_SETTINGS_KEY, checkGeminiProvider, checkOpenAICompatibleProvider, noProviderSettings, rewritePromptWithProvider, validateProviderSettings } from "./provider-settings.js";
+import { createPromptDocumentV2, createPromptSemanticRequestV2 } from "@platform/domain-prompt-optimizer";
+import { PROVIDER_SECRET_KEY, PROVIDER_SETTINGS_KEY, checkGeminiProvider, checkOpenAICompatibleProvider, noProviderSettings, rewritePromptWithProvider, semanticProviderPort, validateProviderSettings } from "./provider-settings.js";
 
 describe("DWI provider settings", () => {
   it("persists only non-secret provider metadata", () => {
@@ -61,7 +62,8 @@ describe("DWI provider settings", () => {
     const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
       expect((init?.headers as Record<string, string>)["x-goog-api-key"]).toBe("secret");
       expect(String(init?.body)).toContain("Bounded local prompt");
-      expect(String(init?.body)).not.toContain("secret");
+      expect(String(init?.body)).not.toContain("Bearer secret");
+      expect(String(init?.body)).not.toContain('"apiKey":"secret"');
       const structured = { optimizedPrompt: "Optimized prompt", title: "Result", summary: "Improved", improvements: [], remainingQuestions: [], warnings: [] };
       return new Response(JSON.stringify({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: JSON.stringify(structured) }] } }] }), { status: 200 });
     };
@@ -70,5 +72,38 @@ describe("DWI provider settings", () => {
 
   it("refuses a rewrite unless the provider passed its model-response check", async () => {
     await expect(rewritePromptWithProvider({ mode: "gemini", model: "gemini-2.5-flash", configured: false, health: "unverified" }, "secret", "Prompt")).rejects.toMatchObject({ message: expect.stringContaining("Configure and verify") });
+  });
+
+  it("executes a structured semantic request without placing the credential in its body", async () => {
+    const request = createPromptSemanticRequestV2(createPromptDocumentV2({ id: "semantic-host", now: "2026-08-31T00:00:00.000Z" }), { operation: "enhance", requestId: "request", cancellationId: "cancel", provider: "openai", model: "fixed", compiledPrompt: "Bounded prompt" });
+    let sent: RequestInit | undefined;
+    const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
+      sent = init;
+      return new Response(JSON.stringify({ choices: [{ finish_reason: "stop", message: { content: JSON.stringify({ operation: "enhance", baseHash: request.baseHash, operations: [] }) } }], usage: { prompt_tokens: 12, completion_tokens: 4 } }), { status: 200 });
+    };
+    await expect(semanticProviderPort({ mode: "openai-compatible", model: "fixed", baseUrl: "https://provider.example/v1", configured: true, health: "ready" }, "secret", fetchImpl).execute(request)).resolves.toMatchObject({ finishReason: "stop", inputTokens: 12, outputTokens: 4 });
+    expect((sent?.headers as Record<string, string>).authorization).toBe("Bearer secret");
+    expect(String(sent?.body)).not.toContain("Bearer secret");
+    expect(String(sent?.body)).not.toContain('\"apiKey\":\"secret\"');
+  });
+
+  it("marks provider length termination as truncated", async () => {
+    const request = createPromptSemanticRequestV2(createPromptDocumentV2({ id: "semantic-host", now: "2026-08-31T00:00:00.000Z" }), { operation: "enhance", requestId: "request", cancellationId: "cancel", provider: "gemini", model: "fixed", compiledPrompt: "Bounded prompt" });
+    const fetchImpl = async () => new Response(JSON.stringify({ candidates: [{ finishReason: "MAX_TOKENS", content: { parts: [{ text: "{}" }] } }] }), { status: 200 });
+    await expect(semanticProviderPort({ mode: "gemini", model: "fixed", configured: true, health: "ready" }, "secret", fetchImpl).execute(request)).resolves.toMatchObject({ truncated: true });
+  });
+
+  it("maps the OpenAI-compatible HTTP and transport fault matrix without leaking details", async () => {
+    const request = createPromptSemanticRequestV2(createPromptDocumentV2({ id: "semantic-matrix", now: "2026-08-31T00:00:00.000Z" }), { operation: "enhance", requestId: "request", cancellationId: "cancel", provider: "openai", model: "fixed", compiledPrompt: "Bounded prompt" });
+    const port = (fetchImpl: typeof fetch) => semanticProviderPort({ mode: "openai-compatible", model: "fixed", baseUrl: "https://provider.example/v1", configured: true, health: "ready" }, "secret", fetchImpl);
+    for (const [status, code, expected] of [[401, "UNAUTHENTICATED", "AUTHENTICATION"], [403, "PERMISSION_DENIED", "AUTHENTICATION"], [429, "QUOTA_EXCEEDED", "RATE_LIMITED"], [429, "RATE_LIMIT_EXCEEDED", "RATE_LIMITED"], [500, "INTERNAL", "PROVIDER_ERROR"]] as const) {
+      const fetchImpl = async () => new Response(JSON.stringify({ error: { code, message: "private provider detail" } }), { status });
+      await expect(port(fetchImpl as typeof fetch).execute(request)).rejects.toMatchObject({ code: expected, message: expect.not.stringContaining("private provider detail") });
+    }
+    await expect(port((async () => { throw new Error("disconnect at secret endpoint"); }) as typeof fetch).execute(request)).rejects.toMatchObject({ code: "PROVIDER_ERROR", message: expect.not.stringContaining("secret endpoint") });
+    await expect(port((async () => new Response(JSON.stringify({ choices: [{ finish_reason: "content_filter", message: { content: "" } }] }), { status: 200 })) as typeof fetch).execute(request)).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+    const controller = new AbortController();
+    controller.abort();
+    await expect(port((async () => { throw new DOMException("cancelled", "AbortError"); }) as typeof fetch).execute(request, controller.signal)).rejects.toMatchObject({ code: "CANCELLED" });
   });
 });

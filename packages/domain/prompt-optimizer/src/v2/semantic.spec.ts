@@ -67,6 +67,13 @@ function providerText(questions: readonly unknown[]): string {
 }
 
 describe("bounded provider-generated clarification questions", () => {
+  it("builds the exact same-call snake_case projection contract when estimation metadata is supplied", () => {
+    const request = createPromptSemanticRequestV2(createPromptDocumentV2({ id: "prompt-projection", now: "2026-08-31T00:00:00.000Z" }), { operation: "enhance", requestId: "request-projection", cancellationId: "cancel-projection", provider: "openai", model: "fixed-model", compiledPrompt: "Implement bounded retries.", estimationContext: { estimationId: "estimate-1", moduleCount: 3, criticality: "high" } });
+    const prompt = JSON.parse(buildPromptSemanticProviderInputV2(request).prompt) as { responseContract: { projection: Record<string, unknown> }; projectionRequirements: Record<string, unknown> };
+    expect(prompt.responseContract.projection).toMatchObject({ estimation_id: "estimate-1", estimation_status: "estimate_only", projected_delta: { absolute_tokens: "baseline minus optimized" }, routing_disclosure: { requested_provider: "openai", requested_model: "fixed-model" } });
+    expect(prompt.projectionRequirements).toMatchObject({ endToEndEngineeringEstimate: true, notBillingRecord: true, notPromptTokenCountOnly: true, noIndependentTransmission: true });
+  });
+
   it("builds a draft-grounded v3 contract with a fixed target allowlist", () => {
     const request = analyzeRequest();
     expect(request.allowlistedQuestionTargets).toEqual(
@@ -511,7 +518,7 @@ describe("bounded provider-generated clarification questions", () => {
         providerText([question()]).replace(request.baseHash, "0".repeat(64)),
         request,
       ),
-    ).toThrow(/requested operation/iu);
+    ).toThrow(/stale/iu);
     expect(() =>
       validatePromptSemanticResultV2(request, {
         schemaVersion: "prompt-analyze-result.v3",
