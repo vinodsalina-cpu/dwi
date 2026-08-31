@@ -60,26 +60,32 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open Prompt Optimizer" }));
     expect(screen.getByRole("navigation", { name: "Prompt Optimizer steps" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /1 Input/ }).getAttribute("aria-current")).toBe("step");
-    expect((screen.getByRole("button", { name: /2 Review/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /2 Resolve/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /3 Review/ }) as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => { hostMessage({ type: "dwi.provider.state", settings: { mode: "none", configured: false, health: "missing" } }); });
     const task = screen.getByRole("textbox", { name: "Task to optimize" }) as HTMLTextAreaElement;
     expect(task.disabled).toBe(false);
     expect(screen.queryByRole("checkbox")).toBeNull();
     fireEvent.change(task, { target: { value: "Implement a safe provider retry flow." } });
 
-    fireEvent.click(screen.getByRole("button", { name: "Preview locally" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue to resolve" }));
     const compile = posted.findLast((message) => (message as { type?: string }).type === "prompt.v2.compile") as Record<string, unknown>;
     expect(compile).toMatchObject({ type: "prompt.v2.compile", schemaVersion: "prompt-command.v2", documentId: "current-prompt", revision: 1 });
     expect(compile).not.toHaveProperty("selectedModuleIds");
 
     const localCandidate = compileDwiCandidate(brief, DWI_MODULES.filter(({ defaultSelected }) => defaultSelected).map(({ id }) => id), { task: "Implement a safe provider retry flow.", promptType: "General", outputSize: "low" });
     await act(async () => { hostMessage({ type: "prompt.v2.compiled", requestId: compile.requestId, candidate: localCandidate }); });
-    expect(screen.getByText("Step 2 · Local preview")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /2 Review/ }).getAttribute("aria-current")).toBe("step");
+    expect(screen.getByRole("heading", { name: "Confirm the local interpretation" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /2 Resolve/ }).getAttribute("aria-current")).toBe("step");
     expect(screen.queryByRole("textbox", { name: "Task to optimize" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Continue to review" }));
+    expect(screen.getByText("Step 3 · Local preview")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /3 Review/ }).getAttribute("aria-current")).toBe("step");
     expect(screen.getByRole("region", { name: "Generated prompt" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Open in editor" }));
     expect(posted.findLast((message) => (message as { type?: string }).type === "prompt.v2.review.open")).toEqual({ type: "prompt.v2.review.open", schemaVersion: "prompt-command.v2" });
 
+    await act(async () => { hostMessage({ type: "dwi.provider.state", settings: { mode: "gemini", model: "gemini-2.5-flash", configured: true, health: "ready" } }); });
     fireEvent.click(screen.getByRole("button", { name: "Rewrite with LLM" }));
     const semantic = posted.findLast((message) => (message as { type?: string }).type === "prompt.v2.semantic") as Record<string, unknown>;
     expect(semantic).toMatchObject({ type: "prompt.v2.semantic", operation: "enhance", revision: 2 });
@@ -96,16 +102,18 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save to recents" }));
     expect(posted.findLast((message) => (message as { type?: string }).type === "prompt.v2.record.save")).toMatchObject({ requestId: semantic.requestId, documentId: "current-prompt" });
 
-    fireEvent.click(screen.getByRole("button", { name: "Back to edit" }));
+    fireEvent.click(screen.getByRole("button", { name: "Back to resolve" }));
+    fireEvent.click(screen.getByRole("button", { name: "Back to input" }));
     expect(screen.getByRole("textbox", { name: "Task to optimize" })).toBeTruthy();
     expect(screen.queryByText("Optimized implementation prompt")).toBeNull();
-    expect((screen.getByRole("button", { name: /2 Review/ }) as HTMLButtonElement).disabled).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: /2 Review/ }));
+    expect((screen.getByRole("button", { name: /3 Review/ }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: /3 Review/ }));
     expect(screen.getByText("Optimized implementation prompt")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Back to edit" }));
+    fireEvent.click(screen.getByRole("button", { name: "Back to resolve" }));
+    fireEvent.click(screen.getByRole("button", { name: "Back to input" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Task to optimize" }), { target: { value: "Change the retry policy." } });
-    expect((screen.getByRole("button", { name: /2 Review/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /3 Review/ }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByText("Optimized implementation prompt")).toBeNull();
 
     await act(async () => {
@@ -113,7 +121,7 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
       hostMessage({ type: "dwi.snapshot.partial", snapshot: { status: "partial", stage: "evaluate", brief, candidate: optimized, optimizerDraft: { task: "Implement a safe provider retry flow.", assignmentId: "general", promptType: "General", outputSize: "low" }, optimizerReview: { source: "provider", provider: "gemini", model: "gemini-2.5-flash", title: "Safe provider retry", summary: "Clarifies retry and failure handling." } } });
     });
     expect(screen.getByText("Optimized implementation prompt")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /2 Review/ }).getAttribute("aria-current")).toBe("step");
+    expect(screen.getByRole("button", { name: /3 Review/ }).getAttribute("aria-current")).toBe("step");
 
     await act(async () => {
       hostMessage({ type: "prompt.v2.view.state", view: "input" });
@@ -127,7 +135,7 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
       hostMessage({ type: "dwi.snapshot.partial", snapshot: { status: "partial", stage: "evaluate", brief, candidate: optimized, optimizerDraft: { task: "Legacy prompt", assignmentId: "general", promptType: "General", outputSize: "low" } } });
     });
     expect(screen.getByRole("textbox", { name: "Task to optimize" })).toBeTruthy();
-    expect((screen.getByRole("button", { name: /2 Review/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /3 Review/ }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByText("Optimized implementation prompt")).toBeNull();
   });
 });

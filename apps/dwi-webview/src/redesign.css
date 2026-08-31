@@ -149,7 +149,7 @@ button:not(:disabled) { cursor: pointer; }
 .prompt-workflow { width: min(100%, 600px); margin: 0 auto; }
 .prompt-workflow > * + * { margin-top: 9px; }
 .optimizer-step-navigation { min-width: 0; }
-.optimizer-step-navigation ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--dwi-soft-border); border-radius: 7px; background: var(--dwi-muted-surface); list-style: none; }
+.optimizer-step-navigation ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--dwi-soft-border); border-radius: 7px; background: var(--dwi-muted-surface); list-style: none; }
 .optimizer-step-navigation li { min-width: 0; }
 .optimizer-step-navigation li + li { border-left: 1px solid var(--dwi-soft-border); }
 .optimizer-step-navigation button { display: flex; width: 100%; min-width: 0; min-height: 31px; align-items: center; gap: 6px; border: 0; padding: 5px 8px; background: transparent; color: var(--dwi-muted); text-align: left; }
@@ -158,6 +158,11 @@ button:not(:disabled) { cursor: pointer; }
 .optimizer-step-navigation button:disabled { opacity: .48; }
 .optimizer-step-navigation button span { display: inline-grid; width: 17px; height: 17px; flex: 0 0 auto; place-items: center; border: 1px solid currentColor; border-radius: 50%; font-size: 10px; font-variant-numeric: tabular-nums; }
 .optimizer-step-navigation button strong { min-width: 0; overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.optimizer-resolve-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin: 14px 0; }
+.optimizer-resolve-facts > div { min-width: 0; border: 1px solid var(--dwi-soft-border); border-radius: 6px; padding: 8px; background: var(--dwi-muted-surface); }
+.optimizer-resolve-facts span, .optimizer-resolve-facts strong { display: block; overflow-wrap: anywhere; }
+.optimizer-resolve-facts span { color: var(--dwi-muted); font-size: 10px; }
+.optimizer-resolve-facts strong { margin-top: 3px; font-size: 10px; }
 .home-workflow { display: grid; align-content: start; gap: 9px; }
 .home-workflow > * + * { margin-top: 0; }
 .home-primary-card .actions { flex-wrap: wrap; }

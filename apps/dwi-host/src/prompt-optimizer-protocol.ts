@@ -8,6 +8,12 @@ import type { DwiOutputSize } from "@platform/dwi-core";
 
 export const PROMPT_COMMAND_SCHEMA = "prompt-command.v2" as const;
 
+/**
+ * Resolve is an ephemeral protocol-visible transition. Persisted view state
+ * remains limited to recoverable input/review checkpoints.
+ */
+export type PromptOptimizerView = "input" | "resolve" | "review";
+
 interface PromptCommandIdentity {
   schemaVersion: typeof PROMPT_COMMAND_SCHEMA;
   requestId: string;
@@ -32,7 +38,7 @@ export type PromptOptimizerCommand =
   | Pick<PromptCommandIdentity, "schemaVersion" | "requestId" | "correlationId" | "documentId"> & { type: "prompt.v2.record.save" }
   | { type: "prompt.v2.draft.save"; schemaVersion: typeof PROMPT_COMMAND_SCHEMA; input: PromptOptimizerInput }
   | { type: "prompt.v2.review.open"; schemaVersion: typeof PROMPT_COMMAND_SCHEMA }
-  | { type: "prompt.v2.view.set"; schemaVersion: typeof PROMPT_COMMAND_SCHEMA; view: "input" | "review" };
+  | { type: "prompt.v2.view.set"; schemaVersion: typeof PROMPT_COMMAND_SCHEMA; view: PromptOptimizerView };
 
 const ID = /^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$/;
 const HASH = /^[a-f0-9]{64}$/;
@@ -70,7 +76,7 @@ export function parsePromptOptimizerCommand(value: unknown): PromptOptimizerComm
     return value as PromptOptimizerCommand;
   }
   if (value.type === "prompt.v2.view.set") {
-    if (!exact(value, ["type", "schemaVersion", "view"]) || value.schemaVersion !== PROMPT_COMMAND_SCHEMA || (value.view !== "input" && value.view !== "review")) return undefined;
+    if (!exact(value, ["type", "schemaVersion", "view"]) || value.schemaVersion !== PROMPT_COMMAND_SCHEMA || (value.view !== "input" && value.view !== "resolve" && value.view !== "review")) return undefined;
     return value as PromptOptimizerCommand;
   }
   if (value.type === "prompt.v2.draft.save") {

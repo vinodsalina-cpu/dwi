@@ -19,6 +19,7 @@ describe("prompt optimizer protocol", () => {
     expect(parsePromptOptimizerCommand({ type: "prompt.v2.draft.save", schemaVersion: "prompt-command.v2", input: { ...input, task: "" } })?.type).toBe("prompt.v2.draft.save");
     expect(parsePromptOptimizerCommand({ type: "prompt.v2.review.open", schemaVersion: "prompt-command.v2" })?.type).toBe("prompt.v2.review.open");
     expect(parsePromptOptimizerCommand({ type: "prompt.v2.view.set", schemaVersion: "prompt-command.v2", view: "review" })?.type).toBe("prompt.v2.view.set");
+    expect(parsePromptOptimizerCommand({ type: "prompt.v2.view.set", schemaVersion: "prompt-command.v2", view: "resolve" })?.type).toBe("prompt.v2.view.set");
   });
 
   it("rejects extra keys, unsupported operations, and invalid identity", () => {

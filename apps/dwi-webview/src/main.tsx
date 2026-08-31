@@ -40,7 +40,7 @@ type SessionMode = "loading" | "workspace" | "generic" | "recovery";
 type ActivityLevel = "info" | "warning" | "error";
 type FeedbackRating = "helpful" | "mixed" | "not-helpful";
 type ActiveSurface = "home" | "initializer" | "optimizer" | "library" | "activity" | "settings" | "docs";
-type OptimizerStep = "input" | "review";
+type OptimizerStep = "input" | "resolve" | "review";
 type OptimizerReview =
   | { source: "local" }
   | { source: "provider"; provider?: "gemini" | "openai"; model?: string; title?: string; summary?: string };
@@ -527,11 +527,12 @@ function SurfaceHeader({ title, onBack }: { title: string; onBack(): void }) {
   </header>;
 }
 
-function OptimizerStepNavigation({ step, reviewAvailable, onSelect }: { step: OptimizerStep; reviewAvailable: boolean; onSelect(step: OptimizerStep): void }) {
+function OptimizerStepNavigation({ step, candidateAvailable, onSelect }: { step: OptimizerStep; candidateAvailable: boolean; onSelect(step: OptimizerStep): void }) {
   return <nav className="optimizer-step-navigation" aria-label="Prompt Optimizer steps">
     <ol>
       <li><button type="button" aria-label="Step 1 Input" aria-current={step === "input" ? "step" : undefined} onClick={() => onSelect("input")}><span>1</span><strong>Input</strong></button></li>
-      <li><button type="button" aria-label="Step 2 Review" aria-current={step === "review" ? "step" : undefined} disabled={!reviewAvailable} onClick={() => onSelect("review")}><span>2</span><strong>Review</strong></button></li>
+      <li><button type="button" aria-label="Step 2 Resolve" aria-current={step === "resolve" ? "step" : undefined} disabled={!candidateAvailable} onClick={() => onSelect("resolve")}><span>2</span><strong>Resolve</strong></button></li>
+      <li><button type="button" aria-label="Step 3 Review" aria-current={step === "review" ? "step" : undefined} disabled={!candidateAvailable} onClick={() => onSelect("review")}><span>3</span><strong>Review</strong></button></li>
     </ol>
   </nav>;
 }
@@ -855,8 +856,8 @@ export function App() {
         setIsCompiling(false);
         setWorkflowError("");
         setStage("evaluate");
-        optimizerFocusPending.current = "review";
-        setOptimizerStep("review");
+        optimizerFocusPending.current = "resolve";
+        setOptimizerStep("resolve");
         setActiveSurface("optimizer");
       }
       if (data.type === "prompt.v2.semantic.result" && data.candidate && data.localCandidate && data.result) {
@@ -1155,7 +1156,7 @@ export function App() {
   }, [activeSurface]);
 
   useEffect(() => {
-    if (optimizerStep === "review" && !candidate) setOptimizerStep("input");
+    if (optimizerStep !== "input" && !candidate) setOptimizerStep("input");
   }, [candidate, optimizerStep]);
 
   useEffect(() => {
@@ -1163,6 +1164,7 @@ export function App() {
     optimizerFocusPending.current = undefined;
     window.requestAnimationFrame(() => {
       if (optimizerStep === "review") optimizerReviewHeadingRef.current?.focus();
+      else if (optimizerStep === "resolve") document.querySelector<HTMLElement>('[data-optimizer-resolve-heading]')?.focus();
       else document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Task to optimize"]')?.focus();
     });
   }, [activeSurface, optimizerStep]);
@@ -1249,7 +1251,7 @@ export function App() {
   }
 
   function selectOptimizerStep(next: OptimizerStep): void {
-    if (next === "review" && (!candidate || !optimizerReview)) return;
+    if (next !== "input" && (!candidate || !optimizerReview)) return;
     setWorkflowError("");
     optimizerFocusPending.current = next;
     restoredOptimizerStep.current = next;
@@ -1304,8 +1306,8 @@ export function App() {
     setIsCompiling(false);
     if (operation === "compile") {
       setStage("evaluate");
-      optimizerFocusPending.current = "review";
-      setOptimizerStep("review");
+      optimizerFocusPending.current = "resolve";
+      setOptimizerStep("resolve");
     } else setWorkflowError("LLM rewriting is available in the installed VS Code extension.");
   }
 
@@ -1731,13 +1733,13 @@ export function App() {
     </section></>}
 
     {activeSurface === "optimizer" && <><header className="app-header">
-      <div className="app-title"><strong>Prompt Optimizer</strong><span>{optimizerStep === "review" ? "Review" : "Input"}</span></div>
+      <div className="app-title"><strong>Prompt Optimizer</strong><span>{optimizerStep === "resolve" ? "Resolve" : optimizerStep === "review" ? "Review" : "Input"}</span></div>
       <button className="icon-button compact" type="button" aria-label="Open provider settings" title="Provider settings" onClick={openSettings}><Icon name="settings" size={14} /></button>
     </header><section className="content"><div className="prompt-workflow">
 
         {(stage === "consent" || stage === "brief") && <article className="work-card empty-state"><div className="empty-icon"><Icon name="database" /></div><span className="section-label">Project context required</span><h1>Initialize this project first</h1><p>Prompt Optimizer uses the reviewed project brief as its bounded knowledge layer.</p><button className="primary" type="button" onClick={activateInitializer}>Open Project Initializer</button></article>}
 
-        {sessionMode !== "generic" && sessionMode !== "recovery" && (stage === "compose" || stage === "evaluate") && <OptimizerStepNavigation step={optimizerStep} reviewAvailable={Boolean(candidate && optimizerReview)} onSelect={selectOptimizerStep} />}
+        {sessionMode !== "generic" && sessionMode !== "recovery" && (stage === "compose" || stage === "evaluate") && <OptimizerStepNavigation step={optimizerStep} candidateAvailable={Boolean(candidate && optimizerReview)} onSelect={selectOptimizerStep} />}
 
         {sessionMode !== "generic" && sessionMode !== "recovery" && (stage === "compose" || stage === "evaluate") && optimizerStep === "input" && <article className="work-card compose-card">
           <div className="section-head"><div className="card-heading compact-heading"><span className="section-label">Step 1 · Input</span><h1>Shape the task</h1></div><button type="button" className="mini-info" aria-label="Open project context in Project Initializer" onClick={activateInitializer}><Icon name="database" size={13} /></button></div>
@@ -1751,19 +1753,26 @@ export function App() {
             outputSize={outputSize}
             onOutputSizeChange={changeOutputSize}
             label="Task to optimize"
-            disabled={provider.health !== "ready"}
+            disabled={false}
           /></div>
           {provider.health !== "ready" && <div className="inline-alert provider-required" role="status"><Icon name="warning" /><span>Connect and verify an LLM provider before rewriting.</span><button type="button" className="text-button" onClick={openSettings}>Open settings</button></div>}
           {workflowError && <div className="inline-alert" role="alert"><Icon name="warning" /><span>{workflowError}</span></div>}
-          <div className="actions optimizer-actions">{isCompiling ? <button className="secondary" type="button" onClick={cancelOptimizer}>Cancel rewrite</button> : <><button className="secondary" type="button" disabled={provider.health !== "ready" || !promptText.trim() || !assignmentOptions.length} onClick={() => runOptimizer("compile")}>Preview locally</button><button className="primary" disabled={provider.health !== "ready" || !promptText.trim() || !assignmentOptions.length} onClick={() => runOptimizer("enhance")} title={provider.health !== "ready" ? "Connect and verify a provider before rewriting." : !promptText.trim() ? "Describe the task before rewriting it." : undefined}>Rewrite with LLM <span aria-hidden="true">→</span></button></>}</div>
+          <div className="actions optimizer-actions">{isCompiling ? <button className="secondary" type="button" onClick={cancelOptimizer}>Cancel resolve</button> : <><button className="secondary" type="button" disabled={!promptText.trim() || !assignmentOptions.length} onClick={() => runOptimizer("compile")}>Continue to resolve</button><button className="primary" disabled={provider.health !== "ready" || !promptText.trim() || !assignmentOptions.length} onClick={() => runOptimizer("enhance")} title={provider.health !== "ready" ? "Connect and verify a provider before rewriting." : !promptText.trim() ? "Describe the task before rewriting it." : undefined}>Rewrite with LLM <span aria-hidden="true">→</span></button></>}</div>
+        </article>}
+
+        {sessionMode !== "generic" && sessionMode !== "recovery" && optimizerStep === "resolve" && candidate && <article className="work-card resolve-card">
+          <div className="section-head"><div className="card-heading compact-heading"><span className="section-label">Step 2 · Resolve</span><h1 data-optimizer-resolve-heading tabIndex={-1}>Confirm the local interpretation</h1><p>The task, reviewed project context, selected template, and deterministic candidate are current.</p></div><span className="review-source" aria-label="Result source: Local deterministic"><Icon name="lock" size={12} />Local</span></div>
+          <div className="optimizer-resolve-facts"><div><span>Project knowledge</span><strong>Approved snapshot</strong></div><div><span>Candidate</span><strong>Local deterministic</strong></div><div><span>Provider</span><strong>Not required</strong></div></div>
+          {workflowError && <div className="inline-alert" role="alert"><Icon name="warning" /><span>{workflowError}</span></div>}
+          <div className="actions"><button className="secondary" type="button" onClick={() => selectOptimizerStep("input")}><Icon name="back" size={13} />Back to input</button><button className="primary" type="button" onClick={() => selectOptimizerStep("review")}>Continue to review <span aria-hidden="true">→</span></button></div>
         </article>}
 
         {sessionMode !== "generic" && sessionMode !== "recovery" && optimizerStep === "review" && candidate && <article className="work-card review-card">
-          <div className="section-head"><div className="card-heading compact-heading"><span className="section-label">Step 2 · {optimizerReview?.source === "local" ? "Local preview" : "LLM rewrite"}</span><h1 ref={optimizerReviewHeadingRef} tabIndex={-1}>{optimizerReview?.source === "provider" ? optimizerReview.title || optimizedResult?.title || "Review the optimized prompt" : "Review the local preview"}</h1>{optimizerReview?.source === "provider" && (optimizerReview.summary || optimizedResult?.summary) && <p>{optimizerReview.summary || optimizedResult?.summary}</p>}</div><span className="review-source" aria-label={optimizerReview?.source === "local" ? "Result source: Local preview" : `Result source: ${optimizerReview?.model || provider.model || "verified provider"}`}><Icon name={optimizerReview?.source === "local" ? "lock" : "sparkle"} size={12} />{optimizerReview?.source === "local" ? "Local" : optimizerReview?.model || provider.model || "Provider"}</span></div>
+          <div className="section-head"><div className="card-heading compact-heading"><span className="section-label">Step 3 · {optimizerReview?.source === "local" ? "Local preview" : "LLM rewrite"}</span><h1 ref={optimizerReviewHeadingRef} tabIndex={-1}>{optimizerReview?.source === "provider" ? optimizerReview.title || optimizedResult?.title || "Review the optimized prompt" : "Review the local preview"}</h1>{optimizerReview?.source === "provider" && (optimizerReview.summary || optimizedResult?.summary) && <p>{optimizerReview.summary || optimizedResult?.summary}</p>}</div><span className="review-source" aria-label={optimizerReview?.source === "local" ? "Result source: Local preview" : `Result source: ${optimizerReview?.model || provider.model || "verified provider"}`}><Icon name={optimizerReview?.source === "local" ? "lock" : "sparkle"} size={12} />{optimizerReview?.source === "local" ? "Local" : optimizerReview?.model || provider.model || "Provider"}</span></div>
           <div className="prompt-output" role="region" aria-label="Generated prompt"><pre tabIndex={0} aria-label="Generated prompt text">{candidate.text}</pre></div>
           {isCompiling && <div className="inline-alert optimizer-progress" role="status"><Icon name="refresh" /><span>Rewriting with the verified provider…</span></div>}
           {workflowError && <div className="inline-alert" role="alert"><Icon name="warning" /><span>{workflowError}</span></div>}
-          <div className="actions prompt-actions"><button className="secondary" type="button" onClick={() => selectOptimizerStep("input")} disabled={isCompiling}><Icon name="back" size={13} />Back to edit</button><button className="primary" type="button" onClick={() => void copyCandidate()} disabled={isCompiling}>{copyNotice === "Prompt copied." ? <><Icon name="check" size={14} />Copied</> : "Copy prompt"}</button></div>
+          <div className="actions prompt-actions"><button className="secondary" type="button" onClick={() => selectOptimizerStep("resolve")} disabled={isCompiling}><Icon name="back" size={13} />Back to resolve</button><button className="primary" type="button" onClick={() => void copyCandidate()} disabled={isCompiling}>{copyNotice === "Prompt copied." ? <><Icon name="check" size={14} />Copied</> : "Copy prompt"}</button></div>
           <div className="review-utilities"><button type="button" onClick={saveOptimizerRecent} disabled={isCompiling}>{optimizerSaveNotice || "Save to recents"}</button><button type="button" onClick={openPromptReview}>Open in editor <Icon name="external" size={12} /></button><button type="button" onClick={() => openEditorDocument({ kind: "estimate", estimate: candidate.estimate })}>{candidate.estimate.estimatedAvoidedDuplication} fewer tokens <Icon name="external" size={12} /></button></div>
           {provider.health !== "ready" && <div className="inline-alert provider-required" role="status"><Icon name="warning" /><span>The result is available, but another rewrite needs a verified provider.</span><button type="button" className="text-button" onClick={openSettings}>Open settings</button></div>}
           <div className="actions regenerate-actions">{isCompiling ? <button className="secondary" type="button" onClick={cancelOptimizer}>Cancel rewrite</button> : <button className="secondary" type="button" disabled={provider.health !== "ready"} onClick={() => runOptimizer("enhance")}>{optimizerReview?.source === "local" ? "Rewrite with LLM" : "Rewrite again"}</button>}</div>

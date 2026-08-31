@@ -43,7 +43,8 @@ import {
 } from "./template-library-protocol.js";
 import { TemplateLibraryStore, TemplateLibraryStoreError } from "./template-library-store.js";
 import { parsePromptCompileRequest, type PromptComposeInput } from "./prompt-compose-protocol.js";
-import { parsePromptOptimizerCommand, type PromptOptimizerInput } from "./prompt-optimizer-protocol.js";
+import { parsePromptOptimizerCommand, type PromptOptimizerInput, type PromptOptimizerView } from "./prompt-optimizer-protocol.js";
+import { PromptOptimizerRequestBoundary, persistedPromptOptimizerView, restorePromptOptimizerView, type PersistedPromptOptimizerView } from "./prompt-optimizer-session.js";
 import { resolveDwiEditorDocument, resolvePersistedPromptReviewDocument, type ResolvedDwiEditorDocument } from "./editor-document.js";
 import { consumeConsentCapability, issueConsentCapability, type ConsentCapability } from "./consent-capability.js";
 
@@ -64,7 +65,6 @@ const DWI_CONSENT_RECEIPTS_KEY = "dwi.workspaceInspectionConsent.v1";
 const PROMPT_OPTIMIZER_RECENTS_KEY = "dwi.promptOptimizer.recents.v1";
 const PROMPT_OPTIMIZER_VIEWS_KEY = "dwi.promptOptimizer.views.v1";
 const PROMPT_OPTIMIZER_RECENT_LIMIT = 5;
-type PromptOptimizerView = "input" | "review";
 
 interface PromptOptimizerRecent {
   id: string;
@@ -312,6 +312,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
   private rootEpoch = 0;
   private pendingConsentCapability: ConsentCapability | undefined;
   private readonly optimizerControllers = new Map<string, AbortController>();
+  private readonly optimizerRequests = new PromptOptimizerRequestBoundary();
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly output: vscode.OutputChannel,
@@ -354,6 +355,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     this.rootEpoch += 1;
     this.selectedRootUri = undefined;
     this.pendingConsentCapability = undefined;
+    this.optimizerRequests.invalidate();
     this.recordActivity({
       level: "warning",
       category: "Workspace",
@@ -363,17 +365,46 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     void this.view?.webview.postMessage({ type: "dwi.workspace.changed" });
   }
   private async dispatch(message: Message, webview: vscode.Webview): Promise<void> {
+    const optimizerCommand = message.type.startsWith("prompt.v2.") ? parsePromptOptimizerCommand(message) : undefined;
     if (message.type === "prompt.v2.cancel") {
-      const command = parsePromptOptimizerCommand(message);
+      const command = optimizerCommand;
       if (command?.type === "prompt.v2.cancel") {
         this.optimizerControllers.get(command.cancellationId)?.abort();
         await webview.postMessage({ type: "prompt.v2.cancelled", requestId: command.requestId, correlationId: command.correlationId });
       }
       return;
     }
-    const request = this.requestQueue.then(() => this.handle(message, webview));
+    if (optimizerCommand?.type === "prompt.v2.draft.save") {
+      this.optimizerRequests.invalidate();
+    }
+    if (optimizerCommand?.type === "prompt.v2.compile" || optimizerCommand?.type === "prompt.v2.semantic") {
+      const baseHash = createHash("sha256").update(JSON.stringify({
+        task: optimizerCommand.input.task,
+        assignmentId: optimizerCommand.input.assignmentId,
+        promptType: optimizerCommand.input.promptType,
+        outputSize: optimizerCommand.input.outputSize,
+      })).digest("hex");
+      this.optimizerRequests.start({ documentId: optimizerCommand.documentId, requestId: optimizerCommand.requestId, baseHash });
+    }
+    if (optimizerCommand?.type === "prompt.v2.semantic") {
+      await this.handle(message, webview);
+      return;
+    }
+    await this.enqueueMutation(() => this.handle(message, webview));
+  }
+
+  private async enqueueMutation(task: () => Promise<void>): Promise<void> {
+    const request = this.requestQueue.then(task);
     this.requestQueue = request.then(() => undefined, () => undefined);
     await request;
+  }
+
+  private optimizerRequestIsCurrent(command: { documentId: string; requestId: string }): boolean {
+    return this.optimizerRequests.isCurrent(command);
+  }
+
+  private optimizerRequestIdentity(command: { documentId: string; requestId: string }): { documentId: string; requestId: string; revision: number; baseHash: string } | undefined {
+    return this.optimizerRequests.currentFor(command);
   }
 
   private recordActivity(draft: DwiActivityDraft, webview = this.view?.webview): void {
@@ -698,24 +729,26 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     await webview.postMessage({ type: "prompt.v2.recents", recents: this.optimizerRecents(workspaceFingerprint) });
   }
 
-  private optimizerView(workspaceFingerprint: string): PromptOptimizerView {
+  private optimizerView(workspaceFingerprint: string): PersistedPromptOptimizerView {
     const stored = this.context.workspaceState.get<unknown>(PROMPT_OPTIMIZER_VIEWS_KEY, {});
     if (!stored || typeof stored !== "object" || Array.isArray(stored)) return "input";
-    return (stored as Record<string, unknown>)[workspaceFingerprint] === "review" ? "review" : "input";
+    return restorePromptOptimizerView((stored as Record<string, unknown>)[workspaceFingerprint], true);
   }
 
-  private async setOptimizerView(workspaceFingerprint: string, view: PromptOptimizerView): Promise<void> {
+  private async setOptimizerView(workspaceFingerprint: string, view: PromptOptimizerView, candidatePresent = false): Promise<PersistedPromptOptimizerView> {
     const stored = this.context.workspaceState.get<unknown>(PROMPT_OPTIMIZER_VIEWS_KEY, {});
     const current = stored && typeof stored === "object" && !Array.isArray(stored) ? stored as Record<string, unknown> : {};
     const next = { ...current };
     delete next[workspaceFingerprint];
-    const bounded = Object.fromEntries([...Object.entries(next), [workspaceFingerprint, view]].slice(-50));
+    const persisted = persistedPromptOptimizerView(view, candidatePresent);
+    const bounded = Object.fromEntries([...Object.entries(next), [workspaceFingerprint, persisted]].slice(-50));
     await this.context.workspaceState.update(PROMPT_OPTIMIZER_VIEWS_KEY, bounded);
+    return persisted;
   }
 
   private async postOptimizerView(webview: vscode.Webview, workspaceFingerprint: string, candidatePresent: boolean): Promise<void> {
     const stored = this.optimizerView(workspaceFingerprint);
-    await webview.postMessage({ type: "prompt.v2.view.state", view: stored === "review" && candidatePresent ? "review" : "input" });
+    await webview.postMessage({ type: "prompt.v2.view.state", view: restorePromptOptimizerView(stored, candidatePresent) });
   }
 
   private async postPromptError(
@@ -772,8 +805,9 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       const operation = await this.workspaceOperation();
       const state = await operation.store.load();
       const snapshot = state.status === "partial" || state.status === "complete" ? state.snapshot : undefined;
-      const view = command.view === "review" && snapshot?.candidate && snapshot.optimizerReview ? "review" : "input";
-      await this.setOptimizerView(operation.identity.localFingerprint, view);
+      const candidatePresent = Boolean(snapshot?.candidate && snapshot.optimizerReview);
+      const persisted = await this.setOptimizerView(operation.identity.localFingerprint, command.view, candidatePresent);
+      const view = command.view === "resolve" && candidatePresent ? "resolve" : persisted;
       await webview.postMessage({ type: "prompt.v2.view.state", view });
       return true;
     }
@@ -851,6 +885,10 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       return true;
     }
     if (command.type === "prompt.v2.compile") {
+      if (!this.optimizerRequestIsCurrent(command)) {
+        await this.postPromptError(webview, command, "stale", "A newer Prompt Optimizer input replaced this local resolve result.");
+        return true;
+      }
       this.assertWorkspaceOperation(operation.folder, operation.epoch);
       await operation.store.updatePartial(this.partial({
         ...snapshot,
@@ -864,8 +902,10 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
         evaluationMarkdown: undefined,
         feedback: undefined,
       }));
-      await this.setOptimizerView(operation.identity.localFingerprint, "review");
-      await webview.postMessage({ type: "prompt.v2.compiled", requestId: command.requestId, correlationId: command.correlationId, documentId: command.documentId, revision: command.revision, baseHash: command.baseHash, candidate: localCandidate });
+      await this.setOptimizerView(operation.identity.localFingerprint, "resolve", true);
+      const identity = this.optimizerRequestIdentity(command);
+      if (!identity) return true;
+      await webview.postMessage({ type: "prompt.v2.compiled", correlationId: command.correlationId, ...identity, candidate: localCandidate });
       this.recordActivity({ level: "info", category: "Prompt", title: "Local prompt preview compiled", detail: "A deterministic preview was created locally; prompt text is excluded from activity and logs." }, webview);
       return true;
     }
@@ -884,29 +924,38 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       if (optimized.provider !== "gemini" && optimized.provider !== "openai") {
         throw new ProviderRewriteError("connectivity", "The configured provider returned an unsupported provider identity.");
       }
+      const optimizedProvider: "gemini" | "openai" = optimized.provider;
       const candidate = { ...localCandidate, text: optimized.optimizedPrompt };
-      this.assertWorkspaceOperation(operation.folder, operation.epoch);
-      await operation.store.updatePartial(this.partial({
-        ...snapshot,
-        stage: "evaluate",
-        brief,
-        selectedModuleIds,
-        candidate,
-        candidateInput: command.input,
-        optimizerDraft: command.input,
-        optimizerReview: {
-          source: "provider",
-          provider: optimized.provider,
-          model: optimized.model,
-          title: optimized.title,
-          summary: optimized.summary,
-        },
-        evaluationMarkdown: undefined,
-        feedback: undefined,
-      }));
-      await this.setOptimizerView(operation.identity.localFingerprint, "review");
-      await webview.postMessage({ type: "prompt.v2.semantic.result", requestId: command.requestId, correlationId: command.correlationId, documentId: command.documentId, revision: command.revision, baseHash: command.baseHash, operation: "enhance", localCandidate, candidate, result: optimized });
-      this.recordActivity({ level: "info", category: "Prompt", title: "Prompt rewritten", detail: "A verified provider returned a rewrite; prompt text is excluded from activity and logs." }, webview);
+      await this.enqueueMutation(async () => {
+        if (!this.optimizerRequestIsCurrent(command)) {
+          await this.postPromptError(webview, command, "stale", "A newer Prompt Optimizer input replaced this provider result.");
+          return;
+        }
+        this.assertWorkspaceOperation(operation.folder, operation.epoch);
+        await operation.store.updatePartial(this.partial({
+          ...snapshot,
+          stage: "evaluate",
+          brief,
+          selectedModuleIds,
+          candidate,
+          candidateInput: command.input,
+          optimizerDraft: command.input,
+          optimizerReview: {
+            source: "provider",
+            provider: optimizedProvider,
+            model: optimized.model,
+            title: optimized.title,
+            summary: optimized.summary,
+          },
+          evaluationMarkdown: undefined,
+          feedback: undefined,
+        }));
+        await this.setOptimizerView(operation.identity.localFingerprint, "review", true);
+        const identity = this.optimizerRequestIdentity(command);
+        if (!identity) return;
+        await webview.postMessage({ type: "prompt.v2.semantic.result", correlationId: command.correlationId, ...identity, operation: "enhance", localCandidate, candidate, result: optimized });
+        this.recordActivity({ level: "info", category: "Prompt", title: "Prompt rewritten", detail: "A verified provider returned a rewrite; prompt text is excluded from activity and logs." }, webview);
+      });
     } catch (error) {
       if (controller.signal.aborted) {
         await webview.postMessage({ type: "prompt.v2.cancelled", requestId: command.requestId, correlationId: command.correlationId });
