@@ -236,6 +236,7 @@ h2 { margin: 3px 0 0; font-size: 15px; line-height: 1.25; }
 .optimizer-actions { flex-wrap: wrap; }
 .review-source { display: inline-flex; max-width: 42%; min-height: 22px; flex: 0 0 auto; align-items: center; gap: 4px; overflow: hidden; border: 1px solid var(--dwi-soft-border); border-radius: 99px; padding: 2px 6px; color: var(--dwi-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .review-source .icon { flex: 0 0 auto; }
+.review-context-actions { display: flex; min-width: 0; flex: 0 1 auto; align-items: center; gap: 3px; }
 .source-plan { display: grid; gap: 12px; border: 1px solid var(--dwi-soft-border); border-radius: 10px; padding: 14px; background: var(--dwi-muted-surface); }
 .source-plan-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .source-plan-heading h2 { margin: 2px 0 0; font-size: 15px; }

@@ -40,6 +40,13 @@ describe("prompt optimizer session store", () => {
     expect(store.open(fpB)).toEqual({ status: "absent" });
   });
 
+  it("retains an exact resolve checkpoint even when context invalidates its candidate", async () => {
+    const storage = new MemoryStorage();
+    const store = new PromptOptimizerSessionStore(storage, () => now);
+    const saved = await store.save({ ...session(), view: "resolve" }, "new");
+    expect(store.open(fpA)).toEqual({ status: "ready", session: saved });
+  });
+
   it("rejects stale writes and preserves the stored session", async () => {
     const storage = new MemoryStorage();
     const store = new PromptOptimizerSessionStore(storage, () => now);

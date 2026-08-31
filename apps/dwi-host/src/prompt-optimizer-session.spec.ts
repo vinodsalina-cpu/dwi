@@ -2,16 +2,18 @@ import { describe, expect, it } from "vitest";
 import { PromptOptimizerRequestBoundary, persistedPromptOptimizerView, restorePromptOptimizerView } from "./prompt-optimizer-session.js";
 
 describe("prompt optimizer three-step session boundary", () => {
-  it("keeps legacy input and review checkpoints recoverable", () => {
+  it("keeps every workflow checkpoint recoverable across context review", () => {
     expect(restorePromptOptimizerView("input", false)).toBe("input");
     expect(restorePromptOptimizerView("review", true)).toBe("review");
-    expect(restorePromptOptimizerView("review", false)).toBe("input");
+    expect(restorePromptOptimizerView("review", false)).toBe("review");
+    expect(restorePromptOptimizerView("resolve", false)).toBe("resolve");
   });
 
-  it("does not persist the ephemeral resolve transition", () => {
-    expect(persistedPromptOptimizerView("resolve", false)).toBe("input");
-    expect(persistedPromptOptimizerView("resolve", true)).toBe("input");
+  it("persists the exact current step independently of candidate validity", () => {
+    expect(persistedPromptOptimizerView("resolve", false)).toBe("resolve");
+    expect(persistedPromptOptimizerView("resolve", true)).toBe("resolve");
     expect(persistedPromptOptimizerView("review", true)).toBe("review");
+    expect(persistedPromptOptimizerView("review", false)).toBe("review");
   });
 
   it("rejects delayed results after newer input or explicit invalidation", () => {

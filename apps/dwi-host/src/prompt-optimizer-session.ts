@@ -1,23 +1,26 @@
 import type { PromptOptimizerView } from "./prompt-optimizer-protocol.js";
 
-export type PersistedPromptOptimizerView = Exclude<PromptOptimizerView, "resolve">;
+export type PersistedPromptOptimizerView = PromptOptimizerView;
 
 /**
- * Resolve is an in-memory transition, never a resumable checkpoint. Existing
- * input/review values therefore remain readable without adding persistence.
+ * The current step is a resumable checkpoint. Candidate availability is
+ * validated separately so stale context can discard output without losing the
+ * developer's exact workflow position.
  */
 export function restorePromptOptimizerView(
   stored: unknown,
   candidatePresent: boolean,
 ): PersistedPromptOptimizerView {
-  return stored === "review" && candidatePresent ? "review" : "input";
+  void candidatePresent;
+  return stored === "resolve" || stored === "review" ? stored : "input";
 }
 
 export function persistedPromptOptimizerView(
   view: PromptOptimizerView,
   candidatePresent: boolean,
 ): PersistedPromptOptimizerView {
-  return view === "review" && candidatePresent ? "review" : "input";
+  void candidatePresent;
+  return view;
 }
 
 export interface PromptOptimizerRequestIdentity {

@@ -45,7 +45,7 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     expect(deltaLabel?.({ absoluteTokens: 0, percentageChange: 0 })).toBe("No projected token change");
 
     expect(screen.getByRole("button", { name: "Home" }).getAttribute("aria-current")).toBe("page");
-    expect(screen.getByRole("button", { name: "Project Initializer" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Project Meta Context" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Prompt Optimizer" })).toBeTruthy();
     expect(screen.getByText("Local")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Provider status: missing/ })).toBeTruthy();
@@ -75,8 +75,8 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     const task = screen.getByRole("textbox", { name: "Task to optimize" }) as HTMLTextAreaElement;
     expect(task.disabled).toBe(false);
     const contextHelp = screen.getByRole("tooltip");
-    expect(contextHelp.textContent).toContain("Reviewed project context and the selected template are included automatically.");
-    expect(screen.getByRole("button", { name: "About included project context" }).getAttribute("aria-describedby")).toBe(contextHelp.id);
+    expect(contextHelp.textContent).toContain("Reviewed Project Meta Context and the selected template are included automatically.");
+    expect(screen.getByRole("button", { name: "About included Project Meta Context" }).getAttribute("aria-describedby")).toBe(contextHelp.id);
     expect(screen.queryByRole("checkbox")).toBeNull();
     fireEvent.change(task, { target: { value: "Implement a safe provider retry flow." } });
 
@@ -179,6 +179,19 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     await act(async () => { hostMessage({ type: "prompt.v2.session.state", draft: { task: "Recovered local session", assignmentId: "general", promptType: "General", outputSize: "low" }, candidate: localCandidate, review: { source: "local" }, view: "review" }); });
     expect(screen.getByRole("region", { name: "Generated prompt" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /3 Review/ }).getAttribute("aria-current")).toBe("step");
+
+    fireEvent.click(screen.getByRole("button", { name: "Review Project Meta Context" }));
+    expect(screen.getByRole("button", { name: "Project Meta Context" }).getAttribute("aria-current")).toBe("page");
+    await act(async () => {
+      hostMessage({ type: "dwi.project.snapshot", snapshot: { ...PROJECT_UI_FIXTURES.current, projectName: "DWI", reviewed: true } });
+      hostMessage({ type: "dwi.brief.confirmed", brief });
+    });
+    expect(screen.getByRole("button", { name: "Prompt Optimizer" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("button", { name: /3 Review/ }).getAttribute("aria-current")).toBe("step");
+    expect(screen.getByText("Resolve this step with the reviewed metadata")).toBeTruthy();
+    expect(screen.getByText(/task draft and workflow position were retained/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Back to input" }));
+    expect(screen.getByRole("textbox", { name: "Task to optimize" })).toHaveProperty("value", "Recovered local session");
 
     fireEvent.click(screen.getByRole("button", { name: "Open provider settings" }));
     expect(screen.getByText(/approved project brief, project declaration, consent, and provider settings stay intact/i)).toBeTruthy();

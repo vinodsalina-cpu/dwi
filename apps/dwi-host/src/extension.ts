@@ -812,7 +812,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
   }
 
   private async invalidateOptimizerRecovery(workspaceFingerprint: string): Promise<void> {
-    await this.updateOptimizerSession(workspaceFingerprint, { draft: null, candidate: null, review: null, view: "input" });
+    await this.updateOptimizerSession(workspaceFingerprint, { candidate: null, review: null });
   }
 
   private async migrateOptimizerSession(workspaceFingerprint: string, snapshot?: DwiWorkspaceSnapshot): Promise<void> {
@@ -1822,7 +1822,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       brief: { ...brief, confirmed: false, corrections: "" },
       candidate: undefined,
       candidateInput: undefined,
-      optimizerDraft: undefined,
+      optimizerDraft: previous.optimizerDraft,
       optimizerReview: undefined,
       evaluationMarkdown: undefined,
       feedback: undefined,
@@ -1939,7 +1939,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       { unknowns: resolution.unknowns, coverageOverrides: resolution.coverage },
     );
     const approvedBrief = { ...projectSnapshotToBrief(approved), confirmed: false, corrections: "" };
-    const updated = this.partial({ ...state.snapshot, stage: "brief", project: approved, brief: approvedBrief, candidate: undefined, candidateInput: undefined, optimizerDraft: undefined, optimizerReview: undefined, evaluationMarkdown: undefined, feedback: undefined });
+    const updated = this.partial({ ...state.snapshot, stage: "brief", project: approved, brief: approvedBrief, candidate: undefined, candidateInput: undefined, optimizerDraft: state.snapshot.optimizerDraft, optimizerReview: undefined, evaluationMarkdown: undefined, feedback: undefined });
     this.assertWorkspaceOperation(operation.folder, operation.epoch);
     await store.updatePartial(updated);
     await this.invalidateOptimizerRecovery(operation.identity.localFingerprint);

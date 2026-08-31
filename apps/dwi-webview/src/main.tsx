@@ -649,7 +649,7 @@ function ProjectContextCard({ snapshot, actionMessage, ready, onRefresh, onRevie
   const canReview = snapshot.status !== "scanning" && !needsRefresh;
   return <section className="project-context" aria-labelledby="project-context-title">
     <div className="project-heading-row">
-      <div><span className="section-label">Current project</span><h1 id="project-context-title">{snapshot.projectName}</h1></div>
+      <div><span className="section-label">Project Meta Context</span><h1 id="project-context-title">{snapshot.projectName}</h1></div>
       <div className="context-status-wrap">
         <button type="button" className={`status-trigger status-${snapshot.status}`} aria-label={`Open ${copy.label} diagnostics in editor`} onClick={onOpenDiagnostics}><span className="status-dot" />{copy.label}<Icon name="external" size={13} /></button>
       </div>
@@ -748,6 +748,7 @@ export function App() {
   const [activeSurface, setActiveSurface] = useState<ActiveSurface>(() =>
     initialActiveSurface(document.documentElement.dataset.dwiInitialSurface),
   );
+  const activeSurfaceRef = useRef(activeSurface);
   const [railExpanded, setRailExpanded] = useState(false);
   const [libraryState, setLibraryState] = useState<LibraryState>(initialLibraryState);
   const [libraryRevision, setLibraryRevision] = useState(0);
@@ -773,6 +774,7 @@ export function App() {
   const optimizerRequest = useRef<{ requestId: string; correlationId: string; cancellationId: string } | undefined>(undefined);
   const optimizerDraftTimer = useRef<number | undefined>(undefined);
   const restoredOptimizerStep = useRef<OptimizerStep>("input");
+  const contextReviewReturnStep = useRef<OptimizerStep | undefined>(undefined);
   const optimizerFocusPending = useRef<OptimizerStep | undefined>(undefined);
   const optimizerReviewHeadingRef = useRef<HTMLHeadingElement>(null);
   const assignmentOptions = useMemo<PromptAssignmentOption[]>(() => {
@@ -783,6 +785,8 @@ export function App() {
   const projectReviewed = stage !== "consent" && projectSnapshot.reviewed === true;
   const projectReady = projectReviewed && (projectSnapshot.status === "current" || projectSnapshot.status === "partial");
   const optimizerResetEligible = projectReady && brief.confirmed && (stage === "compose" || stage === "evaluate");
+
+  useEffect(() => { activeSurfaceRef.current = activeSurface; }, [activeSurface]);
 
   useEffect(() => {
     if (!providerNoticeOpen) return;
@@ -1094,12 +1098,22 @@ export function App() {
       if (data.type === "dwi.brief.confirmed" && data.brief) {
         setBrief({ ...data.brief, confirmed: true });
         setCandidate(undefined);
-        setOptimizerStep("input");
         setOptimizerReview(undefined);
         setWorkflowError("");
         setIsConfirming(false);
         setStage("compose");
-        setActiveSurface((current) => current === "optimizer" ? "optimizer" : "home");
+        const returnStep = contextReviewReturnStep.current ??
+          (activeSurfaceRef.current === "initializer" && restoredOptimizerStep.current !== "input" ? restoredOptimizerStep.current : undefined);
+        if (returnStep) {
+          restoredOptimizerStep.current = returnStep;
+          optimizerFocusPending.current = returnStep;
+          setOptimizerStep(returnStep);
+          setActiveSurface("optimizer");
+          contextReviewReturnStep.current = undefined;
+        } else {
+          setOptimizerStep("input");
+          setActiveSurface((current) => current === "optimizer" ? "optimizer" : "home");
+        }
       }
       if (data.type === "dwi.snapshot.partial") {
         const snapshot = data.snapshot as DwiWorkspaceSnapshot | undefined;
@@ -1235,10 +1249,6 @@ export function App() {
     surfaceReturnFocus.current = null;
     (opener?.isConnected ? opener : workflowTriggerRef.current)?.focus();
   }, [activeSurface]);
-
-  useEffect(() => {
-    if (optimizerStep !== "input" && !candidate) setOptimizerStep("input");
-  }, [candidate, optimizerStep]);
 
   useEffect(() => {
     if (activeSurface !== "optimizer" || optimizerFocusPending.current !== optimizerStep) return;
@@ -1572,6 +1582,10 @@ export function App() {
     setResetPending(false);
     restoreSurfaceFocus.current = false;
     surfaceReturnFocus.current = null;
+    if (activeSurfaceRef.current === "optimizer") {
+      const visibleStep = document.querySelector<HTMLElement>('.optimizer-step-navigation [aria-current="step"]')?.getAttribute("aria-label");
+      contextReviewReturnStep.current = visibleStep?.includes("3") ? "review" : visibleStep?.includes("2") ? "resolve" : restoredOptimizerStep.current;
+    }
     setActiveSurface("initializer");
   }
 
@@ -1748,7 +1762,7 @@ export function App() {
     <nav className="activity-rail" aria-label="Developer Workspace Intelligence">
       <div className="rail-primary">
         <button ref={workflowTriggerRef} className={`rail-button${activeSurface === "home" ? " active" : ""}`} type="button" aria-current={activeSurface === "home" ? "page" : undefined} aria-label="Home" onClick={activateWorkflow}><Icon name="home" /><span className="rail-label">Home</span></button>
-        <button className={`rail-button${activeSurface === "initializer" ? " active" : ""}`} type="button" aria-current={activeSurface === "initializer" ? "page" : undefined} aria-label="Project Initializer" onClick={activateInitializer}><Icon name="database" /><span className="rail-label">Initializer</span></button>
+        <button className={`rail-button${activeSurface === "initializer" ? " active" : ""}`} type="button" aria-current={activeSurface === "initializer" ? "page" : undefined} aria-label="Project Meta Context" onClick={() => { if (activeSurface === "optimizer") contextReviewReturnStep.current = optimizerStep; activateInitializer(); }}><Icon name="database" /><span className="rail-label">Meta Context</span></button>
         <button className={`rail-button${activeSurface === "optimizer" ? " active" : ""}`} type="button" aria-current={activeSurface === "optimizer" ? "page" : undefined} aria-label="Prompt Optimizer" onClick={activateOptimizer}><Icon name="sparkle" /><span className="rail-label">Optimizer</span></button>
         <button className={`rail-button${activeSurface === "library" ? " active" : ""}`} type="button" aria-current={activeSurface === "library" ? "page" : undefined} aria-label="Library" onClick={() => { setActiveSurface("library"); vscode?.postMessage({ type: "dwi.library.open" }); }}><Icon name="library" /><span className="rail-label">Library</span></button>
       </div>
@@ -1769,13 +1783,13 @@ export function App() {
     </header><section className="content"><div className="prompt-workflow home-workflow">
       {sessionMode === "loading" && <article className="work-card empty-state" aria-live="polite"><span className="section-label">Opening workspace</span><h1>Loading DWI state…</h1></article>}
       {sessionMode === "generic" && <article className="work-card empty-state"><div className="empty-icon"><Icon name="folder" /></div><span className="section-label">No project open</span><h1>Open a folder to begin</h1><p>{projectActionMessage || openFolderMessageForReason("no-workspace")}</p><button className="primary" type="button" onClick={openFolderFromExplorer}>Open Explorer</button></article>}
-      {sessionMode === "recovery" && <article className="work-card empty-state"><div className="empty-icon warning"><Icon name="warning" /></div><span className="section-label">Saved state needs attention</span><h1>Review the local session</h1><p>Your project files are unchanged.</p><button className="primary" type="button" onClick={activateInitializer}>Open Project Initializer</button></article>}
-      {sessionMode === "workspace" && (stage === "consent" || stage === "brief") && <article className="work-card home-primary-card"><div className="card-heading"><span className="section-label">Project setup</span><h1>{stage === "consent" ? "Initialize this project" : "Review the project brief"}</h1><p>{stage === "consent" ? "Build a bounded, consent-based knowledge layer before project-aware prompt work." : "Confirm the collected project context so Prompt Optimizer can use it."}</p></div><button className="primary" type="button" onClick={activateInitializer}>{stage === "consent" ? "Start initialization" : "Continue review"} <span aria-hidden="true">→</span></button></article>}
-      {sessionMode === "workspace" && (stage === "compose" || stage === "evaluate") && <><article className="work-card home-primary-card"><div className="card-heading"><span className="section-label">Project initialized</span><h1>{projectSnapshot.projectName || "Project context is ready"}</h1><p>The reviewed knowledge layer is ready for project-aware prompts.</p></div><div className="actions"><button className="secondary" type="button" onClick={activateInitializer}>Review context</button><button className="primary" type="button" onClick={activateOptimizer}>Open Prompt Optimizer <span aria-hidden="true">→</span></button></div></article><section className="home-recents" aria-labelledby="recent-prompts-title"><div className="section-head"><div><span className="section-label">Recent</span><h2 id="recent-prompts-title">Prompt activity</h2></div><button className="text-button" type="button" onClick={() => openEditorDocument({ kind: "activity-log", entries: activityEntries })}>All activity <Icon name="external" size={12} /></button></div>{optimizerRecents.length ? <ul>{optimizerRecents.map((recent) => <li key={recent.id}><button type="button" onClick={activateOptimizer}><strong>{recent.title}</strong><span>{recent.source === "local" ? "Local preview" : recent.model || "LLM rewrite"} · {recent.promptType} · {new Date(recent.updatedAt).toLocaleDateString()}</span><small>{recent.preview}</small></button></li>)}</ul> : <p className="empty-copy">Saved local previews and LLM rewrites will appear here, ordered by latest saved time.</p>}</section></>}
+      {sessionMode === "recovery" && <article className="work-card empty-state"><div className="empty-icon warning"><Icon name="warning" /></div><span className="section-label">Saved state needs attention</span><h1>Review the local session</h1><p>Your project files are unchanged.</p><button className="primary" type="button" onClick={activateInitializer}>Open Project Meta Context</button></article>}
+      {sessionMode === "workspace" && (stage === "consent" || stage === "brief") && <article className="work-card home-primary-card"><div className="card-heading"><span className="section-label">Project Meta Context</span><h1>{stage === "consent" ? "Initialize this project" : "Review Project Meta Context"}</h1><p>{stage === "consent" ? "Build a bounded, consent-based knowledge layer before project-aware prompt work." : "Confirm the reviewed project metadata Prompt Optimizer will use."}</p></div><button className="primary" type="button" onClick={activateInitializer}>{stage === "consent" ? "Start initialization" : "Continue review"} <span aria-hidden="true">→</span></button></article>}
+      {sessionMode === "workspace" && (stage === "compose" || stage === "evaluate") && <><article className="work-card home-primary-card"><div className="card-heading"><span className="section-label">Project Meta Context · Ready</span><h1>{projectSnapshot.projectName || "Project metadata is ready"}</h1><p>The reviewed knowledge layer is ready for project-aware prompts.</p></div><div className="actions"><button className="secondary" type="button" onClick={activateInitializer}>Review Project Meta Context</button><button className="primary" type="button" onClick={activateOptimizer}>Open Prompt Optimizer <span aria-hidden="true">→</span></button></div></article><section className="home-recents" aria-labelledby="recent-prompts-title"><div className="section-head"><div><span className="section-label">Recent</span><h2 id="recent-prompts-title">Prompt activity</h2></div><button className="text-button" type="button" onClick={() => openEditorDocument({ kind: "activity-log", entries: activityEntries })}>All activity <Icon name="external" size={12} /></button></div>{optimizerRecents.length ? <ul>{optimizerRecents.map((recent) => <li key={recent.id}><button type="button" onClick={activateOptimizer}><strong>{recent.title}</strong><span>{recent.source === "local" ? "Local preview" : recent.model || "LLM rewrite"} · {recent.promptType} · {new Date(recent.updatedAt).toLocaleDateString()}</span><small>{recent.preview}</small></button></li>)}</ul> : <p className="empty-copy">Saved local previews and LLM rewrites will appear here, ordered by latest saved time.</p>}</section></>}
     </div></section></>}
 
     {activeSurface === "initializer" && <><header className="app-header">
-      <div className="app-title"><strong className="app-product-title" aria-hidden="true">Developer Workspace Intelligence</strong><span>{stage === "consent" ? "Access" : stage === "brief" ? "Project brief" : "Ready"}</span></div>
+      <div className="app-title"><strong>Project Meta Context</strong><span>{stage === "consent" ? "Access" : stage === "brief" ? "Review" : "Ready"}</span></div>
       <div className="header-status-group">
         <span ref={providerNoticeRef} className="provider-notice-anchor">
           {(() => {
@@ -1824,7 +1838,7 @@ export function App() {
         {sessionMode === "recovery" && <article className="work-card empty-state"><div className="empty-icon warning"><Icon name="warning" /></div><span className="section-label">Saved session needs attention</span><h1>Start a clean local session</h1><p>Your project files are unchanged.</p><button className="primary" type="button" onClick={requestReset}>Review reset</button></article>}
 
         {sessionMode !== "generic" && sessionMode !== "recovery" && stage === "consent" && <article className="work-card consent-card">
-          <div className="card-heading"><div className="section-heading-with-info"><span className="section-label">Project access</span><button type="button" className="mini-info" aria-label="About project metadata collection" title="About project metadata collection" aria-describedby="project-access-help" onClick={(event) => { const help = event.currentTarget.nextElementSibling as HTMLSpanElement | null; if (help) help.hidden = !help.hidden; }}><Icon name="info" size={13} /></button><span id="project-access-help" className="inline-help" hidden>DWI collects only bounded project-level metadata to build a reviewable brief for later prompts. Nothing is sent until you approve the project brief.</span></div><h1>Build project context for prompts</h1></div>
+          <div className="card-heading"><div className="section-heading-with-info"><span className="section-label">Project Meta Context · Access</span><button type="button" className="mini-info" aria-label="About project metadata collection" title="About project metadata collection" aria-describedby="project-access-help" onClick={(event) => { const help = event.currentTarget.nextElementSibling as HTMLSpanElement | null; if (help) help.hidden = !help.hidden; }}><Icon name="info" size={13} /></button><span id="project-access-help" className="inline-help" hidden>DWI collects only bounded project-level metadata to build a reviewable brief for later prompts. Nothing is sent until you approve the project brief.</span></div><h1>Build Project Meta Context</h1></div>
           <ul className="scope-list"><li><Icon name="database" /><span>Manifests</span></li><li><Icon name="folder" /><span>Workspace</span></li><li><Icon name="file" /><span>Guidance</span></li></ul>
           {consentError && <div className="inline-alert" role="alert"><Icon name="warning" /><span>{consentError}</span></div>}
           <div className="primary-stack"><button className="primary full-width" onClick={approve} disabled={isApproving || sessionMode === "loading"}>{sessionMode === "loading" ? "Opening project…" : isApproving ? "Checking project…" : <>Check this project <span aria-hidden="true">→</span></>}</button><button className="text-button centered" type="button" onClick={() => openEditorDocument({ kind: "privacy" })}><Icon name="external" size={13} />Review data boundaries in editor</button></div>
@@ -1844,7 +1858,7 @@ export function App() {
         </article>}
 
         {sessionMode === "workspace" && (stage === "compose" || stage === "evaluate") && <article className="work-card ready-card">
-          <div className="card-heading"><span className="section-label">Project initialized</span><h1>Project context is ready</h1><p>The approved brief is available to Prompt Optimizer and future project-aware tools.</p></div>
+          <div className="card-heading"><span className="section-label">Project Meta Context · Ready</span><h1>Project metadata is ready</h1><p>The approved brief is available to Prompt Optimizer and future project-aware tools.</p></div>
           <div className="actions"><button className="secondary" type="button" onClick={() => setActiveSurface("library")}>Open Library</button><button className="primary" type="button" onClick={activateOptimizer}>Open Prompt Optimizer <span aria-hidden="true">→</span></button></div>
         </article>}
       </div>
@@ -1860,7 +1874,7 @@ export function App() {
         {sessionMode !== "generic" && sessionMode !== "recovery" && (stage === "compose" || stage === "evaluate") && <OptimizerStepNavigation step={optimizerStep} candidateAvailable={Boolean(candidate && optimizerReview)} onSelect={selectOptimizerStep} />}
 
         {sessionMode !== "generic" && sessionMode !== "recovery" && (stage === "compose" || stage === "evaluate") && optimizerStep === "input" && <article className="work-card compose-card">
-          <div className="section-head"><div className="card-heading compact-heading"><span className="section-label">Step 1 · Input</span><div className="task-heading-with-info"><h1>Shape the task</h1><span className="task-context-info"><button type="button" className="mini-info" aria-label="About included project context" aria-describedby="task-context-help"><Icon name="info" size={13} /></button><span id="task-context-help" className="task-context-tooltip" role="tooltip">Reviewed project context and the selected template are included automatically.</span></span></div></div><button type="button" className="mini-info" aria-label="Open project context in Project Initializer" onClick={activateInitializer}><Icon name="database" size={13} /></button></div>
+          <div className="section-head"><div className="card-heading compact-heading"><span className="section-label">Step 1 · Input</span><div className="task-heading-with-info"><h1>Shape the task</h1><span className="task-context-info"><button type="button" className="mini-info" aria-label="About included Project Meta Context" aria-describedby="task-context-help"><Icon name="info" size={13} /></button><span id="task-context-help" className="task-context-tooltip" role="tooltip">Reviewed Project Meta Context and the selected template are included automatically.</span></span></div></div><button type="button" className="mini-info" aria-label="Review Project Meta Context" onClick={activateInitializer}><Icon name="database" size={13} /></button></div>
           <div className="compose-input"><PromptInputEditor
             text={promptText}
             onTextChange={changePromptText}
@@ -1877,8 +1891,13 @@ export function App() {
           <div className="actions optimizer-actions">{isCompiling ? <button className="secondary" type="button" onClick={cancelOptimizer}>Cancel resolve</button> : <><button className="secondary" type="button" disabled={!promptText.trim() || !assignmentOptions.length} onClick={() => runOptimizer("compile")}>Continue to resolve</button><button className="primary" disabled={provider.health !== "ready" || !promptText.trim() || !assignmentOptions.length} onClick={() => runOptimizer("enhance")} title={provider.health !== "ready" ? "Connect and verify a provider before rewriting." : !promptText.trim() ? "Describe the task before rewriting it." : undefined}>Rewrite with LLM <span aria-hidden="true">→</span></button></>}</div>
         </article>}
 
+        {sessionMode !== "generic" && sessionMode !== "recovery" && optimizerStep !== "input" && !candidate && <article className="work-card context-recovery-card" role="status">
+          <div className="card-heading"><span className="section-label">Project Meta Context updated</span><h1>Resolve this step with the reviewed metadata</h1><p>Your task draft and workflow position were retained. The old generated candidate was discarded because it was bound to an earlier project review.</p></div>
+          <div className="actions"><button className="secondary" type="button" onClick={() => selectOptimizerStep("input")}><Icon name="back" size={13} />Back to input</button><button className="primary" type="button" disabled={!promptText.trim() || isCompiling} onClick={() => runOptimizer("compile")}>{isCompiling ? "Resolving…" : "Resolve again"}</button></div>
+        </article>}
+
         {sessionMode !== "generic" && sessionMode !== "recovery" && optimizerStep === "resolve" && candidate && <article className="work-card resolve-card">
-          <div className="section-head"><div className="card-heading compact-heading"><span className="section-label">Step 2 · Resolve</span><h1 data-optimizer-resolve-heading tabIndex={-1}>Confirm the local interpretation</h1><p>The task, reviewed project context, selected template, and deterministic candidate are current.</p></div><span className="review-source" aria-label="Result source: Local deterministic"><Icon name="lock" size={12} />Local</span></div>
+          <div className="section-head"><div className="card-heading compact-heading"><span className="section-label">Step 2 · Resolve</span><h1 data-optimizer-resolve-heading tabIndex={-1}>Confirm the local interpretation</h1><p>The task, reviewed project context, selected template, and deterministic candidate are current.</p></div><div className="review-context-actions"><span className="review-source" aria-label="Result source: Local deterministic"><Icon name="lock" size={12} />Local</span><button type="button" className="mini-info" aria-label="Review Project Meta Context" onClick={() => { contextReviewReturnStep.current = "resolve"; activateInitializer(); }}><Icon name="database" size={13} /></button></div></div>
           <div className="optimizer-resolve-facts"><div><span>Project knowledge</span><strong>Approved snapshot</strong></div><div><span>Candidate</span><strong>Local deterministic</strong></div><div><span>Provider</span><strong>Not required</strong></div></div>
           {optimizerSourcePlan && <section className="source-plan" aria-labelledby="source-plan-heading">
             <div className="source-plan-heading"><div><span className="section-label">Source plan</span><h2 id="source-plan-heading">What will shape this prompt</h2></div><span>{optimizerSourcePlan.decisions.filter(({ disposition }) => disposition !== "exclude").length} active</span></div>
@@ -1892,7 +1911,7 @@ export function App() {
         </article>}
 
         {sessionMode !== "generic" && sessionMode !== "recovery" && optimizerStep === "review" && candidate && <article className="work-card review-card">
-          <div className="section-head review-heading"><div className="card-heading compact-heading review-heading-copy"><span className="section-label">Step 3 · {optimizerReview?.source === "local" ? "Local preview" : "LLM rewrite"}</span><h1 ref={optimizerReviewHeadingRef} tabIndex={-1} title={optimizerReview?.source === "provider" ? optimizerReview.title || optimizedResult?.title || "Review the optimized prompt" : "Review the local preview"}>{optimizerReview?.source === "provider" ? optimizerReview.title || optimizedResult?.title || "Review the optimized prompt" : "Review the local preview"}</h1>{optimizerReview?.source === "provider" && (optimizerReview.summary || optimizedResult?.summary) && <p title={optimizerReview.summary || optimizedResult?.summary}>{optimizerReview.summary || optimizedResult?.summary}</p>}</div><span className="review-source" aria-label={optimizerReview?.source === "local" ? "Result source: Local preview" : `Result source: ${optimizerReview?.model || provider.model || "verified provider"}`}><Icon name={optimizerReview?.source === "local" ? "lock" : "sparkle"} size={12} />{optimizerReview?.source === "local" ? "Local" : optimizerReview?.model || provider.model || "Provider"}</span></div>
+          <div className="section-head review-heading"><div className="card-heading compact-heading review-heading-copy"><span className="section-label">Step 3 · {optimizerReview?.source === "local" ? "Local preview" : "LLM rewrite"}</span><h1 ref={optimizerReviewHeadingRef} tabIndex={-1} title={optimizerReview?.source === "provider" ? optimizerReview.title || optimizedResult?.title || "Review the optimized prompt" : "Review the local preview"}>{optimizerReview?.source === "provider" ? optimizerReview.title || optimizedResult?.title || "Review the optimized prompt" : "Review the local preview"}</h1>{optimizerReview?.source === "provider" && (optimizerReview.summary || optimizedResult?.summary) && <p title={optimizerReview.summary || optimizedResult?.summary}>{optimizerReview.summary || optimizedResult?.summary}</p>}</div><div className="review-context-actions"><span className="review-source" aria-label={optimizerReview?.source === "local" ? "Result source: Local preview" : `Result source: ${optimizerReview?.model || provider.model || "verified provider"}`}><Icon name={optimizerReview?.source === "local" ? "lock" : "sparkle"} size={12} />{optimizerReview?.source === "local" ? "Local" : optimizerReview?.model || provider.model || "Provider"}</span><button type="button" className="mini-info" aria-label="Review Project Meta Context" onClick={() => { contextReviewReturnStep.current = "review"; activateInitializer(); }}><Icon name="database" size={13} /></button></div></div>
           <div className="prompt-output" role="region" aria-label="Generated prompt"><pre tabIndex={0} aria-label="Generated prompt text">{candidate.text}</pre></div>
           {tokenProjection && <details className="review-source-plan token-projection" open><summary>Estimated engineering token cost · {tokenProjection.estimationStatus.replace("_", " ")}</summary><p className="projection-disclaimer">Projection only—not a billing record or deterministic token count.</p><div className="projection-totals"><div><span>Without refinement</span><strong>{tokenProjection.baselineProjection.totalTokens.toLocaleString()}</strong></div><div><span>With refined prompt</span><strong>{tokenProjection.optimizedProjection.totalTokens.toLocaleString()}</strong></div><div><span>Projected change</span><strong>{projectedTokenDeltaLabel(tokenProjection.projectedDelta)}</strong></div></div><dl className="projection-breakdown">{(["planning", "contextIngestion", "promptInput", "toolProviderCalls", "retries", "finalOutput"] as const).map((part) => <div key={part}><dt>{part.replace(/([A-Z])/g, " $1")}</dt><dd>{tokenProjection.baselineProjection.breakdown[part].toLocaleString()} → {tokenProjection.optimizedProjection.breakdown[part].toLocaleString()}</dd></div>)}</dl><p>Confidence: {tokenProjection.confidence} · Range: {tokenProjection.optimizedProjection.totalTokens.toLocaleString()} ({tokenProjection.uncertainty.optimizedMin.toLocaleString()}–{tokenProjection.uncertainty.optimizedMax.toLocaleString()})</p><p>Cost: {tokenProjection.cost.status === "cost_unavailable" ? "unavailable—no validated provider price supplied" : `$${tokenProjection.cost.optimized.toFixed(4)} estimated`}</p><p>Routing: requested {tokenProjection.routing.requestedProvider}/{tokenProjection.routing.requestedModel}{tokenProjection.routing.actualProvider || tokenProjection.routing.actualModel ? `; actual ${tokenProjection.routing.actualProvider ?? "provider unknown"}/${tokenProjection.routing.actualModel ?? "model unknown"}` : "; actual route not reported"}{tokenProjection.routing.substitutionReason ? `; ${tokenProjection.routing.substitutionReason}` : ""}.</p>{tokenProjection.telemetry && <p>{tokenProjection.telemetry.scope === "task_execution" ? "Reconciled task-execution telemetry" : "Measured optimizer-call telemetry"}: {tokenProjection.telemetry.totalTokens.toLocaleString()} tokens{tokenProjection.telemetry.scope === "optimizer_call" ? "; this does not measure downstream task execution" : ""}.</p>}<details><summary>Assumptions and metadata</summary><ul>{tokenProjection.assumptions.map((assumption) => <li key={assumption}>{assumption}</li>)}</ul><p>Metadata used: {tokenProjection.metadataUsed.length ? tokenProjection.metadataUsed.join(", ") : "none declared"}</p><p>{tokenProjection.optimizationRationale}</p><small>Estimation ID: {tokenProjection.estimationId}</small></details></details>}
           {optimizerSourcePlan && <details className="review-source-plan"><summary>Source provenance · {optimizerSourcePlan.decisions.filter(({ disposition }) => disposition !== "exclude").length} active sources</summary><ul>{optimizerSourcePlan.decisions.filter(({ disposition }) => disposition !== "exclude").map((decision) => <li key={decision.id}><strong>{decision.label}</strong><span>{decision.disposition} · {decision.provenance.join(" · ")}</span></li>)}</ul></details>}

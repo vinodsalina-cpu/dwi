@@ -35,7 +35,7 @@ export interface PromptOptimizerSession {
   schema: typeof PROMPT_OPTIMIZER_SESSION_SCHEMA;
   workspaceFingerprint: string;
   revision: number;
-  view: Exclude<PromptOptimizerView, "resolve">;
+  view: PromptOptimizerView;
   draft?: PromptOptimizerInput;
   candidate?: DwiCandidate;
   review?: DwiOptimizerReview;
@@ -107,7 +107,7 @@ export function parsePromptOptimizerSession(value: unknown): PromptOptimizerSess
   if (!record(value) || !exact(value, ["schema", "workspaceFingerprint", "revision", "view", "recents", "updatedAt"], ["draft", "candidate", "review"]) ||
     value.schema !== PROMPT_OPTIMIZER_SESSION_SCHEMA || !fingerprint(value.workspaceFingerprint) ||
     !Number.isSafeInteger(value.revision) || Number(value.revision) < 0 ||
-    (value.view !== "input" && value.view !== "review") || !Array.isArray(value.recents) ||
+    (value.view !== "input" && value.view !== "resolve" && value.view !== "review") || !Array.isArray(value.recents) ||
     value.recents.length > PROMPT_OPTIMIZER_SESSION_RECENT_LIMIT || !value.recents.every(recent) ||
     !timestamp(value.updatedAt) || (value.draft !== undefined && !input(value.draft)) ||
     !isValidPromptOptimizerRecovery(value.candidate, value.draft, value.review)) return undefined;
@@ -170,7 +170,7 @@ export class PromptOptimizerSessionStore {
 
   async migrateLegacy(
     workspaceFingerprint: string,
-    legacy: { view?: Exclude<PromptOptimizerView, "resolve">; draft?: PromptOptimizerInput; candidate?: DwiCandidate; review?: DwiOptimizerReview; recents?: PromptOptimizerSessionRecent[] },
+    legacy: { view?: PromptOptimizerView; draft?: PromptOptimizerInput; candidate?: DwiCandidate; review?: DwiOptimizerReview; recents?: PromptOptimizerSessionRecent[] },
   ): Promise<PromptOptimizerSessionOpen> {
     const opened = this.open(workspaceFingerprint);
     if (opened.status !== "absent") return opened;

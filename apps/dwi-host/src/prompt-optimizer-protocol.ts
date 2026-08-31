@@ -8,10 +8,6 @@ import type { DwiOutputSize } from "@platform/dwi-core";
 
 export const PROMPT_COMMAND_SCHEMA = "prompt-command.v2" as const;
 
-/**
- * Resolve is an ephemeral protocol-visible transition. Persisted view state
- * remains limited to recoverable input/review checkpoints.
- */
 export type PromptOptimizerView = "input" | "resolve" | "review";
 
 interface PromptCommandIdentity {
