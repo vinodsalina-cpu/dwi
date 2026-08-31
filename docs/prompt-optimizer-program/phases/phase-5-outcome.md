@@ -1,6 +1,6 @@
 # Phase 5 outcome
 
-State: local implementation and package candidate complete; phase closure blocked on installed functional evidence and exact review SHA
+State: POC complete locally at review SHA `afbd113`; provider and promotion authority remain closed
 
 ## Actual result
 
@@ -31,13 +31,17 @@ A later independent exact-candidate review found two additional material discrep
 
 Installed use then exposed a route-loss defect in the shared two-webview lifecycle: automatic brief-confirmed and workspace-root messages could replace an active Prompt Optimizer surface with Home. DWI-PO-0029 preserves the active optimizer for those automatic updates and explicitly selects it at rewrite dispatch and pending. The focused regression covers dispatch, both lifecycle interleavings, pending, actionable error, fallback, and result while retaining the task draft. The final 416-test suite and package gates pass; the final VSIX is 387 files / 683,053 bytes / SHA-256 `a2d93c51e30ca42666f5cf3374a69a7f1a51218b21bb0c02ea9f6f868b7dea0e`.
 
-No known unclassified material discrepancy remains in the locally executable scope. Exact-SHA review is still pending because the candidate remains uncommitted.
+No known unclassified material discrepancy remains in the locally executable scope. The final candidate is split across six atomic local commits through `afbd113`.
 
-## Remaining gates
+## Closure evidence
 
-- The installed harness proves package installation, activation, and both view opens, but it cannot drive the webview through initialization/review → save → restart/resume → optimizer reset → approved-project preservation. Unit/integration UI evidence cannot substitute for this packaged functional gate.
-- The candidate is uncommitted. The Phase 5 contract requires separate authority for an exact local review commit.
-- Phase 4 remains blocked and semantically unqualified. Phase 5 cannot close that evidence gap or open Phase 6.
+- The final repository suite passes 419 tests: 104 prompt optimizer, 31 workspace, 66 core, 16 catalog, 171 host, and 31 webview. All six package typechecks pass.
+- The installed VS Code 1.134.0 harness drives consent, bounded scan, project review, brief confirmation, provider-free deterministic Resolve, Review, save-to-recents, and optimizer-only reset while retaining Project Meta Context.
+- Direct versioned-store and host/webview lifecycle suites prove restart/resume, migration, corruption, byte limits, downgrade refusal, stale revisions, exact step recovery, and cross-workspace isolation. The Electron runner cannot survive an intentional window reload, so cross-process installed automation is not claimed separately.
+- Responsive browser checks pass at 320x640, 640x360, and 160x320 without horizontal overflow or console errors. Keyboard/focus reset behavior is covered directly.
+- Final VSIX: 388 files, SHA-256 `cf6b400512e113d945512abce8acc93e3c93227b1eb9379cce7e5d6bf6f4adf6`; archive inspection contains the host, webview, session store, and production-fail-closed smoke confirmation gate.
+
+Phase 4 remains blocked and semantically unqualified. Phase 5 completion does not waive that gap or authorize provider work.
 
 ## Rollback
 

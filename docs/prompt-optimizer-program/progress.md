@@ -1,12 +1,17 @@
 # Current progress
 
-- Active phase: Phase 5 — product hardening and minimum durable state
+- Active phase: Phase 6 — broad local POC qualification complete; awaiting later authority decisions
 - Phase owner: Codex
 - Starting SHA: `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`
-- Review SHA / current HEAD: `c2c3a7b`
-- State: three atomic Phase 5 commits locally qualified; blocked on a Phase 5-specific installed restart/resume/reset flow and the remaining global-recents consolidation finding
+- Review SHA / current HEAD: `afbd113`
+- State: Phase 5 POC and broad local Phase 6 POC qualification complete; real-provider semantics, fixed-executor comparison, promotion, merge, and tag remain pending separate authority
 
 ## Completed
+
+- Consolidated optimizer recents under the workspace-scoped session authority and purged legacy global recents after one-time import (`3b45b60`).
+- Added a production-fail-closed installed-smoke confirmation port and CDP-driven packaged journey (`afbd113`). VS Code 1.134.0 now proves initialization/consent, Project Meta Context review and confirmation, provider-free deterministic Resolve/Review, save-to-recents, and optimizer-only reset.
+- Final full suite: 419 tests; all six typechecks; schema export; build; 388-file VSIX SHA-256 `cf6b400512e113d945512abce8acc93e3c93227b1eb9379cce7e5d6bf6f4adf6`; installed functional flow; 16 proxy syntax checks, 20 proxy tests, and recovered simulator scenarios.
+- Broad local Phase 6 failure/structural qualification passes malformed response, timeout, cancellation, stale revision/result, auth, quota/rate limit, refusal/truncation, connectivity, policy/safety, hash mismatch, locked section, migration/downgrade, privacy, call ceiling, provenance/conflict, rollback, and repository-independence coverage.
 
 - Preserved Phase 4 as blocked and created a verified compact checkpoint containing a complete Git bundle at `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`, local program/evaluation records, approval boundaries, and SHA-256 verification.
 - Created local branch `feature/po-05-product-hardening` at the exact Phase 4 functional SHA and froze the Phase 5 contract without changing product code.
