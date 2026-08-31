@@ -745,6 +745,8 @@ export function App() {
   const [isResetting, setIsResetting] = useState(false);
   const [optimizerResetPending, setOptimizerResetPending] = useState(false);
   const [isOptimizerResetting, setIsOptimizerResetting] = useState(false);
+  const optimizerResetTriggerRef = useRef<HTMLButtonElement>(null);
+  const optimizerResetDialogRef = useRef<HTMLDivElement>(null);
   const [activeSurface, setActiveSurface] = useState<ActiveSurface>(() =>
     initialActiveSurface(document.documentElement.dataset.dwiInitialSurface),
   );
@@ -787,6 +789,11 @@ export function App() {
   const optimizerResetEligible = projectReady && brief.confirmed && (stage === "compose" || stage === "evaluate");
 
   useEffect(() => { activeSurfaceRef.current = activeSurface; }, [activeSurface]);
+
+  useEffect(() => {
+    if (optimizerResetPending) optimizerResetDialogRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    else optimizerResetTriggerRef.current?.focus();
+  }, [optimizerResetPending]);
 
   useEffect(() => {
     if (!providerNoticeOpen) return;
@@ -1076,10 +1083,6 @@ export function App() {
       if (data.type === "dwi.brief.ready" && data.brief) {
         setBrief({ ...data.brief, confirmed: false });
         setCandidate(undefined);
-        setPromptText("");
-        setAssignmentId(DEFAULT_ASSIGNMENT_ID);
-        setOutputSize("low");
-        setOptimizerStep("input");
         setOptimizerReview(undefined);
         setDraft("");
         setFeedbackRating(undefined);
@@ -1993,7 +1996,7 @@ export function App() {
         }}>Remove provider configuration</button>}
         {settingsError && <div className="inline-alert" role="alert"><Icon name="warning" /><span>{settingsError}</span></div>}
       </section>
-      {optimizerResetEligible && <section className="settings-section danger-zone"><div><strong>Prompt Optimizer session</strong><span>Clear this project's prompt draft, generated candidates, saved prompt recents, and optimizer view. The approved project brief, project declaration, consent, and provider settings stay intact.</span></div>{optimizerResetPending ? <div className="reset-inline-confirm" role="alertdialog" aria-labelledby="optimizer-reset-title" aria-describedby="optimizer-reset-description"><strong id="optimizer-reset-title">Reset Prompt Optimizer?</strong><span id="optimizer-reset-description">Only Prompt Optimizer progress for this project will be cleared.</span><div className="actions"><button type="button" className="secondary" disabled={isOptimizerResetting} onClick={() => setOptimizerResetPending(false)}>Cancel</button><button type="button" className="danger-outline" disabled={isOptimizerResetting} onClick={confirmOptimizerReset}>{isOptimizerResetting ? "Resetting…" : "Reset prompt progress"}</button></div></div> : <button type="button" className="danger-outline" onClick={() => setOptimizerResetPending(true)}>Reset Prompt Optimizer</button>}</section>}
+      {optimizerResetEligible && <section className="settings-section danger-zone"><div><strong>Prompt Optimizer session</strong><span>Clear this project's prompt draft, generated candidates, saved prompt recents, and optimizer view. The approved project brief, project declaration, consent, and provider settings stay intact.</span></div>{optimizerResetPending ? <div ref={optimizerResetDialogRef} className="reset-inline-confirm" role="alertdialog" aria-labelledby="optimizer-reset-title" aria-describedby="optimizer-reset-description" onKeyDown={(event) => { if (event.key === "Escape" && !isOptimizerResetting) { event.preventDefault(); setOptimizerResetPending(false); } }}><strong id="optimizer-reset-title">Reset Prompt Optimizer?</strong><span id="optimizer-reset-description">Only Prompt Optimizer progress for this project will be cleared.</span><div className="actions"><button type="button" className="secondary" disabled={isOptimizerResetting} onClick={() => setOptimizerResetPending(false)}>Cancel</button><button type="button" className="danger-outline" disabled={isOptimizerResetting} onClick={confirmOptimizerReset}>{isOptimizerResetting ? "Resetting…" : "Reset prompt progress"}</button></div></div> : <button ref={optimizerResetTriggerRef} type="button" className="danger-outline" onClick={() => setOptimizerResetPending(true)}>Reset Prompt Optimizer</button>}</section>}
       </div>
     </section>}
 

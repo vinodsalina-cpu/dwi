@@ -51,7 +51,7 @@ import { TemplateLibraryStore, TemplateLibraryStoreError } from "./template-libr
 import { parsePromptCompileRequest, type PromptComposeInput } from "./prompt-compose-protocol.js";
 import { parsePromptOptimizerCommand, type PromptOptimizerInput, type PromptOptimizerView } from "./prompt-optimizer-protocol.js";
 import { PromptOptimizerRequestBoundary, persistedPromptOptimizerView, restorePromptOptimizerView, type PersistedPromptOptimizerView } from "./prompt-optimizer-session.js";
-import { PromptOptimizerSessionStore, type PromptOptimizerSessionRecent } from "./prompt-optimizer-session-store.js";
+import { PromptOptimizerSessionStore, type PromptOptimizerSession, type PromptOptimizerSessionRecent } from "./prompt-optimizer-session-store.js";
 import { resolveDwiEditorDocument, resolvePersistedPromptReviewDocument, type ResolvedDwiEditorDocument } from "./editor-document.js";
 import { consumeConsentCapability, issueConsentCapability, type ConsentCapability } from "./consent-capability.js";
 import { reviewedProjectSourceContribution } from "./prompt-source-adapter.js";
@@ -807,12 +807,22 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
         recents: patch.recents ?? current?.recents ?? legacyRecents,
       }, current?.revision ?? "new");
     } catch {
-      // Compatibility persistence remains available; never make local navigation unusable because recovery storage failed.
+      // A stale authoritative record is worse than falling back to the current
+      // workspace snapshot. Remove it when possible so restart migration cannot
+      // overwrite newer successfully persisted workflow state.
+      try { await this.optimizerSessions.reset(workspaceFingerprint); } catch { /* Preserve corrupt/newer state unchanged. */ }
     }
   }
 
   private async invalidateOptimizerRecovery(workspaceFingerprint: string): Promise<void> {
     await this.updateOptimizerSession(workspaceFingerprint, { candidate: null, review: null });
+  }
+
+  private optimizerSessionMatchesSnapshot(session: PromptOptimizerSession, snapshot?: DwiWorkspaceSnapshot): boolean {
+    if (!snapshot) return false;
+    return JSON.stringify(session.draft) === JSON.stringify(snapshot.optimizerDraft ?? snapshot.candidateInput) &&
+      JSON.stringify(session.candidate) === JSON.stringify(snapshot.candidate) &&
+      JSON.stringify(session.review) === JSON.stringify(snapshot.optimizerReview);
   }
 
   private async migrateOptimizerSession(workspaceFingerprint: string, snapshot?: DwiWorkspaceSnapshot): Promise<void> {
@@ -887,9 +897,9 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
         return true;
       }
       this.assertWorkspaceOperation(operation.folder, operation.epoch);
-      await this.resetOptimizerSession(operation.identity.localFingerprint);
       const cleared = clearPromptOptimizerState(snapshot, new Date().toISOString());
       await operation.store.updatePartial(cleared);
+      await this.resetOptimizerSession(operation.identity.localFingerprint);
       await this.postOptimizerRecents(webview, operation.identity.localFingerprint);
       await this.postOptimizerView(webview, operation.identity.localFingerprint, false);
       await webview.postMessage({
@@ -1341,7 +1351,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
         }
         await this.postWorkspaceMessage(webview, operation, { type: `dwi.snapshot.${state.status}`, ...state });
         const optimizerSession = this.optimizerSessions.open(operation.identity.localFingerprint);
-        if (optimizerSession.status === "ready") {
+        if (optimizerSession.status === "ready" && this.optimizerSessionMatchesSnapshot(optimizerSession.session, snapshot)) {
           await webview.postMessage({
             type: "prompt.v2.session.state",
             draft: optimizerSession.session.draft,

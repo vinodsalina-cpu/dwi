@@ -184,6 +184,7 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     expect(screen.getByRole("button", { name: "Project Meta Context" }).getAttribute("aria-current")).toBe("page");
     await act(async () => {
       hostMessage({ type: "dwi.project.snapshot", snapshot: { ...PROJECT_UI_FIXTURES.current, projectName: "DWI", reviewed: true } });
+      hostMessage({ type: "dwi.brief.ready", brief: { ...brief, confirmed: false } });
       hostMessage({ type: "dwi.brief.confirmed", brief });
     });
     expect(screen.getByRole("button", { name: "Prompt Optimizer" }).getAttribute("aria-current")).toBe("page");
@@ -209,6 +210,10 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     fireEvent.click(screen.getByRole("button", { name: "DWI settings" }));
     fireEvent.click(screen.getByRole("button", { name: "Reset Prompt Optimizer" }));
     expect(screen.getByRole("alertdialog", { name: "Reset Prompt Optimizer?" })).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.keyDown(screen.getByRole("alertdialog", { name: "Reset Prompt Optimizer?" }), { key: "Escape" });
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Reset Prompt Optimizer" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reset Prompt Optimizer" }));
     fireEvent.click(screen.getByRole("button", { name: "Reset prompt progress" }));
     expect(posted.findLast((message) => (message as { type?: string }).type === "prompt.v2.session.reset")).toEqual({ type: "prompt.v2.session.reset", schemaVersion: "prompt-command.v2" });
     await act(async () => { hostMessage({ type: "prompt.v2.session.reset.result", status: "reset" }); });
