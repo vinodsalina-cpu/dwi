@@ -775,13 +775,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
   }
 
   private async setOptimizerView(workspaceFingerprint: string, view: PromptOptimizerView, candidatePresent = false): Promise<PersistedPromptOptimizerView> {
-    const stored = this.context.workspaceState.get<unknown>(PROMPT_OPTIMIZER_VIEWS_KEY, {});
-    const current = stored && typeof stored === "object" && !Array.isArray(stored) ? stored as Record<string, unknown> : {};
-    const next = { ...current };
-    delete next[workspaceFingerprint];
     const persisted = persistedPromptOptimizerView(view, candidatePresent);
-    const bounded = Object.fromEntries([...Object.entries(next), [workspaceFingerprint, persisted]].slice(-50));
-    await this.context.workspaceState.update(PROMPT_OPTIMIZER_VIEWS_KEY, bounded);
     await this.updateOptimizerSession(workspaceFingerprint, { view: persisted });
     return persisted;
   }
@@ -789,9 +783,9 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
   private async updateOptimizerSession(
     workspaceFingerprint: string,
     patch: { view?: PersistedPromptOptimizerView; draft?: PromptOptimizerInput | null; candidate?: DwiCandidate | null; review?: DwiOptimizerReview | null; recents?: PromptOptimizerSessionRecent[] },
-  ): Promise<void> {
+  ): Promise<boolean> {
     const opened = this.optimizerSessions.open(workspaceFingerprint);
-    if (opened.status === "unavailable") return;
+    if (opened.status === "unavailable") return false;
     const current = opened.status === "ready" ? opened.session : undefined;
     const legacyRecents = this.optimizerRecents(workspaceFingerprint).map(({ workspaceFingerprint: _workspaceFingerprint, ...recent }) => recent);
     try {
@@ -806,11 +800,13 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
         ...(review ? { review } : {}),
         recents: patch.recents ?? current?.recents ?? legacyRecents,
       }, current?.revision ?? "new");
+      return true;
     } catch {
       // A stale authoritative record is worse than falling back to the current
       // workspace snapshot. Remove it when possible so restart migration cannot
       // overwrite newer successfully persisted workflow state.
       try { await this.optimizerSessions.reset(workspaceFingerprint); } catch { /* Preserve corrupt/newer state unchanged. */ }
+      return false;
     }
   }
 
@@ -827,25 +823,20 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
 
   private async migrateOptimizerSession(workspaceFingerprint: string, snapshot?: DwiWorkspaceSnapshot): Promise<void> {
     try {
-      await this.optimizerSessions.migrateLegacy(workspaceFingerprint, {
+      const migrated = await this.optimizerSessions.migrateLegacy(workspaceFingerprint, {
         view: this.legacyOptimizerView(workspaceFingerprint),
         ...(snapshot?.optimizerDraft ? { draft: snapshot.optimizerDraft } : {}),
         ...(snapshot?.candidate ? { candidate: snapshot.candidate } : {}),
         ...(snapshot?.optimizerReview ? { review: snapshot.optimizerReview } : {}),
         recents: this.legacyOptimizerRecents(workspaceFingerprint).map(({ workspaceFingerprint: _workspaceFingerprint, ...recent }) => recent),
       });
+      if (migrated.status === "ready") await this.clearLegacyOptimizerState(workspaceFingerprint);
     } catch {
       // Legacy state remains the downgrade-safe recovery path when migration cannot be persisted.
     }
   }
 
-  private async postOptimizerView(webview: vscode.Webview, workspaceFingerprint: string, candidatePresent: boolean): Promise<void> {
-    const stored = this.optimizerView(workspaceFingerprint);
-    await webview.postMessage({ type: "prompt.v2.view.state", view: restorePromptOptimizerView(stored, candidatePresent) });
-  }
-
-  private async resetOptimizerSession(workspaceFingerprint: string): Promise<void> {
-    await this.optimizerSessions.reset(workspaceFingerprint);
+  private async clearLegacyOptimizerState(workspaceFingerprint: string): Promise<void> {
     const storedViews = this.context.workspaceState.get<unknown>(PROMPT_OPTIMIZER_VIEWS_KEY, {});
     if (storedViews && typeof storedViews === "object" && !Array.isArray(storedViews)) {
       const nextViews = { ...(storedViews as Record<string, unknown>) };
@@ -858,6 +849,16 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
         !entry || typeof entry !== "object" || (entry as Partial<PromptOptimizerRecent>).workspaceFingerprint !== workspaceFingerprint,
       ));
     }
+  }
+
+  private async postOptimizerView(webview: vscode.Webview, workspaceFingerprint: string, candidatePresent: boolean): Promise<void> {
+    const stored = this.optimizerView(workspaceFingerprint);
+    await webview.postMessage({ type: "prompt.v2.view.state", view: restorePromptOptimizerView(stored, candidatePresent) });
+  }
+
+  private async resetOptimizerSession(workspaceFingerprint: string): Promise<void> {
+    await this.optimizerSessions.reset(workspaceFingerprint);
+    await this.clearLegacyOptimizerState(workspaceFingerprint);
   }
 
   private async postPromptError(
@@ -985,13 +986,14 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
         source: review.source,
         ...(review.source === "provider" ? { provider: review.provider, model: review.model } : {}),
       };
-      const all = this.context.globalState.get<PromptOptimizerRecent[]>(PROMPT_OPTIMIZER_RECENTS_KEY, []);
-      const retained = Array.isArray(all) ? all.filter((entry) => entry.workspaceFingerprint !== operation.identity.localFingerprint) : [];
       const scoped = [recent, ...this.optimizerRecents(operation.identity.localFingerprint)].slice(0, PROMPT_OPTIMIZER_RECENT_LIMIT);
-      await this.context.globalState.update(PROMPT_OPTIMIZER_RECENTS_KEY, [...scoped, ...retained].slice(0, 50));
-      await this.updateOptimizerSession(operation.identity.localFingerprint, {
+      const persisted = await this.updateOptimizerSession(operation.identity.localFingerprint, {
         recents: scoped.map(({ workspaceFingerprint: _workspaceFingerprint, ...item }) => item),
       });
+      if (!persisted) {
+        await this.postPromptError(webview, command, "storage", "The prompt could not be saved to workspace-scoped recents.");
+        return true;
+      }
       await this.postOptimizerRecents(webview, operation.identity.localFingerprint);
       await webview.postMessage({ type: "prompt.v2.record.result", requestId: command.requestId, correlationId: command.correlationId, status: "saved", recent });
       return true;
