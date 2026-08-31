@@ -234,6 +234,26 @@ h2 { margin: 3px 0 0; font-size: 15px; line-height: 1.25; }
 .optimizer-actions { flex-wrap: wrap; }
 .review-source { display: inline-flex; max-width: 42%; min-height: 22px; flex: 0 0 auto; align-items: center; gap: 4px; overflow: hidden; border: 1px solid var(--dwi-soft-border); border-radius: 99px; padding: 2px 6px; color: var(--dwi-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .review-source .icon { flex: 0 0 auto; }
+.source-plan { display: grid; gap: 12px; border: 1px solid var(--dwi-soft-border); border-radius: 10px; padding: 14px; background: var(--dwi-muted-surface); }
+.source-plan-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.source-plan-heading h2 { margin: 2px 0 0; font-size: 15px; }
+.source-plan-heading > span, .source-disposition { color: var(--dwi-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+.source-decision-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.source-decision { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; border-left: 3px solid var(--dwi-soft-border); padding: 7px 9px; background: var(--dwi-surface); }
+.source-decision.source-include { border-left-color: var(--dwi-success); }
+.source-decision.source-summarize { border-left-color: var(--dwi-accent); }
+.source-decision.source-exclude { opacity: .72; }
+.source-decision div { display: grid; gap: 2px; }
+.source-decision div span, .source-decision small, .source-plan-questions small { color: var(--dwi-muted); font-size: 10px; }
+.source-decision p, .source-decision small { grid-column: 1 / -1; margin: 0; }
+.source-plan-alert, .source-plan-questions { border-radius: 8px; padding: 10px; background: color-mix(in srgb, var(--dwi-warning) 10%, var(--dwi-surface)); }
+.source-plan-alert p, .source-plan-questions ol { margin: 6px 0 0; }
+.source-plan-questions li { margin-block: 5px; }
+.source-plan-questions small { display: block; }
+.review-source-plan { border: 1px solid var(--dwi-soft-border); border-radius: 8px; padding: 9px 11px; }
+.review-source-plan summary { cursor: pointer; font-weight: 600; }
+.review-source-plan ul { display: grid; gap: 7px; margin: 10px 0 0; padding-left: 18px; }
+.review-source-plan li span { display: block; color: var(--dwi-muted); font-size: 10px; }
 .optimizer-progress { margin-top: 8px; }
 .review-utilities { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 7px; }
 .review-utilities button { display: inline-flex; min-width: 0; align-items: center; gap: 3px; border: 0; padding: 2px 0; background: transparent; color: var(--dwi-link); font-size: 10px; text-align: left; }

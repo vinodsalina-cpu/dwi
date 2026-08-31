@@ -7,6 +7,7 @@ import {
   evaluationMarkdown,
   type DwiBrief,
 } from "@platform/dwi-core";
+import { resolvePromptSourcesV2, type PromptSourcePlanV2 } from "@platform/domain-prompt-optimizer";
 import { EMPTY_PROMPT_DRAFT_FIELDS } from "@platform/domain-prompt-optimizer/catalog";
 import type {
   PromptTemplate,
@@ -154,6 +155,7 @@ type HostMessage = {
   result?: PromptOptimizeResult;
   recents?: OptimizerRecent[];
   view?: OptimizerStep;
+  sourcePlan?: PromptSourcePlanV2;
 };
 type PendingLibraryOperation =
   | { kind: "save"; templateId?: string; resolve(detail: LibraryTemplateDetail): void; reject(error: Error): void }
@@ -697,6 +699,7 @@ export function App() {
   const [candidate, setCandidate] = useState<ReturnType<typeof compileDwiCandidate> | undefined>(initialCandidate);
   const [optimizedResult, setOptimizedResult] = useState<PromptOptimizeResult>();
   const [optimizerStep, setOptimizerStep] = useState<OptimizerStep>(() => previewStage() === "evaluate" ? "review" : "input");
+  const [optimizerSourcePlan, setOptimizerSourcePlan] = useState<PromptSourcePlanV2>();
   const [optimizerReview, setOptimizerReview] = useState<OptimizerReview | undefined>(() => previewStage() === "evaluate" ? { source: "local" } : undefined);
   const [optimizerRecents, setOptimizerRecents] = useState<OptimizerRecent[]>([]);
   const [optimizerSaveNotice, setOptimizerSaveNotice] = useState("");
@@ -798,6 +801,7 @@ export function App() {
     setOptimizedResult(undefined);
     setOptimizerStep("input");
     setOptimizerReview(undefined);
+    setOptimizerSourcePlan(undefined);
     setOptimizerSaveNotice("");
     setPromptText("");
     setAssignmentId(DEFAULT_ASSIGNMENT_ID);
@@ -852,6 +856,7 @@ export function App() {
       }
       if (data.type === "prompt.v2.compiled" && data.candidate) {
         setCandidate(data.candidate);
+        setOptimizerSourcePlan(data.sourcePlan);
         setOptimizerReview({ source: "local" });
         setIsCompiling(false);
         setWorkflowError("");
@@ -862,6 +867,7 @@ export function App() {
       }
       if (data.type === "prompt.v2.semantic.result" && data.candidate && data.localCandidate && data.result) {
         setCandidate(data.candidate);
+        setOptimizerSourcePlan(data.sourcePlan);
         setOptimizedResult(data.result);
         const reviewProvider = data.result.provider === "gemini" || data.result.provider === "openai" ? data.result.provider : undefined;
         setOptimizerReview({ source: "provider", provider: reviewProvider, model: data.result.model, title: data.result.title, summary: data.result.summary });
@@ -1223,6 +1229,7 @@ export function App() {
     setCandidate(undefined);
     setOptimizedResult(undefined);
     setOptimizerReview(undefined);
+    setOptimizerSourcePlan(undefined);
     setOptimizerSaveNotice("");
     setCopyNotice("");
     setStage("compose");
@@ -1301,6 +1308,22 @@ export function App() {
       template,
       outputSize,
     });
+    setOptimizerSourcePlan(resolvePromptSourcesV2({
+      task: promptText,
+      template: { id: assignment.id, label: assignment.name },
+      guidance: DEFAULT_MODULES.map((id) => ({ id, label: id, required: true })),
+      project: {
+        sourceId: "project:preview",
+        label: "Reviewed project snapshot",
+        approved: projectReady,
+        current: projectReady,
+        provenance: ["local preview fixture"],
+        facts: brief.facts.map(({ label, value }) => ({ label, value })),
+        conflicts: [],
+        questions: brief.unknowns.slice(0, 3).map((unknown, index) => ({ id: `preview-question:${index}`, prompt: unknown, targetSectionId: "relevant-context", reason: "Project knowledge marks this as unknown." })),
+        assumptions: [],
+      },
+    }));
     setCandidate(preview);
     setOptimizerReview({ source: "local" });
     setIsCompiling(false);
@@ -1763,6 +1786,13 @@ export function App() {
         {sessionMode !== "generic" && sessionMode !== "recovery" && optimizerStep === "resolve" && candidate && <article className="work-card resolve-card">
           <div className="section-head"><div className="card-heading compact-heading"><span className="section-label">Step 2 · Resolve</span><h1 data-optimizer-resolve-heading tabIndex={-1}>Confirm the local interpretation</h1><p>The task, reviewed project context, selected template, and deterministic candidate are current.</p></div><span className="review-source" aria-label="Result source: Local deterministic"><Icon name="lock" size={12} />Local</span></div>
           <div className="optimizer-resolve-facts"><div><span>Project knowledge</span><strong>Approved snapshot</strong></div><div><span>Candidate</span><strong>Local deterministic</strong></div><div><span>Provider</span><strong>Not required</strong></div></div>
+          {optimizerSourcePlan && <section className="source-plan" aria-labelledby="source-plan-heading">
+            <div className="source-plan-heading"><div><span className="section-label">Source plan</span><h2 id="source-plan-heading">What will shape this prompt</h2></div><span>{optimizerSourcePlan.decisions.filter(({ disposition }) => disposition !== "exclude").length} active</span></div>
+            <ul className="source-decision-list">{optimizerSourcePlan.decisions.map((decision) => <li key={decision.id} className={`source-decision source-${decision.disposition}`}><div><strong>{decision.label}</strong><span>{decision.authority} · {decision.freshness} · {decision.relevance}</span></div><span className="source-disposition">{decision.disposition}</span><p>{decision.reason}</p><small>{decision.provenance.join(" · ")}</small></li>)}</ul>
+            {optimizerSourcePlan.conflicts.length > 0 && <div className="source-plan-alert" role="alert"><strong>Conflicts require review</strong>{optimizerSourcePlan.conflicts.map((conflict) => <p key={conflict.id}>{conflict.label}: {conflict.reason}</p>)}</div>}
+            {optimizerSourcePlan.questions.length > 0 && <div className="source-plan-questions"><strong>Material questions</strong><ol>{optimizerSourcePlan.questions.map((question) => <li key={question.id}>{question.prompt}<small>{question.reason}</small></li>)}</ol></div>}
+            {optimizerSourcePlan.assumptions.length > 0 && <details><summary>Assumptions ({optimizerSourcePlan.assumptions.length})</summary><ul>{optimizerSourcePlan.assumptions.map((assumption) => <li key={assumption.id}>{assumption.text}</li>)}</ul></details>}
+          </section>}
           {workflowError && <div className="inline-alert" role="alert"><Icon name="warning" /><span>{workflowError}</span></div>}
           <div className="actions"><button className="secondary" type="button" onClick={() => selectOptimizerStep("input")}><Icon name="back" size={13} />Back to input</button><button className="primary" type="button" onClick={() => selectOptimizerStep("review")}>Continue to review <span aria-hidden="true">→</span></button></div>
         </article>}
@@ -1770,6 +1800,7 @@ export function App() {
         {sessionMode !== "generic" && sessionMode !== "recovery" && optimizerStep === "review" && candidate && <article className="work-card review-card">
           <div className="section-head"><div className="card-heading compact-heading"><span className="section-label">Step 3 · {optimizerReview?.source === "local" ? "Local preview" : "LLM rewrite"}</span><h1 ref={optimizerReviewHeadingRef} tabIndex={-1}>{optimizerReview?.source === "provider" ? optimizerReview.title || optimizedResult?.title || "Review the optimized prompt" : "Review the local preview"}</h1>{optimizerReview?.source === "provider" && (optimizerReview.summary || optimizedResult?.summary) && <p>{optimizerReview.summary || optimizedResult?.summary}</p>}</div><span className="review-source" aria-label={optimizerReview?.source === "local" ? "Result source: Local preview" : `Result source: ${optimizerReview?.model || provider.model || "verified provider"}`}><Icon name={optimizerReview?.source === "local" ? "lock" : "sparkle"} size={12} />{optimizerReview?.source === "local" ? "Local" : optimizerReview?.model || provider.model || "Provider"}</span></div>
           <div className="prompt-output" role="region" aria-label="Generated prompt"><pre tabIndex={0} aria-label="Generated prompt text">{candidate.text}</pre></div>
+          {optimizerSourcePlan && <details className="review-source-plan"><summary>Source provenance · {optimizerSourcePlan.decisions.filter(({ disposition }) => disposition !== "exclude").length} active sources</summary><ul>{optimizerSourcePlan.decisions.filter(({ disposition }) => disposition !== "exclude").map((decision) => <li key={decision.id}><strong>{decision.label}</strong><span>{decision.disposition} · {decision.provenance.join(" · ")}</span></li>)}</ul></details>}
           {isCompiling && <div className="inline-alert optimizer-progress" role="status"><Icon name="refresh" /><span>Rewriting with the verified provider…</span></div>}
           {workflowError && <div className="inline-alert" role="alert"><Icon name="warning" /><span>{workflowError}</span></div>}
           <div className="actions prompt-actions"><button className="secondary" type="button" onClick={() => selectOptimizerStep("resolve")} disabled={isCompiling}><Icon name="back" size={13} />Back to resolve</button><button className="primary" type="button" onClick={() => void copyCandidate()} disabled={isCompiling}>{copyNotice === "Prompt copied." ? <><Icon name="check" size={14} />Copied</> : "Copy prompt"}</button></div>

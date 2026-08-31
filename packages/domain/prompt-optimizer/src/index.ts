@@ -15,5 +15,6 @@ export * from "./v2/semantic.js";
 export * from "./v2/types.js";
 export * from "./v2/validation.js";
 export * from "./v2/question-policy.js";
+export * from "./v2/source-resolution.js";
 export * from "./orchestration/contracts.js";
 export * from "./orchestration/simulator.js";

@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { createHash, randomUUID } from "node:crypto";
 import { extname } from "node:path";
-import { isEntityId } from "@platform/domain-prompt-optimizer";
+import { isEntityId, resolvePromptSourcesV2 } from "@platform/domain-prompt-optimizer";
 import {
   DWI_MODULES,
   briefDigest,
@@ -47,6 +47,7 @@ import { parsePromptOptimizerCommand, type PromptOptimizerInput, type PromptOpti
 import { PromptOptimizerRequestBoundary, persistedPromptOptimizerView, restorePromptOptimizerView, type PersistedPromptOptimizerView } from "./prompt-optimizer-session.js";
 import { resolveDwiEditorDocument, resolvePersistedPromptReviewDocument, type ResolvedDwiEditorDocument } from "./editor-document.js";
 import { consumeConsentCapability, issueConsentCapability, type ConsentCapability } from "./consent-capability.js";
+import { reviewedProjectSourceContribution } from "./prompt-source-adapter.js";
 
 const MAX_DECLARATION_BYTES = 64 * 1024;
 const MAX_GIT_CONFIG_BYTES = 1024 * 1024;
@@ -877,6 +878,16 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     }
     const selectedModuleIds = DWI_MODULES.filter(({ defaultSelected }) => defaultSelected).map(({ id }) => id);
     const brief = bindBriefForProject(snapshot.project, snapshot.brief);
+    const sourcePlan = resolvePromptSourcesV2({
+      task: command.input.task,
+      template: { id: command.input.assignmentId, label: command.input.assignmentId },
+      guidance: selectedModuleIds.map((id) => ({ id, label: id, required: true })),
+      project: reviewedProjectSourceContribution(snapshot.project, true),
+    });
+    if (sourcePlan.blocked) {
+      await this.postPromptError(webview, command, "initialization_required", sourcePlan.blockReasons[0] ?? "Prompt sources are not current.");
+      return true;
+    }
     let localCandidate: DwiCandidate;
     try {
       localCandidate = await this.recompileCandidate(brief, selectedModuleIds, command.input);
@@ -905,7 +916,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       await this.setOptimizerView(operation.identity.localFingerprint, "resolve", true);
       const identity = this.optimizerRequestIdentity(command);
       if (!identity) return true;
-      await webview.postMessage({ type: "prompt.v2.compiled", correlationId: command.correlationId, ...identity, candidate: localCandidate });
+      await webview.postMessage({ type: "prompt.v2.compiled", correlationId: command.correlationId, ...identity, candidate: localCandidate, sourcePlan });
       this.recordActivity({ level: "info", category: "Prompt", title: "Local prompt preview compiled", detail: "A deterministic preview was created locally; prompt text is excluded from activity and logs." }, webview);
       return true;
     }
@@ -953,7 +964,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
         await this.setOptimizerView(operation.identity.localFingerprint, "review", true);
         const identity = this.optimizerRequestIdentity(command);
         if (!identity) return;
-        await webview.postMessage({ type: "prompt.v2.semantic.result", correlationId: command.correlationId, ...identity, operation: "enhance", localCandidate, candidate, result: optimized });
+        await webview.postMessage({ type: "prompt.v2.semantic.result", correlationId: command.correlationId, ...identity, operation: "enhance", localCandidate, candidate, result: optimized, sourcePlan });
         this.recordActivity({ level: "info", category: "Prompt", title: "Prompt rewritten", detail: "A verified provider returned a rewrite; prompt text is excluded from activity and logs." }, webview);
       });
     } catch (error) {

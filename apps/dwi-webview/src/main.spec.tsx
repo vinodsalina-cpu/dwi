@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import React, { act } from "react";
 import { compileDwiCandidate, DWI_MODULES } from "@platform/dwi-core";
+import { resolvePromptSourcesV2 } from "@platform/domain-prompt-optimizer";
 import { PROJECT_UI_FIXTURES } from "./project-fixtures.js";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -74,14 +75,19 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     expect(compile).not.toHaveProperty("selectedModuleIds");
 
     const localCandidate = compileDwiCandidate(brief, DWI_MODULES.filter(({ defaultSelected }) => defaultSelected).map(({ id }) => id), { task: "Implement a safe provider retry flow.", promptType: "General", outputSize: "low" });
-    await act(async () => { hostMessage({ type: "prompt.v2.compiled", requestId: compile.requestId, candidate: localCandidate }); });
+    const sourcePlan = resolvePromptSourcesV2({ task: "Implement a safe provider retry flow.", template: { id: "general", label: "General delivery brief" }, project: { sourceId: "project:dwi", label: "Reviewed project: DWI", approved: true, current: true, provenance: ["review:sha256:abc"], facts: [{ label: "Workspace", value: "pnpm" }], conflicts: [], questions: [{ id: "question:one", prompt: "Which retry errors are recoverable?", targetSectionId: "relevant-context", reason: "The project does not establish retry policy." }], assumptions: [] } });
+    await act(async () => { hostMessage({ type: "prompt.v2.compiled", requestId: compile.requestId, candidate: localCandidate, sourcePlan }); });
     expect(screen.getByRole("heading", { name: "Confirm the local interpretation" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "What will shape this prompt" })).toBeTruthy();
+    expect(screen.getByText("Reviewed project: DWI")).toBeTruthy();
+    expect(screen.getByText("Which retry errors are recoverable?")).toBeTruthy();
     expect(screen.getByRole("button", { name: /2 Resolve/ }).getAttribute("aria-current")).toBe("step");
     expect(screen.queryByRole("textbox", { name: "Task to optimize" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Continue to review" }));
     expect(screen.getByText("Step 3 · Local preview")).toBeTruthy();
     expect(screen.getByRole("button", { name: /3 Review/ }).getAttribute("aria-current")).toBe("step");
     expect(screen.getByRole("region", { name: "Generated prompt" })).toBeTruthy();
+    expect(screen.getByText(/Source provenance/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Open in editor" }));
     expect(posted.findLast((message) => (message as { type?: string }).type === "prompt.v2.review.open")).toEqual({ type: "prompt.v2.review.open", schemaVersion: "prompt-command.v2" });
 
