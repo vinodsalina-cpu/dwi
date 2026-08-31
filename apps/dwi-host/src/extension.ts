@@ -55,6 +55,7 @@ import { PromptOptimizerSessionStore, type PromptOptimizerSession, type PromptOp
 import { resolveDwiEditorDocument, resolvePersistedPromptReviewDocument, type ResolvedDwiEditorDocument } from "./editor-document.js";
 import { consumeConsentCapability, issueConsentCapability, type ConsentCapability } from "./consent-capability.js";
 import { reviewedProjectSourceContribution } from "./prompt-source-adapter.js";
+import { packagedSmokeConfirmationsEnabled } from "./confirmation-mode.js";
 
 const MAX_DECLARATION_BYTES = 64 * 1024;
 const MAX_GIT_CONFIG_BYTES = 1024 * 1024;
@@ -313,6 +314,40 @@ interface WorkspaceOperation {
   store: DwiWorkspaceSnapshotStore<vscode.Uri>;
 }
 
+type ProjectReviewChoice = "approve" | "export" | "cancel";
+interface ConfirmationPort {
+  approveInspection(folderName: string): Promise<boolean>;
+  reviewProject(project: DwiProjectSnapshot): Promise<ProjectReviewChoice>;
+}
+
+function confirmationPort(context: vscode.ExtensionContext): ConfirmationPort {
+  if (packagedSmokeConfirmationsEnabled(context.extensionMode, process.env.DWI_PACKAGED_SMOKE)) {
+    return {
+      approveInspection: async () => true,
+      reviewProject: async () => "approve",
+    };
+  }
+  return {
+    approveInspection: async (folderName) => (await vscode.window.showWarningMessage(
+      `Allow DWI to inspect the bounded metadata for ${folderName}?`,
+      { modal: true, detail: "DWI will read only the documented, size-bounded project metadata and store the reviewed summary in VS Code global storage." },
+      "Allow bounded check",
+    )) === "Allow bounded check",
+    reviewProject: async (project) => {
+      const choice = await vscode.window.showInformationMessage(
+        `Review project details for ${project.metadata.name}`,
+        {
+          modal: true,
+          detail: `${project.claims.length} details from ${project.evidence.length} local sources · ${project.resolution.unknowns.length} open questions · ${project.resolution.conflicts.length} conflicts. Approval records that you reviewed this exact project version; open questions remain visible in the prompt.`,
+        },
+        "Approve project details",
+        "Export details…",
+      );
+      return choice === "Approve project details" ? "approve" : choice === "Export details…" ? "export" : "cancel";
+    },
+  };
+}
+
 class DwiSidebarProvider implements vscode.WebviewViewProvider {
   private readonly views = new Map<string, vscode.WebviewView>();
   private editorDocumentPanel: vscode.WebviewPanel | undefined;
@@ -329,6 +364,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     private readonly output: vscode.OutputChannel,
     private readonly templateLibrary: TemplateLibraryStore,
     private readonly optimizerSessions: PromptOptimizerSessionStore,
+    private readonly confirmations: ConfirmationPort,
   ) {}
   dispose(): void {
     this.editorDocumentPanel?.dispose();
@@ -1403,13 +1439,9 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
           await this.postWorkspaceMessage(webview, operation, { type: "dwi.consent.required", message: "This approval expired. Review the bounded inspection scope and approve it again." });
           return;
         }
-        const choice = await vscode.window.showWarningMessage(
-          `Allow DWI to inspect the bounded metadata for ${folder.name}?`,
-          { modal: true, detail: "DWI will read only the documented, size-bounded project metadata and store the reviewed summary in VS Code global storage." },
-          "Allow bounded check",
-        );
+        const approved = await this.confirmations.approveInspection(folder.name);
         this.assertWorkspaceOperation(folder, epoch);
-        if (choice !== "Allow bounded check") {
+        if (!approved) {
           await this.postWorkspaceMessage(webview, operation, { type: "dwi.consent.required", message: "The project check was not started. Approve the bounded scope when you are ready." });
           return;
         }
@@ -1906,21 +1938,13 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       }, webview);
       return;
     }
-    const choice = await vscode.window.showInformationMessage(
-      `Review project details for ${project.metadata.name}`,
-      {
-        modal: true,
-        detail: `${project.claims.length} details from ${project.evidence.length} local sources · ${project.resolution.unknowns.length} open questions · ${project.resolution.conflicts.length} conflicts. Approval records that you reviewed this exact project version; open questions remain visible in the prompt.`,
-      },
-      "Approve project details",
-      "Export details…",
-    );
+    const choice = await this.confirmations.reviewProject(project);
     this.assertWorkspaceOperation(operation.folder, operation.epoch);
-    if (choice === "Export details…") {
+    if (choice === "export") {
       await this.exportProjectSnapshot();
       return;
     }
-    if (choice !== "Approve project details") {
+    if (choice !== "approve") {
       await this.postWorkspaceMessage(webview, operation, { type: "dwi.project.action", message: "Project details remain unreviewed." });
       return;
     }
@@ -2214,7 +2238,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel("DWI");
   const templateLibrary = new TemplateLibraryStore(context.globalState, new MockTemplateLibraryBackend(output));
   const optimizerSessions = new PromptOptimizerSessionStore(context.workspaceState);
-  const sidebar = new DwiSidebarProvider(context, output, templateLibrary, optimizerSessions);
+  const sidebar = new DwiSidebarProvider(context, output, templateLibrary, optimizerSessions, confirmationPort(context));
   context.subscriptions.push(
     sidebar,
     output,
