@@ -3,6 +3,7 @@ import {
   DWI_PROJECT_DECLARATION_FILE,
   DWI_SNAPSHOT_SCHEMA,
   DwiWorkspaceSnapshotStore,
+  clearPromptOptimizerState,
   type DwiWorkspaceSnapshot,
   type SnapshotFs,
 } from "./workspace-snapshot.js";
@@ -107,6 +108,20 @@ function completed(partial: DwiWorkspaceSnapshot): DwiWorkspaceSnapshot {
 }
 
 describe("DWI workspace snapshot", () => {
+  it("refuses to promote an incomplete initialization while clearing optimizer recovery", async () => {
+    const fs = new MemoryFs();
+    const store = makeStore(fs);
+    const partial = await store.begin({ policyVersion: "v1", scopeDigest: "a".repeat(64), workspaceFingerprint: identity.localFingerprint, approvedAt: timestamp });
+    const snapshot = completed({
+      ...partial,
+      optimizerDraft: { task: "Keep project knowledge.", assignmentId: "general", promptType: "General", outputSize: "low" },
+      optimizerReview: { source: "local" },
+    });
+    expect(() => clearPromptOptimizerState(snapshot, timestamp)).toThrow(/current approved project/i);
+    expect(snapshot.stage).toBe("evaluate");
+    expect(snapshot).toHaveProperty("optimizerDraft");
+  });
+
   it("distinguishes absent, partial, complete, invalid schema, and reset", async () => {
     const fs = new MemoryFs();
     const store = makeStore(fs);

@@ -38,6 +38,7 @@ export type PromptOptimizerCommand =
   | Pick<PromptCommandIdentity, "schemaVersion" | "requestId" | "correlationId" | "documentId"> & { type: "prompt.v2.record.save" }
   | { type: "prompt.v2.draft.save"; schemaVersion: typeof PROMPT_COMMAND_SCHEMA; input: PromptOptimizerInput }
   | { type: "prompt.v2.review.open"; schemaVersion: typeof PROMPT_COMMAND_SCHEMA }
+  | { type: "prompt.v2.session.reset"; schemaVersion: typeof PROMPT_COMMAND_SCHEMA }
   | { type: "prompt.v2.view.set"; schemaVersion: typeof PROMPT_COMMAND_SCHEMA; view: PromptOptimizerView };
 
 const ID = /^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$/;
@@ -72,6 +73,10 @@ function optimizerInput(value: unknown, allowEmptyTask = false): value is Prompt
 export function parsePromptOptimizerCommand(value: unknown): PromptOptimizerCommand | undefined {
   if (!record(value) || typeof value.type !== "string") return undefined;
   if (value.type === "prompt.v2.review.open") {
+    if (!exact(value, ["type", "schemaVersion"]) || value.schemaVersion !== PROMPT_COMMAND_SCHEMA) return undefined;
+    return value as PromptOptimizerCommand;
+  }
+  if (value.type === "prompt.v2.session.reset") {
     if (!exact(value, ["type", "schemaVersion"]) || value.schemaVersion !== PROMPT_COMMAND_SCHEMA) return undefined;
     return value as PromptOptimizerCommand;
   }

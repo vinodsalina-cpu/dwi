@@ -8,6 +8,7 @@ import {
   type DwiProjectSnapshot,
 } from "@platform/dwi-core";
 import { PROMPT_TEXT_LIMIT_CHARS } from "@platform/domain-prompt-optimizer";
+import { canResetPromptOptimizerState } from "./workflow-state.js";
 import type { WorkspaceIdentity } from "./workspace-identity.js";
 import { isPromptComposeInput, type PromptComposeInput } from "./prompt-compose-protocol.js";
 
@@ -63,6 +64,29 @@ export interface DwiWorkspaceSnapshot {
   optimizerReview?: DwiOptimizerReview;
   evaluationMarkdown?: string;
   feedback?: DwiFeedback;
+}
+
+export function clearPromptOptimizerState(snapshot: DwiWorkspaceSnapshot, updatedAt: string): DwiWorkspaceSnapshot {
+  if (!canResetPromptOptimizerState(snapshot)) {
+    throw new Error("A current approved project and confirmed brief are required before resetting Prompt Optimizer state.");
+  }
+  const {
+    candidate: _candidate,
+    candidateInput: _candidateInput,
+    optimizerDraft: _optimizerDraft,
+    optimizerReview: _optimizerReview,
+    evaluationMarkdown: _evaluationMarkdown,
+    feedback: _feedback,
+    ...retained
+  } = snapshot;
+  const cleared: DwiWorkspaceSnapshot = {
+    ...retained,
+    status: "partial",
+    stage: "compose",
+    updatedAt,
+  };
+  assertSnapshot(cleared);
+  return cleared;
 }
 export interface SnapshotFs<Path> {
   exists(path: Path): Promise<boolean>;
@@ -514,6 +538,22 @@ function validateOptimizerReview(value: unknown): void {
   ) throw new Error("DWI optimizer review is invalid.");
   if (review.title !== undefined) boundedString(review.title, "optimizer review title", 256, true);
   if (review.summary !== undefined) boundedString(review.summary, "optimizer review summary", 2_048, true);
+}
+
+export function isValidPromptOptimizerRecovery(
+  candidate: unknown,
+  draft: unknown,
+  review: unknown,
+): candidate is DwiCandidate {
+  try {
+    if (candidate === undefined && review === undefined) return draft === undefined || isOptimizerDraft(draft);
+    if (candidate === undefined || review === undefined || !isOptimizerDraft(draft)) return false;
+    validateCandidate(candidate);
+    validateOptimizerReview(review);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function assertInitialization(value: unknown): asserts value is DwiInitializationRecord {

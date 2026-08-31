@@ -106,9 +106,20 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Rewrite with LLM" }));
     const semantic = posted.findLast((message) => (message as { type?: string }).type === "prompt.v2.semantic") as Record<string, unknown>;
     expect(semantic).toMatchObject({ type: "prompt.v2.semantic", operation: "enhance", revision: 2 });
+    expect(screen.getByRole("button", { name: "Prompt Optimizer" }).getAttribute("aria-current")).toBe("page");
+    await act(async () => { hostMessage({ type: "dwi.brief.confirmed", brief }); });
+    expect(screen.getByRole("button", { name: "Prompt Optimizer" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("textbox", { name: "Task to optimize" })).toHaveProperty("value", "Implement a safe provider retry flow.");
+    await act(async () => { hostMessage({ type: "dwi.workspace.choose-root", roots: [{ uri: "file:///workspace", label: "workspace", fingerprint: "workspace-fingerprint" }] }); });
+    expect(screen.getByRole("button", { name: "Prompt Optimizer" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("textbox", { name: "Task to optimize" })).toHaveProperty("value", "Implement a safe provider retry flow.");
     await act(async () => { hostMessage({ type: "prompt.v2.pending", requestId: semantic.requestId }); });
-    fireEvent.click(screen.getByRole("button", { name: "Cancel rewrite" }));
+    expect(screen.getByRole("button", { name: "Prompt Optimizer" }).getAttribute("aria-current")).toBe("page");
+    fireEvent.click(screen.getByRole("button", { name: /Cancel (rewrite|resolve)/ }));
     expect(posted.findLast((message) => (message as { type?: string }).type === "prompt.v2.cancel")).toMatchObject({ cancellationId: semantic.cancellationId });
+    await act(async () => { hostMessage({ type: "prompt.v2.error", requestId: semantic.requestId, failureKind: "network", message: "The provider connection was interrupted." }); });
+    expect(screen.getByRole("button", { name: "Prompt Optimizer" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByText("The provider connection was interrupted.")).toBeTruthy();
     const fallbackTrace = { schemaVersion: "dwi.optimization-trace.v1", session: { sessionId: String(semantic.requestId), documentId: "current-prompt", revision: 2, baseHash: "a".repeat(64) }, calls: [{ ordinal: 1, purpose: "restructure", provider: "gemini", model: "gemini-2.5-flash", baseHash: "a".repeat(64), result: "rejected", failureCode: "INVALID_RESPONSE" }], outcome: "fallback" };
     await act(async () => { hostMessage({ type: "prompt.v2.semantic.fallback", requestId: semantic.requestId, localCandidate, sourcePlan, trace: fallbackTrace, failureCode: "INVALID_RESPONSE", message: "The provider result was rejected. The unchanged local candidate remains available." }); });
     expect(screen.getByText("The provider result was rejected. The unchanged local candidate remains available.")).toBeTruthy();
@@ -164,5 +175,31 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     expect(screen.getByRole("textbox", { name: "Task to optimize" })).toBeTruthy();
     expect((screen.getByRole("button", { name: /3 Review/ }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByText("Optimized implementation prompt")).toBeNull();
+
+    await act(async () => { hostMessage({ type: "prompt.v2.session.state", draft: { task: "Recovered local session", assignmentId: "general", promptType: "General", outputSize: "low" }, candidate: localCandidate, review: { source: "local" }, view: "review" }); });
+    expect(screen.getByRole("region", { name: "Generated prompt" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /3 Review/ }).getAttribute("aria-current")).toBe("step");
+
+    fireEvent.click(screen.getByRole("button", { name: "Open provider settings" }));
+    expect(screen.getByText(/approved project brief, project declaration, consent, and provider settings stay intact/i)).toBeTruthy();
+    await act(async () => { hostMessage({ type: "dwi.brief.ready", brief: { ...brief, confirmed: false } }); });
+    expect(screen.queryByRole("button", { name: "Reset Prompt Optimizer" })).toBeNull();
+    await act(async () => {
+      hostMessage({ type: "dwi.project.snapshot", snapshot: { ...PROJECT_UI_FIXTURES.stale, projectName: "DWI", reviewed: false } });
+      hostMessage({ type: "dwi.brief.confirmed", brief });
+    });
+    expect(screen.queryByRole("button", { name: "Reset Prompt Optimizer" })).toBeNull();
+    await act(async () => {
+      hostMessage({ type: "dwi.project.snapshot", snapshot: { ...PROJECT_UI_FIXTURES.current, projectName: "DWI", reviewed: true } });
+      hostMessage({ type: "dwi.brief.confirmed", brief });
+    });
+    fireEvent.click(screen.getByRole("button", { name: "DWI settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reset Prompt Optimizer" }));
+    expect(screen.getByRole("alertdialog", { name: "Reset Prompt Optimizer?" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Reset prompt progress" }));
+    expect(posted.findLast((message) => (message as { type?: string }).type === "prompt.v2.session.reset")).toEqual({ type: "prompt.v2.session.reset", schemaVersion: "prompt-command.v2" });
+    await act(async () => { hostMessage({ type: "prompt.v2.session.reset.result", status: "reset" }); });
+    expect(screen.getByRole("textbox", { name: "Task to optimize" })).toHaveProperty("value", "");
+    expect(screen.getByRole("button", { name: /1 Input/ }).getAttribute("aria-current")).toBe("step");
   });
 });

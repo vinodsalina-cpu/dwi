@@ -24,7 +24,7 @@ import {
 } from "@platform/dwi-core";
 import { collectProjectIntelligence } from "@platform/domain-workspace";
 import { requireWorkspaceFolder, runWhileWorkspaceCurrent } from "./workspace-state.js";
-import { DWI_SNAPSHOT_SCHEMA, DwiWorkspaceSnapshotStore, type DwiOptimizerReview, type DwiWorkspaceConsent, type DwiWorkspaceSnapshot } from "./workspace-snapshot.js";
+import { DWI_SNAPSHOT_SCHEMA, DwiWorkspaceSnapshotStore, clearPromptOptimizerState, type DwiOptimizerReview, type DwiWorkspaceConsent, type DwiWorkspaceSnapshot } from "./workspace-snapshot.js";
 import { PROVIDER_SECRET_KEY, PROVIDER_SETTINGS_KEY, ProviderRewriteError, checkGeminiProvider, checkOpenAICompatibleProvider, noProviderSettings, normalizeProviderSettings, providerTarget, semanticProviderPort, validateProviderSettings, type ProviderSettingsInput } from "./provider-settings.js";
 import { gitOriginFromConfig, selectWorkspaceRoot, workspaceIdentity, type WorkspaceIdentity } from "./workspace-identity.js";
 import { collectWorkspaceInspection, WORKSPACE_INSPECTION_EXCLUDE_GLOB, WORKSPACE_INSPECTION_POLICY_VERSION, workspaceInspectionScopeDigest } from "./workspace-inspection.js";
@@ -36,7 +36,7 @@ import {
 import { importProjectStandards } from "./project-importers.js";
 import { projectIntelligenceToSnapshot } from "./project-snapshot-adapter.js";
 import { gitRevisionChanges, parseGitRevision, parseSafeGitHeadReference, type GitRevision } from "./git-revision.js";
-import { bindBriefForProject, canCompileProjectBrief, canConfirmProjectBrief, confirmWorkspaceBrief, hasApprovedProjectReview } from "./workflow-state.js";
+import { bindBriefForProject, canCompileProjectBrief, canConfirmProjectBrief, canResetPromptOptimizerState, confirmWorkspaceBrief, hasApprovedProjectReview } from "./workflow-state.js";
 import { MockTemplateLibraryBackend } from "./template-library-backend.js";
 import {
   TEMPLATE_CLONE_EXTENSIONS,
@@ -51,6 +51,7 @@ import { TemplateLibraryStore, TemplateLibraryStoreError } from "./template-libr
 import { parsePromptCompileRequest, type PromptComposeInput } from "./prompt-compose-protocol.js";
 import { parsePromptOptimizerCommand, type PromptOptimizerInput, type PromptOptimizerView } from "./prompt-optimizer-protocol.js";
 import { PromptOptimizerRequestBoundary, persistedPromptOptimizerView, restorePromptOptimizerView, type PersistedPromptOptimizerView } from "./prompt-optimizer-session.js";
+import { PromptOptimizerSessionStore, type PromptOptimizerSessionRecent } from "./prompt-optimizer-session-store.js";
 import { resolveDwiEditorDocument, resolvePersistedPromptReviewDocument, type ResolvedDwiEditorDocument } from "./editor-document.js";
 import { consumeConsentCapability, issueConsentCapability, type ConsentCapability } from "./consent-capability.js";
 import { reviewedProjectSourceContribution } from "./prompt-source-adapter.js";
@@ -327,6 +328,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     private readonly context: vscode.ExtensionContext,
     private readonly output: vscode.OutputChannel,
     private readonly templateLibrary: TemplateLibraryStore,
+    private readonly optimizerSessions: PromptOptimizerSessionStore,
   ) {}
   dispose(): void {
     this.editorDocumentPanel?.dispose();
@@ -735,6 +737,14 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
   }
 
   private optimizerRecents(workspaceFingerprint?: string): PromptOptimizerRecent[] {
+    if (workspaceFingerprint) {
+      const opened = this.optimizerSessions.open(workspaceFingerprint);
+      if (opened.status === "ready") return opened.session.recents.map((recent) => ({ ...recent, workspaceFingerprint }));
+    }
+    return this.legacyOptimizerRecents(workspaceFingerprint);
+  }
+
+  private legacyOptimizerRecents(workspaceFingerprint?: string): PromptOptimizerRecent[] {
     const stored = this.context.globalState.get<unknown>(PROMPT_OPTIMIZER_RECENTS_KEY, []);
     if (!Array.isArray(stored)) return [];
     return stored.filter((candidate): candidate is PromptOptimizerRecent => {
@@ -753,6 +763,12 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
   }
 
   private optimizerView(workspaceFingerprint: string): PersistedPromptOptimizerView {
+    const opened = this.optimizerSessions.open(workspaceFingerprint);
+    if (opened.status === "ready") return opened.session.view;
+    return this.legacyOptimizerView(workspaceFingerprint);
+  }
+
+  private legacyOptimizerView(workspaceFingerprint: string): PersistedPromptOptimizerView {
     const stored = this.context.workspaceState.get<unknown>(PROMPT_OPTIMIZER_VIEWS_KEY, {});
     if (!stored || typeof stored !== "object" || Array.isArray(stored)) return "input";
     return restorePromptOptimizerView((stored as Record<string, unknown>)[workspaceFingerprint], true);
@@ -766,12 +782,72 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     const persisted = persistedPromptOptimizerView(view, candidatePresent);
     const bounded = Object.fromEntries([...Object.entries(next), [workspaceFingerprint, persisted]].slice(-50));
     await this.context.workspaceState.update(PROMPT_OPTIMIZER_VIEWS_KEY, bounded);
+    await this.updateOptimizerSession(workspaceFingerprint, { view: persisted });
     return persisted;
+  }
+
+  private async updateOptimizerSession(
+    workspaceFingerprint: string,
+    patch: { view?: PersistedPromptOptimizerView; draft?: PromptOptimizerInput | null; candidate?: DwiCandidate | null; review?: DwiOptimizerReview | null; recents?: PromptOptimizerSessionRecent[] },
+  ): Promise<void> {
+    const opened = this.optimizerSessions.open(workspaceFingerprint);
+    if (opened.status === "unavailable") return;
+    const current = opened.status === "ready" ? opened.session : undefined;
+    const legacyRecents = this.optimizerRecents(workspaceFingerprint).map(({ workspaceFingerprint: _workspaceFingerprint, ...recent }) => recent);
+    try {
+      const candidate = patch.candidate === null ? undefined : patch.candidate ?? current?.candidate;
+      const review = patch.review === null ? undefined : patch.review ?? current?.review;
+      const draft = patch.draft === null ? undefined : patch.draft ?? current?.draft;
+      await this.optimizerSessions.save({
+        workspaceFingerprint,
+        view: patch.view ?? current?.view ?? "input",
+        ...(draft ? { draft } : {}),
+        ...(candidate ? { candidate } : {}),
+        ...(review ? { review } : {}),
+        recents: patch.recents ?? current?.recents ?? legacyRecents,
+      }, current?.revision ?? "new");
+    } catch {
+      // Compatibility persistence remains available; never make local navigation unusable because recovery storage failed.
+    }
+  }
+
+  private async invalidateOptimizerRecovery(workspaceFingerprint: string): Promise<void> {
+    await this.updateOptimizerSession(workspaceFingerprint, { draft: null, candidate: null, review: null, view: "input" });
+  }
+
+  private async migrateOptimizerSession(workspaceFingerprint: string, snapshot?: DwiWorkspaceSnapshot): Promise<void> {
+    try {
+      await this.optimizerSessions.migrateLegacy(workspaceFingerprint, {
+        view: this.legacyOptimizerView(workspaceFingerprint),
+        ...(snapshot?.optimizerDraft ? { draft: snapshot.optimizerDraft } : {}),
+        ...(snapshot?.candidate ? { candidate: snapshot.candidate } : {}),
+        ...(snapshot?.optimizerReview ? { review: snapshot.optimizerReview } : {}),
+        recents: this.legacyOptimizerRecents(workspaceFingerprint).map(({ workspaceFingerprint: _workspaceFingerprint, ...recent }) => recent),
+      });
+    } catch {
+      // Legacy state remains the downgrade-safe recovery path when migration cannot be persisted.
+    }
   }
 
   private async postOptimizerView(webview: vscode.Webview, workspaceFingerprint: string, candidatePresent: boolean): Promise<void> {
     const stored = this.optimizerView(workspaceFingerprint);
     await webview.postMessage({ type: "prompt.v2.view.state", view: restorePromptOptimizerView(stored, candidatePresent) });
+  }
+
+  private async resetOptimizerSession(workspaceFingerprint: string): Promise<void> {
+    await this.optimizerSessions.reset(workspaceFingerprint);
+    const storedViews = this.context.workspaceState.get<unknown>(PROMPT_OPTIMIZER_VIEWS_KEY, {});
+    if (storedViews && typeof storedViews === "object" && !Array.isArray(storedViews)) {
+      const nextViews = { ...(storedViews as Record<string, unknown>) };
+      delete nextViews[workspaceFingerprint];
+      await this.context.workspaceState.update(PROMPT_OPTIMIZER_VIEWS_KEY, nextViews);
+    }
+    const storedRecents = this.context.globalState.get<unknown>(PROMPT_OPTIMIZER_RECENTS_KEY, []);
+    if (Array.isArray(storedRecents)) {
+      await this.context.globalState.update(PROMPT_OPTIMIZER_RECENTS_KEY, storedRecents.filter((entry) =>
+        !entry || typeof entry !== "object" || (entry as Partial<PromptOptimizerRecent>).workspaceFingerprint !== workspaceFingerprint,
+      ));
+    }
   }
 
   private async postPromptError(
@@ -802,6 +878,27 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       return true;
     }
     if (command.type === "prompt.v2.cancel") return true;
+    if (command.type === "prompt.v2.session.reset") {
+      const operation = await this.workspaceOperation();
+      const state = await operation.store.load();
+      const snapshot = state.status === "partial" || state.status === "complete" ? state.snapshot : undefined;
+      if (!snapshot || !canResetPromptOptimizerState(snapshot) || !await this.hasCurrentInspectionConsent(snapshot, operation.identity)) {
+        await this.postPromptError(webview, {}, "initialization_required", "Initialize and review this project before resetting Prompt Optimizer progress.");
+        return true;
+      }
+      this.assertWorkspaceOperation(operation.folder, operation.epoch);
+      await this.resetOptimizerSession(operation.identity.localFingerprint);
+      const cleared = clearPromptOptimizerState(snapshot, new Date().toISOString());
+      await operation.store.updatePartial(cleared);
+      await this.postOptimizerRecents(webview, operation.identity.localFingerprint);
+      await this.postOptimizerView(webview, operation.identity.localFingerprint, false);
+      await webview.postMessage({
+        type: "prompt.v2.session.reset.result",
+        status: "reset",
+        retained: ["approved-project-brief", "project-declaration", "provider-settings"],
+      });
+      return true;
+    }
     if (command.type === "prompt.v2.review.open") {
       const operation = await this.workspaceOperation();
       const state = await operation.store.load();
@@ -853,6 +950,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
         evaluationMarkdown: undefined,
         feedback: undefined,
       }));
+      await this.updateOptimizerSession(operation.identity.localFingerprint, { draft: command.input, candidate: null, review: null, view: "input" });
       await this.setOptimizerView(operation.identity.localFingerprint, "input");
       return true;
     }
@@ -881,6 +979,9 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       const retained = Array.isArray(all) ? all.filter((entry) => entry.workspaceFingerprint !== operation.identity.localFingerprint) : [];
       const scoped = [recent, ...this.optimizerRecents(operation.identity.localFingerprint)].slice(0, PROMPT_OPTIMIZER_RECENT_LIMIT);
       await this.context.globalState.update(PROMPT_OPTIMIZER_RECENTS_KEY, [...scoped, ...retained].slice(0, 50));
+      await this.updateOptimizerSession(operation.identity.localFingerprint, {
+        recents: scoped.map(({ workspaceFingerprint: _workspaceFingerprint, ...item }) => item),
+      });
       await this.postOptimizerRecents(webview, operation.identity.localFingerprint);
       await webview.postMessage({ type: "prompt.v2.record.result", requestId: command.requestId, correlationId: command.correlationId, status: "saved", recent });
       return true;
@@ -935,6 +1036,11 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
         evaluationMarkdown: undefined,
         feedback: undefined,
       }));
+      await this.updateOptimizerSession(operation.identity.localFingerprint, {
+        draft: command.input,
+        candidate: localCandidate,
+        review: { source: "local" },
+      });
       await this.setOptimizerView(operation.identity.localFingerprint, "resolve", true);
       const identity = this.optimizerRequestIdentity(command);
       if (!identity) return true;
@@ -1053,6 +1159,17 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
           evaluationMarkdown: undefined,
           feedback: undefined,
         }));
+        await this.updateOptimizerSession(operation.identity.localFingerprint, {
+          draft: command.input,
+          candidate,
+          review: {
+            source: "provider",
+            provider: semanticProvider,
+            model: provider.model!,
+            title: "Validated semantic enhancement",
+            summary: "A current hash-bound patch was validated and compiled locally.",
+          },
+        });
         await this.setOptimizerView(operation.identity.localFingerprint, "review", true);
         const identity = this.optimizerRequestIdentity(command);
         if (!identity) return;
@@ -1205,8 +1322,10 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       }
       try {
         const operation = await this.workspaceOperation();
-        await this.postOptimizerRecents(webview, operation.identity.localFingerprint);
         const state = await operation.store.load();
+        const snapshot = state.status === "partial" || state.status === "complete" ? state.snapshot : undefined;
+        await this.migrateOptimizerSession(operation.identity.localFingerprint, snapshot);
+        await this.postOptimizerRecents(webview, operation.identity.localFingerprint);
         await this.postOptimizerView(webview, operation.identity.localFingerprint, (state.status === "partial" || state.status === "complete") && Boolean(state.snapshot.candidate));
         this.assertWorkspaceOperation(operation.folder, operation.epoch);
         if (
@@ -1221,6 +1340,16 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
           return;
         }
         await this.postWorkspaceMessage(webview, operation, { type: `dwi.snapshot.${state.status}`, ...state });
+        const optimizerSession = this.optimizerSessions.open(operation.identity.localFingerprint);
+        if (optimizerSession.status === "ready") {
+          await webview.postMessage({
+            type: "prompt.v2.session.state",
+            draft: optimizerSession.session.draft,
+            candidate: optimizerSession.session.candidate,
+            review: optimizerSession.session.review,
+            view: optimizerSession.session.view,
+          });
+        }
         if ((state.status === "partial" || state.status === "complete") && state.snapshot.project) {
           await this.postProjectSnapshot(webview, state.snapshot.project, operation);
         } else {
@@ -1356,6 +1485,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       });
       this.assertWorkspaceOperation(operation.folder, operation.epoch);
       await operation.store.updatePartial(this.partial(updated));
+      await this.invalidateOptimizerRecovery(operation.identity.localFingerprint);
       await this.postWorkspaceMessage(webview, operation, { type: "dwi.brief.confirmed", brief: updated.brief });
       this.recordActivity({
         level: "info",
@@ -1368,7 +1498,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     if (message.type === "dwi.snapshot.reset") {
       const operation = await this.workspaceOperation();
       await operation.store.reset();
-      await this.setOptimizerView(operation.identity.localFingerprint, "input");
+      await this.resetOptimizerSession(operation.identity.localFingerprint);
       await this.postWorkspaceMessage(webview, operation, { type: "dwi.snapshot.absent" });
       await this.postProjectOnboarding(webview, operation);
       this.recordActivity({
@@ -1697,7 +1827,10 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       evaluationMarkdown: undefined,
       feedback: undefined,
     }));
-    if (operation) this.assertWorkspaceOperation(operation.folder, operation.epoch);
+    if (operation) {
+      await this.invalidateOptimizerRecovery(operation.identity.localFingerprint);
+      this.assertWorkspaceOperation(operation.folder, operation.epoch);
+    }
   }
 
   private async refreshProject(webview: vscode.Webview): Promise<void> {
@@ -1809,6 +1942,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     const updated = this.partial({ ...state.snapshot, stage: "brief", project: approved, brief: approvedBrief, candidate: undefined, candidateInput: undefined, optimizerDraft: undefined, optimizerReview: undefined, evaluationMarkdown: undefined, feedback: undefined });
     this.assertWorkspaceOperation(operation.folder, operation.epoch);
     await store.updatePartial(updated);
+    await this.invalidateOptimizerRecovery(operation.identity.localFingerprint);
     this.assertWorkspaceOperation(operation.folder, operation.epoch);
     await this.postProjectSnapshot(webview, approved, operation, true);
     await this.postWorkspaceMessage(webview, operation, { type: "dwi.brief.ready", brief: approvedBrief });
@@ -2067,7 +2201,8 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel("DWI");
   const templateLibrary = new TemplateLibraryStore(context.globalState, new MockTemplateLibraryBackend(output));
-  const sidebar = new DwiSidebarProvider(context, output, templateLibrary);
+  const optimizerSessions = new PromptOptimizerSessionStore(context.workspaceState);
+  const sidebar = new DwiSidebarProvider(context, output, templateLibrary, optimizerSessions);
   context.subscriptions.push(
     sidebar,
     output,

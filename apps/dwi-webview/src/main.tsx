@@ -169,6 +169,8 @@ type HostMessage = {
   trace?: OptimizationTraceV1;
   failureCode?: string;
   semantic?: { provider: "gemini" | "openai"; model: string; finishReason: string; appliedOperations: number; projection?: EngineeringTokenProjectionV1; refinedPrompt?: string };
+  draft?: DwiWorkspaceSnapshot["optimizerDraft"];
+  review?: DwiWorkspaceSnapshot["optimizerReview"];
 };
 type PendingLibraryOperation =
   | { kind: "save"; templateId?: string; resolve(detail: LibraryTemplateDetail): void; reject(error: Error): void }
@@ -741,6 +743,8 @@ export function App() {
   const [restoreNotice, setRestoreNotice] = useState(false);
   const [resetPending, setResetPending] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [optimizerResetPending, setOptimizerResetPending] = useState(false);
+  const [isOptimizerResetting, setIsOptimizerResetting] = useState(false);
   const [activeSurface, setActiveSurface] = useState<ActiveSurface>(() =>
     initialActiveSurface(document.documentElement.dataset.dwiInitialSurface),
   );
@@ -778,6 +782,7 @@ export function App() {
   }, [libraryState.managedTemplates, libraryState.personalTemplates]);
   const projectReviewed = stage !== "consent" && projectSnapshot.reviewed === true;
   const projectReady = projectReviewed && (projectSnapshot.status === "current" || projectSnapshot.status === "partial");
+  const optimizerResetEligible = projectReady && brief.confirmed && (stage === "compose" || stage === "evaluate");
 
   useEffect(() => {
     if (!providerNoticeOpen) return;
@@ -873,6 +878,7 @@ export function App() {
       if (data.type === "prompt.v2.pending") {
         setIsCompiling(true);
         setWorkflowError("");
+        setActiveSurface("optimizer");
       }
       if (data.type === "prompt.v2.compiled" && data.candidate) {
         setCandidate(data.candidate);
@@ -929,6 +935,37 @@ export function App() {
         setWorkflowError("Prompt rewrite cancelled.");
       }
       if (data.type === "prompt.v2.record.result") setOptimizerSaveNotice("Saved to recent prompts.");
+      if (data.type === "prompt.v2.session.state") {
+        if (data.draft) {
+          setPromptText(data.draft.task);
+          setAssignmentId(data.draft.assignmentId);
+          setOutputSize(data.draft.outputSize);
+        }
+        setCandidate(data.candidate);
+        setOptimizerReview(data.review);
+        const restored = data.view === "review" && data.candidate && data.review ? "review" : "input";
+        setOptimizerStep(restored);
+        restoredOptimizerStep.current = restored;
+      }
+      if (data.type === "prompt.v2.session.reset.result") {
+        setPromptText("");
+        setCandidate(undefined);
+        setOptimizedResult(undefined);
+        setOptimizerReview(undefined);
+        setOptimizerSourcePlan(undefined);
+        setOptimizerTrace(undefined);
+        setTokenProjection(undefined);
+        setOptimizerRecents([]);
+        setOptimizerSaveNotice("");
+        setCopyNotice("");
+        setFeedbackOpen(false);
+        setWorkflowError("");
+        setOptimizerStep("input");
+        setStage("compose");
+        setOptimizerResetPending(false);
+        setIsOptimizerResetting(false);
+        setActiveSurface("optimizer");
+      }
       if (data.type === "dwi.activity.entry" && data.entry) {
         setActivityEntries((current) => [data.entry!, ...current.filter((entry) => entry.id !== data.entry!.id)].slice(0, MAX_ACTIVITY_HISTORY));
         if (data.entry.level !== "info") setActivityAttention(true);
@@ -1062,7 +1099,7 @@ export function App() {
         setWorkflowError("");
         setIsConfirming(false);
         setStage("compose");
-        setActiveSurface("home");
+        setActiveSurface((current) => current === "optimizer" ? "optimizer" : "home");
       }
       if (data.type === "dwi.snapshot.partial") {
         const snapshot = data.snapshot as DwiWorkspaceSnapshot | undefined;
@@ -1170,7 +1207,7 @@ export function App() {
       }
       if (data.type === "dwi.workspace.choose-root") {
         setRoots(data.roots ?? []);
-        setActiveSurface("home");
+        setActiveSurface((current) => current === "optimizer" ? "optimizer" : "home");
       }
       if (data.type === "dwi.consent.required") {
         resetProjectWorkflowState();
@@ -1326,6 +1363,7 @@ export function App() {
       setWorkflowError("Configure and verify an LLM provider before rewriting the prompt.");
       return;
     }
+    setActiveSurface("optimizer");
     setIsCompiling(true);
     optimizerRevision.current += 1;
     const requestId = `request-${crypto.randomUUID()}`;
@@ -1475,6 +1513,23 @@ export function App() {
     resetProjectWorkflowState();
     setResetPending(false);
     setIsResetting(false);
+  }
+
+  function confirmOptimizerReset() {
+    setIsOptimizerResetting(true);
+    setWorkflowError("");
+    recordActivity("Prompt Optimizer reset requested", "Approved project knowledge will be retained.", "warning", "prompt");
+    if (vscode) {
+      vscode.postMessage({ type: "prompt.v2.session.reset", schemaVersion: "prompt-command.v2" });
+      return;
+    }
+    setPromptText("");
+    setCandidate(undefined);
+    setOptimizerReview(undefined);
+    setOptimizerStep("input");
+    setStage("compose");
+    setOptimizerResetPending(false);
+    setIsOptimizerResetting(false);
   }
 
   function openInfo() {
@@ -1919,7 +1974,7 @@ export function App() {
         }}>Remove provider configuration</button>}
         {settingsError && <div className="inline-alert" role="alert"><Icon name="warning" /><span>{settingsError}</span></div>}
       </section>
-      {stage !== "consent" && <section className="settings-section danger-zone"><div><strong>Session</strong><span>Clear saved prompt progress for this project.</span></div><button type="button" className="danger-outline" onClick={() => { setActiveSurface("initializer"); requestReset(); }}>Reset session</button></section>}
+      {optimizerResetEligible && <section className="settings-section danger-zone"><div><strong>Prompt Optimizer session</strong><span>Clear this project's prompt draft, generated candidates, saved prompt recents, and optimizer view. The approved project brief, project declaration, consent, and provider settings stay intact.</span></div>{optimizerResetPending ? <div className="reset-inline-confirm" role="alertdialog" aria-labelledby="optimizer-reset-title" aria-describedby="optimizer-reset-description"><strong id="optimizer-reset-title">Reset Prompt Optimizer?</strong><span id="optimizer-reset-description">Only Prompt Optimizer progress for this project will be cleared.</span><div className="actions"><button type="button" className="secondary" disabled={isOptimizerResetting} onClick={() => setOptimizerResetPending(false)}>Cancel</button><button type="button" className="danger-outline" disabled={isOptimizerResetting} onClick={confirmOptimizerReset}>{isOptimizerResetting ? "Resetting…" : "Reset prompt progress"}</button></div></div> : <button type="button" className="danger-outline" onClick={() => setOptimizerResetPending(true)}>Reset Prompt Optimizer</button>}</section>}
       </div>
     </section>}
 

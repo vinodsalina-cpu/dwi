@@ -44,6 +44,10 @@ export function canCompileProjectBrief(project: DwiProjectSnapshot, brief: DwiBr
   return canConfirmProjectBrief(project) && brief.confirmed;
 }
 
+export function canResetPromptOptimizerState(snapshot: DwiWorkspaceSnapshot): boolean {
+  return Boolean(snapshot.project && snapshot.brief && canCompileProjectBrief(snapshot.project, snapshot.brief));
+}
+
 export function confirmWorkspaceBrief(
   snapshot: DwiWorkspaceSnapshot,
   requested: Pick<DwiBrief, "confirmed" | "corrections">,

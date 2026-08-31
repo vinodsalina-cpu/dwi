@@ -132,6 +132,13 @@ function explicitDecision(context: PromptExplicitContextV2): PromptSourceDecisio
   };
 }
 
+/**
+ * Deterministic policy owns source attention, context allocation, and authority here.
+ * A future learned component may supply bounded advisory signals at this seam only
+ * after a promoted experiment; deterministic validation must remain able to ignore
+ * them, and they must never control consent, immutable approvals, spending, safety,
+ * or phase gates.
+ */
 export function resolvePromptSourcesV2(input: ResolvePromptSourcesV2Input): PromptSourcePlanV2 {
   const decisions: PromptSourceDecisionV2[] = [{
     id: "user-task",
