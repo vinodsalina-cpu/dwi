@@ -10,7 +10,7 @@
 
 - Consolidated optimizer recents under the workspace-scoped session authority and purged legacy global recents after one-time import (`3b45b60`).
 - Added a production-fail-closed installed-smoke confirmation port and CDP-driven packaged journey (`afbd113`). VS Code 1.134.0 proves initialization, Project Meta Context review/confirmation, provider-free deterministic Resolve/Review, save-to-recents, and optimizer-only reset from the installed artifact under development-mode automatic confirmations; it does not exercise production modal consent UI.
-- Final full suite after one-icon hardening: 420 tests; all six typechecks; schema export; build; 388-file VSIX SHA-256 `114fc30d850036d1ceb7cadea0845aa43b0e3f5e0dd1e416609cd071568ce245`; same-process installed functional flow; 16 proxy syntax checks, 20 proxy tests, and recovered simulator scenarios.
+- Historical one-container/two-view checkpoint: 420 tests; all six typechecks; schema export; build; 388-file VSIX SHA-256 `114fc30d850036d1ceb7cadea0845aa43b0e3f5e0dd1e416609cd071568ce245`; same-process installed functional flow; 16 proxy syntax checks, 20 proxy tests, and recovered simulator scenarios. The sole-view artifact supersedes this package.
 - Broad local Phase 6 failure/structural matrix passes malformed response, timeout, cancellation, stale revision/result, auth, quota/rate limit, refusal/truncation, connectivity, policy/safety, hash mismatch, locked section, migration/downgrade, privacy, call ceiling, provenance/conflict, rollback, and repository-independence coverage. Together with the packaged restart pass below, this closes the local Phase 6 POC matrix.
 - Added the isolated cross-process installed verifier and local command (`529516e`). It installs the VSIX into a disposable VS Code 1.134.0 portable profile, drives the production native consent sheets, saves a deterministic optimizer review, restarts the same profile, verifies Project Meta Context and optimizer recovery, resets only optimizer state, and verifies reset persistence on a second restart.
 - The exact fresh VSIX passed the three-process installed journey: `DWI_SMOKE_RESTART_INSTALL_OK`, `DWI_SMOKE_RESTART_PROJECT_READY`, `DWI_SMOKE_RESTART_SEED_OK`, `DWI_SMOKE_RESTART_CONTEXT_RESTORED`, `DWI_SMOKE_RESTART_SESSION_RESTORED`, `DWI_SMOKE_RESTART_RESET_OK`, `DWI_SMOKE_RESTART_RESET_PERSISTED`, and `DWI_SMOKE_RESTART_EXTENSION_OK`.
@@ -50,8 +50,8 @@
 - All six package typechecks: passed.
 - Schema export: unchanged.
 - Build and VSIX: passed.
-- Phase 4 exact review SHA: `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`; current local implementation/evidence tip: `aa2a1ba`.
-- Fresh final VSIX package: 388 files, 684,331 bytes; SHA-256 `114fc30d850036d1ceb7cadea0845aa43b0e3f5e0dd1e416609cd071568ce245`.
+- Phase 4 exact review SHA: `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`; the final local implementation/evidence tip and generated artifact record are reported in the handoff.
+- Superseded one-container/two-view VSIX: 388 files, 684,331 bytes; SHA-256 `114fc30d850036d1ceb7cadea0845aa43b0e3f5e0dd1e416609cd071568ce245`. The current sole-view package is generated from the exact final clean tracked commit and recorded under `/Users/vk/Projects/sub/artifacts/vsix/`.
 - Fresh VS Code 1.134.0 installed smoke passed installation, activation, Home open, distinct Prompt Optimizer open, extension-host exit 0, and the terminal marker.
 - Fresh clean absence/install/uninstall/absence/fresh-install: `DWI_CLEAN_REINSTALL_OK`.
 - Fresh `pnpm verify:extension:restart` passed against that VSIX in a disposable portable profile; the direct macOS run used native consent sheets and three separate VS Code processes with graceful termination between them, then removed the temporary profile in `finally`.
