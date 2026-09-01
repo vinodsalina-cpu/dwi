@@ -8,6 +8,10 @@ Amendment 2026-09-01 (DWI-PO-0029): installed use exposed automatic workspace li
 
 Amendment 2026-09-01 (DWI-PO-0032): the installed runtime restart gate is now exercised by a direct VS Code 1.134.0 process in an isolated portable profile. The verifier drives the production native consent sheets by exact button label, then terminates and relaunches the same installed profile twice to prove session resume, optimizer-only reset, and Project Meta Context preservation. The evidence is local-only; Phase 4 semantic/fixed-executor gates and all remote/provider boundaries are unchanged.
 
+Amendment 2026-09-01 (DWI-PO-0033): the one-icon Activity Bar correction resolves both native views under `dwi-sidebar`. Because both webviews can initialize concurrently, consent capabilities are now one-time and per-webview, and opening a native view rehydrates it from the host-owned workspace state. The restart verifier removes its temporary profile in `finally`, and the corrected VSIX was installed into the authorized main profile without closing VS Code. Scope, provider budgets, and phase gates are unchanged.
+
+Amendment 2026-09-01 (DWI-PO-0034): the final product-identity correction makes Prompt Optimizer the sole contributed Activity Bar container, native view, display name, and visible open command. Home and Project Meta Context remain internal destinations in that webview, and the hidden legacy `dwi.open` command routes to internal Home for compatibility. Step 1 places Assignment/type and Criticality before the prompt editor. Packaging derives its filename from the staged manifest, cleans temporary staging in `finally`, and emits source-commit/hash evidence. Scope, provider budgets, and phase gates are unchanged.
+
 ## Identity
 
 - Phase: 5 — product hardening and minimum durable state

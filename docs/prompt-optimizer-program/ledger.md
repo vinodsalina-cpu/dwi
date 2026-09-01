@@ -391,3 +391,15 @@ Append consequential decisions and evidence. Supersede entries explicitly; do no
 - Consequence: Phase 5 POC and Phase 6 local POC qualification are complete on this branch. Phase 4 semantic/fixed-executor qualification remains blocked by the preserved 14,531-token readiness overrun and cannot be retried without a superseding contract; later provider compatibility, held-out quality, promotion, merge, tagging, and release require fresh explicit authority.
 - Supersedes: DWI-PO-0031 as the current Phase 5/6 local evidence status; historical blocked evidence remains preserved.
 - Owner: Codex local session
+
+### DWI-PO-0034 — Sole Prompt Optimizer native identity and canonical packaging
+
+- Date: 2026-09-01
+- Type: product-identity, UI-order, packaging, and installed-verification correction
+- Status: accepted local correction
+- Context: Final installed review required one visible Prompt Optimizer product identity, one Activity Bar entry, and no separate Home, Local, or DWI native surface. It also required Assignment/type and Criticality above the Step 1 prompt editor and an exact checkout-derived VSIX with auditable cleanup and source/hash evidence.
+- Decision or finding: Contribute only `dwi-prompt-optimizer-view` under the Prompt Optimizer `dwi-sidebar` container, expose only `dwi.openPromptOptimizer`, and keep legacy `dwi.open` registered but hidden as an internal-Home compatibility route. Keep Home and Project Meta Context in the sole webview rail. Place Assignment/type and Criticality before the textarea. Derive the VSIX filename from the staged manifest, remove its temporary stage in `finally`, and emit an ignored evidence record containing the source commit, clean-tracked-tree result, artifact identity, size, and SHA-256.
+- Consequence: Installed verification targets one native webview throughout and uses internal navigation to prove initialization and Project Meta Context recovery. The stable extension ID remains `dwi-poc.developer-work-intelligence@0.1.0`; display identity is Prompt Optimizer. No provider, credential, remote, merge, tag, release, or promotion authority changes.
+- Evidence: Focused host/webview suites and typechecks pass before the full exact-candidate gates. Final source commit, artifact hash, archive inspection, installed package checks, and adversarial review are recorded in the handoff.
+- Supersedes: DWI-PO-0033 only where its two-native-view arrangement described the final visible identity; its consent isolation and verifier-cleanup corrections remain valid.
+- Owner: Codex local session

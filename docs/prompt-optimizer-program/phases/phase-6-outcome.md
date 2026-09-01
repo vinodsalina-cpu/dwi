@@ -4,15 +4,16 @@ State: Phase 6 local POC qualification complete; broad local matrix and packaged
 
 ## Qualified matrix
 
-- Fresh build, schema export, six typechecks, 419 repository tests, VSIX package/inspection, install, activation, `dwi.open`, and Prompt Optimizer open pass.
+- Fresh build, schema export, six typechecks, 420 repository tests, VSIX package/inspection, install, activation, `dwi.open`, and Prompt Optimizer open pass.
 - The installed package completes initialization, Project Meta Context review/approval, local deterministic Resolve and Review, save-to-recents, and scoped optimizer reset without a configured provider. The extension-test environment uses the production-fail-closed development confirmation port, so production modal consent interaction is not part of this proof.
 - Persistence tests cover restart/resume units, exact Input/Resolve/Review recovery, stale result rejection, optimistic revision conflict, corruption, serialized UTF-8 limits, one-time migration, unknown-version downgrade refusal, workspace isolation, and reset preservation.
 - Semantic/failure tests cover malformed JSON/schema, timeout, cancellation, delayed/stale completion, wrong hash, locked section, secret-like patch, authentication, rate limit, truncation, invalid telemetry, refusal/safety boundaries, quota/model/transport/connectivity mappings, and the three-call ceiling with no fourth reservation.
 - Source and privacy tests cover consent, stale reviewed knowledge, conflicts/contradictions, provenance, secret/absolute-path rejection, invalid encoding, bounded inspection, provider credential isolation, redirect refusal, and provider-unavailable deterministic fallback. Navigation and deterministic compilation do not invoke the provider port.
 - Atomic snapshot tests cover interrupted rename recovery, failed final rename rollback, stale-backup suppression after reset, copied/tampered state rejection, symlink rejection, and declaration preservation.
 - External deterministic model-host qualification passes 16 syntax checks, 20 tests, and recovered success/auth/rate-limit simulator scenarios. No real-provider or fixed-executor call occurred.
-- Independent adversarial review findings were repaired: stale-context route loss, competing recovery authority, reset ordering/remigration, reset keyboard recovery, and global recents duplication. The exact current tree is recorded in local commits; any later promotion decision still needs a new review at that time.
-- The fresh 388-file VSIX (`ff1b9035fec6e9cb6be70f72da486edff7472af5c72f209d2fb9d0ac44afa87d`) passes `pnpm verify:extension:restart`: native consent/approval, deterministic local save, same-profile process restart/resume, optimizer-only reset, and Project Meta Context preservation after reset.
+- Independent adversarial review findings were repaired: stale-context route loss, competing recovery authority, reset ordering/remigration, reset keyboard recovery, global recents duplication, concurrent per-webview consent invalidation, and stale native-view hydration. The exact current tree is recorded in local commits; any later promotion decision still needs a new review at that time.
+- The fresh 388-file VSIX (`114fc30d850036d1ceb7cadea0845aa43b0e3f5e0dd1e416609cd071568ce245`) passes `pnpm verify:extension:restart`: native consent/approval, deterministic local save, same-profile process restart/resume, optimizer-only reset, and Project Meta Context preservation after reset. The verifier removes its disposable profile after completion.
+- The authorized main profile contains one DWI extension identity and one Prompt Optimizer `dwi-sidebar` Activity Bar entry with one Prompt Optimizer native view. Home and Project Meta Context remain internal destinations; the running VS Code window is not closed.
 
 ## Evidence boundary
 
