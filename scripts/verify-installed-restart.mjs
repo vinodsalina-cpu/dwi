@@ -313,7 +313,7 @@ async function launchCode(port) {
   clickNativeButton('Approve project details');
   await waitForWebview(port - 1, 'home', 'Confirm project brief');
   await clickWebviewButton(port - 1, 'home', 'Confirm project brief');
-  await waitForWebview(port - 1, 'home', 'Project metadata is ready');
+  await waitForWebview(port - 1, 'optimizer', 'Shape the task');
   console.log('DWI_SMOKE_RESTART_PROJECT_READY');
   await runMainCommand(session.target, 'Open Prompt Optimizer');
   await waitForWebview(port - 1, 'optimizer', 'Shape the task');
