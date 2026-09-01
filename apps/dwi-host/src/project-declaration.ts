@@ -90,7 +90,7 @@ export async function createProjectDeclarationExclusively<Path>(
       } catch (cleanupError) {
         throw new AggregateError(
           [error, cleanupError],
-          "DWI could not clean up a staged project declaration.",
+          "Prompt Optimizer could not clean up a staged project declaration.",
         );
       }
     }

@@ -6,7 +6,7 @@ type Manifest = {
   description?: string;
   activationEvents?: string[];
   contributes?: {
-    commands?: Array<{ command?: string }>;
+    commands?: Array<{ command?: string; title?: string; category?: string }>;
     viewsContainers?: { activitybar?: Array<{ id?: string; title?: string; icon?: string }> };
     views?: Record<string, Array<{ type?: string; id?: string; name?: string }>>;
   };
@@ -34,6 +34,14 @@ describe("Prompt Optimizer activity-bar contribution", () => {
     const commands = manifest.contributes?.commands?.map(({ command }) => command) ?? [];
     expect(commands).toContain("dwi.openPromptOptimizer");
     expect(commands).not.toContain("dwi.open");
+    const visibleBranding = JSON.stringify({
+      displayName: manifest.displayName,
+      description: manifest.description,
+      commands: manifest.contributes?.commands,
+      containers,
+      views: manifest.contributes?.views,
+    });
+    expect(visibleBranding).not.toMatch(/Developer Workspace Intelligence|"category":"DWI"|"name":"Home"|media\/dwi\.svg/);
     await expect(readFile(new URL("../media/prompt-optimizer.svg", import.meta.url), "utf8"))
       .resolves.toContain("currentColor");
   });

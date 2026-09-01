@@ -114,7 +114,7 @@ function boundedActivityText(value: string, maxChars: number): string {
 
 class WorkspaceSelectionChangedError extends Error {
   constructor() {
-    super("The selected workspace root changed while DWI was working; retry in the current root.");
+    super("The selected workspace root changed while Prompt Optimizer was working; retry in the current root.");
     this.name = "WorkspaceSelectionChangedError";
   }
 }
@@ -286,7 +286,7 @@ async function scanApprovedWorkspace(folder: vscode.WorkspaceFolder, identity: W
     },
   });
   const declarationResult = await boundedWorkspaceTextAt(folder.uri, [".dwi", "project.yaml"], MAX_DECLARATION_BYTES);
-  if (declarationResult.status === "invalid") throw new Error(`.dwi/project.yaml is ${declarationResult.reason.replaceAll("-", " ")}; fix it before DWI infers project metadata.`);
+  if (declarationResult.status === "invalid") throw new Error(`.dwi/project.yaml is ${declarationResult.reason.replaceAll("-", " ")}; fix it before Prompt Optimizer infers project metadata.`);
   const declarationContent = declarationResult.status === "value" ? declarationResult.value : undefined;
   const evidenceContent = Object.fromEntries(inspection.manifests.flatMap(({ path, content }) => content === undefined ? [] : [[path, content]]));
   const evidenceSha256 = Object.fromEntries(inspection.manifests.flatMap(({ path, contentSha256 }) =>
@@ -328,8 +328,8 @@ function confirmationPort(context: vscode.ExtensionContext): ConfirmationPort {
   }
   return {
     approveInspection: async (folderName) => (await vscode.window.showWarningMessage(
-      `Allow DWI to inspect the bounded metadata for ${folderName}?`,
-      { modal: true, detail: "DWI will read only the documented, size-bounded project metadata and store the reviewed summary in VS Code global storage." },
+      `Allow Prompt Optimizer to inspect the bounded metadata for ${folderName}?`,
+      { modal: true, detail: "Prompt Optimizer will read only the documented, size-bounded project metadata and store the reviewed summary in VS Code global storage." },
       "Allow bounded check",
     )) === "Allow bounded check",
     reviewProject: async (project) => {
@@ -384,7 +384,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     webview.onDidReceiveMessage((message: Message) => {
       void this.dispatch(message, webview).catch(async (error: unknown) => {
         if (error instanceof WorkspaceSelectionChangedError) return;
-        const detail = "DWI could not complete this request. Retry or open Activity and its editor log for troubleshooting details.";
+        const detail = "Prompt Optimizer could not complete this request. Retry or open Activity and its editor log for troubleshooting details.";
         this.recordActivity({
           level: "error",
           category: "Workflow",
@@ -468,7 +468,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
 
   private recordActivity(draft: DwiActivityDraft, webview?: vscode.Webview): void {
     const category = boundedActivityText(draft.category, MAX_ACTIVITY_CATEGORY_CHARS) || "General";
-    const title = boundedActivityText(draft.title, MAX_ACTIVITY_TITLE_CHARS) || "DWI activity";
+    const title = boundedActivityText(draft.title, MAX_ACTIVITY_TITLE_CHARS) || "Prompt Optimizer activity";
     const detail = draft.detail ? boundedActivityText(draft.detail, MAX_ACTIVITY_DETAIL_CHARS) : undefined;
     const latest = this.activityEntries.at(-1);
     if (
@@ -768,7 +768,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     await this.postTemplateLibrary(webview, {
       type: "dwi.library.error",
       code: "invalid-request",
-      message: "DWI could not validate the template library request.",
+      message: "Prompt Optimizer could not validate the template library request.",
       ...(operationId ? { operationId } : {}),
     });
   }
@@ -922,7 +922,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     if (!message.type.startsWith("prompt.v2.")) return false;
     const command = parsePromptOptimizerCommand(message);
     if (!command) {
-      await this.postPromptError(webview, {}, "validation", "DWI rejected an invalid Prompt Optimizer request.");
+      await this.postPromptError(webview, {}, "validation", "Prompt Optimizer rejected an invalid Prompt Optimizer request.");
       return true;
     }
     if (command.type === "prompt.v2.cancel") return true;
@@ -1262,7 +1262,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     if (await this.handlePromptOptimizerMessage(message, webview)) return;
     if (message.type === "dwi.document.open") {
       const document = resolveDwiEditorDocument(message);
-      if (!document) throw new Error("The DWI editor-document request is invalid.");
+      if (!document) throw new Error("The Prompt Optimizer editor-document request is invalid.");
       this.showEditorDocument(document);
       return;
     }
@@ -1290,7 +1290,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
           return;
         }
         if (usesStoredKey) {
-          const choice = await vscode.window.showWarningMessage("Use the stored provider credential for this connection check?", { modal: true, detail: `DWI will send it only to the previously approved provider target ${target}.` }, "Use stored credential");
+          const choice = await vscode.window.showWarningMessage("Use the stored provider credential for this connection check?", { modal: true, detail: `Prompt Optimizer will send it only to the previously approved provider target ${target}.` }, "Use stored credential");
           if (choice !== "Use stored credential") return;
         } else if (existingTarget && existingTarget !== target) {
           const choice = await vscode.window.showWarningMessage("Change the provider credential destination?", { modal: true, detail: `The new credential will be checked against ${target}.` }, "Continue");
@@ -1463,12 +1463,12 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
           level: "info",
           category: "Project",
           title: "Project check complete",
-          detail: "DWI read only the bounded local evidence covered by your approval.",
+          detail: "Prompt Optimizer read only the bounded local evidence covered by your approval.",
         }, webview);
       } catch (error) {
         if (error instanceof WorkspaceSelectionChangedError) return;
-        await webview.postMessage({ type: "dwi.project.error", message: error instanceof Error ? error.message : "DWI could not inspect this workspace." });
-        await webview.postMessage({ type: "dwi.error", code: "initialization-failed", message: error instanceof Error ? error.message : "DWI could not initialize this workspace." });
+        await webview.postMessage({ type: "dwi.project.error", message: error instanceof Error ? error.message : "Prompt Optimizer could not inspect this workspace." });
+        await webview.postMessage({ type: "dwi.error", code: "initialization-failed", message: error instanceof Error ? error.message : "Prompt Optimizer could not initialize this workspace." });
         this.recordActivity({
           level: "error",
           category: "Project",
@@ -1999,7 +1999,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     const target = vscode.Uri.joinPath(directory, "project.yaml");
     const existing = await boundedWorkspaceTextAt(folder.uri, [".dwi", "project.yaml"], MAX_DECLARATION_BYTES);
     if (existing.status === "invalid") {
-      throw new Error(`DWI refuses to open a declaration that is ${existing.reason.replaceAll("-", " ")}.`);
+      throw new Error(`Prompt Optimizer refuses to open a declaration that is ${existing.reason.replaceAll("-", " ")}.`);
     }
     if (existing.status === "absent") {
       try {
@@ -2032,7 +2032,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     this.assertWorkspaceOperation(folder, epoch);
     const finalDeclaration = await boundedWorkspaceTextAt(folder.uri, [".dwi", "project.yaml"], MAX_DECLARATION_BYTES);
     if (finalDeclaration.status !== "value") {
-      throw new Error("The project declaration changed before DWI could open it; retry.");
+      throw new Error("The project declaration changed before Prompt Optimizer could open it; retry.");
     }
     const document = await vscode.workspace.openTextDocument(target);
     this.assertWorkspaceOperation(folder, epoch);
@@ -2089,7 +2089,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       if (!snapshot || !await this.hasCurrentInspectionConsent(snapshot, operation.identity)) throw new Error("Approve the current bounded inspection scope before exporting.");
       const freshness = await this.currentProjectComparison(project, operation);
       if (freshness.changes.length) throw new Error("Project evidence changed. Refresh and review the snapshot before exporting it.");
-      const target = await vscode.window.showSaveDialog({ defaultUri: vscode.Uri.joinPath(operation.folder.uri, "dwi-project-snapshot.json"), filters: { JSON: ["json"] }, saveLabel: "Export DWI project snapshot" });
+      const target = await vscode.window.showSaveDialog({ defaultUri: vscode.Uri.joinPath(operation.folder.uri, "dwi-project-snapshot.json"), filters: { JSON: ["json"] }, saveLabel: "Export Prompt Optimizer project snapshot" });
       if (target) {
         const finalCheck = await this.currentProjectComparison(project, operation);
         if (finalCheck.changes.length) throw new Error("Project evidence changed while choosing the export location. Refresh and retry.");
@@ -2109,7 +2109,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
         title: "Project details were not exported",
         detail: "Review the current project state and try again.",
       });
-      void vscode.window.showErrorMessage(error instanceof Error ? error.message : "DWI project snapshot could not be exported.");
+      void vscode.window.showErrorMessage(error instanceof Error ? error.message : "Prompt Optimizer project snapshot could not be exported.");
     }
   }
 
@@ -2171,13 +2171,13 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
         };
       },
       readFile: async (uri) => {
-        if ((await vscode.workspace.fs.stat(uri)).size > MAX_MANAGED_STATE_BYTES) throw new Error("Managed DWI state exceeds the 4 MiB limit.");
+        if ((await vscode.workspace.fs.stat(uri)).size > MAX_MANAGED_STATE_BYTES) throw new Error("Managed Prompt Optimizer state exceeds the 4 MiB limit.");
         const content = await vscode.workspace.fs.readFile(uri);
-        if (content.byteLength > MAX_MANAGED_STATE_BYTES) throw new Error("Managed DWI state exceeds the 4 MiB limit.");
+        if (content.byteLength > MAX_MANAGED_STATE_BYTES) throw new Error("Managed Prompt Optimizer state exceeds the 4 MiB limit.");
         return content;
       },
       writeFile: async (uri, content) => {
-        if (content.byteLength > MAX_MANAGED_STATE_BYTES) throw new Error("Managed DWI state exceeds the 4 MiB limit.");
+        if (content.byteLength > MAX_MANAGED_STATE_BYTES) throw new Error("Managed Prompt Optimizer state exceeds the 4 MiB limit.");
         await vscode.workspace.fs.writeFile(uri, content);
       },
       readDirectory: async (uri) => (await vscode.workspace.fs.readDirectory(uri)).map(([name]) => name),
@@ -2233,7 +2233,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-  const output = vscode.window.createOutputChannel("DWI");
+  const output = vscode.window.createOutputChannel("Prompt Optimizer");
   const templateLibrary = new TemplateLibraryStore(context.globalState, new MockTemplateLibraryBackend(output));
   const optimizerSessions = new PromptOptimizerSessionStore(context.workspaceState);
   const sidebar = new DwiSidebarProvider(context, output, templateLibrary, optimizerSessions, confirmationPort(context));

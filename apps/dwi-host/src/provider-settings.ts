@@ -178,7 +178,7 @@ export async function checkOpenAICompatibleProvider(model: string, baseUrl: stri
     if (!payload.choices?.[0]?.message?.content?.trim()) return { ok: false, health: "connectivity", message: "The provider accepted the request but returned no text response." };
     return { ok: true, checkedAt: new Date().toISOString() };
   } catch {
-    return { ok: false, health: "connectivity", message: "DWI could not reach the configured provider. Check your network or endpoint." };
+    return { ok: false, health: "connectivity", message: "Prompt Optimizer could not reach the configured provider. Check your network or endpoint." };
   }
 }
 

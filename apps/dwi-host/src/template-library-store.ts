@@ -591,7 +591,7 @@ export class TemplateLibraryStore {
     try {
       stored = this.storage.get<unknown>(TEMPLATE_LIBRARY_STORAGE_KEY);
     } catch {
-      throw new TemplateLibraryStoreError("storage", "DWI could not read the local template library state.");
+      throw new TemplateLibraryStoreError("storage", "Prompt Optimizer could not read the local template library state.");
     }
     if (stored === undefined) return defaultEnvelope();
     const envelope = parseTemplateLibraryEnvelope(stored);
@@ -601,11 +601,11 @@ export class TemplateLibraryStore {
 
   private async persist(envelope: TemplateLibraryEnvelope): Promise<void> {
     const safe = parseTemplateLibraryEnvelope(envelope);
-    if (!safe) throw new TemplateLibraryStoreError("storage", "DWI refused to persist invalid template library state.");
+    if (!safe) throw new TemplateLibraryStoreError("storage", "Prompt Optimizer refused to persist invalid template library state.");
     try {
       await this.storage.update(TEMPLATE_LIBRARY_STORAGE_KEY, safe);
     } catch {
-      throw new TemplateLibraryStoreError("storage", "DWI could not persist the local template library state.");
+      throw new TemplateLibraryStoreError("storage", "Prompt Optimizer could not persist the local template library state.");
     }
   }
 
@@ -622,7 +622,7 @@ export class TemplateLibraryStore {
         this.managedLoaded = true;
       } catch (error) {
         if (error instanceof TemplateLibraryStoreError) throw error;
-        throw new TemplateLibraryStoreError("storage", "DWI could not validate the managed template library.");
+        throw new TemplateLibraryStoreError("storage", "Prompt Optimizer could not validate the managed template library.");
       }
     })();
     this.managedLoading = loading;
@@ -727,7 +727,7 @@ export class TemplateLibraryStore {
       const id = `${prefix}:${this.createId()}`;
       if (isEntityId(id) && !existing.has(id)) return id;
     }
-    throw new TemplateLibraryStoreError("storage", "DWI could not create a unique local template identifier.");
+    throw new TemplateLibraryStoreError("storage", "Prompt Optimizer could not create a unique local template identifier.");
   }
 
   private async publish(action: () => Promise<unknown>, operationId: string): Promise<boolean> {

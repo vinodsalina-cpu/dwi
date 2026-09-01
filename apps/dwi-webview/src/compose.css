@@ -125,7 +125,7 @@
 .root-choice { display: block; width: 100%; margin-top: 7px; text-align: left; }
 .generic-active .resume-card h1, .generic-active .resume-card p { font-size: 0; }
 .generic-active .resume-card h1::after { content: "No current project"; font-size: 20px; }
-.generic-active .resume-card p::after { content: "Open a folder to enable project context. DWI is available only in generic deterministic mode."; font-size: 13px; line-height: 1.45; }
+.generic-active .resume-card p::after { content: "Open a folder to enable project context. Prompt Optimizer is available only in generic deterministic mode."; font-size: 13px; line-height: 1.45; }
 .generic-active .resume-card .consent-actions { display: none; }
 
 .provider-notice {

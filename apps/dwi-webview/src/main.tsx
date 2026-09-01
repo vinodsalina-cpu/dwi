@@ -594,7 +594,7 @@ function providerNotificationState(health: ProviderSettings["health"]): { classN
 
 function openFolderMessageForReason(reason?: HostMessage["reason"]): string {
   if (reason === "open-folder-cancelled") return "No folder was selected. Choose a folder in Explorer to continue.";
-  if (reason === "open-folder-failed") return "Could not open a folder from DWI. Select a workspace from Explorer.";
+  if (reason === "open-folder-failed") return "Could not open a folder from Prompt Optimizer. Select a workspace from Explorer.";
   if (reason === "context-invalid") return "The project context changed. Open a workspace in Explorer and retry.";
   if (reason === "no-workspace") return "Open a folder to begin.";
   return "Open a folder to begin.";
@@ -607,7 +607,7 @@ function DocsSurface({ onBack, snapshot, provider, onOpenPrivacy }: { onBack(): 
       <section className="docs-card">
         <div className="section-label">Local state</div>
         <h1>Local workflow state</h1>
-        <p>DWI keeps project context per workspace and uses it to keep prompts bound to this project.</p>
+        <p>Prompt Optimizer keeps project context per workspace and uses it to keep prompts bound to this project.</p>
         <dl className="detail-grid">
           <div><dt>Workspace</dt><dd>{snapshot.projectName || "No workspace selected"}</dd></div>
           <div><dt>Workflow status</dt><dd>{snapshot.reviewed ? "Reviewed" : "Needs review"}</dd></div>
@@ -619,8 +619,8 @@ function DocsSurface({ onBack, snapshot, provider, onOpenPrivacy }: { onBack(): 
       </section>
       <section className="docs-card">
         <div className="section-label">Local data boundaries</div>
-        <h1>What DWI reads and stores</h1>
-        <p>DWI reads bounded local evidence after approval and stores only workflow artifacts needed for session continuity.</p>
+        <h1>What Prompt Optimizer reads and stores</h1>
+        <p>Prompt Optimizer reads bounded local evidence after approval and stores only workflow artifacts needed for session continuity.</p>
         <ul className="docs-list">
           <li>Supported manifests and selected project metadata for project context.</li>
           <li>Workspace structure and project declaration files for continuity.</li>
@@ -769,7 +769,7 @@ export function App() {
     ...(!vscode ? [[PREVIEW_PERSONAL_TEMPLATE.id, previewLibraryDetail(PREVIEW_PERSONAL_TEMPLATE, 3)] as const] : []),
   ]));
   const activitySequence = useRef(0);
-  const [activityEntries, setActivityEntries] = useState<ActivityEntry[]>(() => [{ id: "session-open", timestamp: "Now", level: "info", category: "session", title: "DWI opened", detail: "Ready for a local project workflow." }]);
+  const [activityEntries, setActivityEntries] = useState<ActivityEntry[]>(() => [{ id: "session-open", timestamp: "Now", level: "info", category: "session", title: "Prompt Optimizer opened", detail: "Ready for a local project workflow." }]);
   const [activityAttention, setActivityAttention] = useState(false);
   const feedbackTriggerRef = useRef<HTMLButtonElement>(null);
   const feedbackFocusPending = useRef(false);
@@ -1165,8 +1165,8 @@ export function App() {
         setIsCompiling(false);
         setIsResetting(false);
         setIsSavingEvaluation(false);
-        setConsentError(data.message ?? "DWI could not check this project.");
-        setWorkflowError(data.message ?? "DWI could not complete this step.");
+        setConsentError(data.message ?? "Prompt Optimizer could not check this project.");
+        setWorkflowError(data.message ?? "Prompt Optimizer could not complete this step.");
         if (data.code === "project-stale") {
           setProjectSnapshot((current) => ({ ...current, status: "stale", reviewed: false, message: data.message }));
           setStage("brief");
@@ -1774,7 +1774,7 @@ export function App() {
       <div className="rail-secondary">
         <button className={`rail-button${activeSurface === "activity" ? " active" : ""}`} type="button" aria-label={activityAttention ? "Activity and editor documents; new attention" : "Activity and editor documents"} aria-current={activeSurface === "activity" ? "page" : undefined} onClick={openInfo}><Icon name="info" /><span className="rail-label">Activity</span>{activityAttention && <span className="rail-badge" />}</button>
         <button className={`rail-button${activeSurface === "docs" ? " active" : ""}`} type="button" aria-label="Docs" aria-current={activeSurface === "docs" ? "page" : undefined} onClick={() => setActiveSurface("docs")}><Icon name="file" /><span className="rail-label">Docs</span></button>
-        <button className={`rail-button${activeSurface === "settings" ? " active" : ""}`} type="button" aria-label="DWI settings" aria-current={activeSurface === "settings" ? "page" : undefined} onClick={openSettings}><Icon name="settings" /><span className="rail-label">Settings</span></button>
+        <button className={`rail-button${activeSurface === "settings" ? " active" : ""}`} type="button" aria-label="Prompt Optimizer settings" aria-current={activeSurface === "settings" ? "page" : undefined} onClick={openSettings}><Icon name="settings" /><span className="rail-label">Settings</span></button>
         <button className="rail-button rail-toggle" type="button" aria-label={railExpanded ? "Collapse activity bar" : "Expand activity bar"} aria-pressed={railExpanded} onClick={() => setRailExpanded((expanded) => !expanded)}><Icon name="panel" /><span className="rail-label">{railExpanded ? "Collapse" : "Expand"}</span></button>
       </div>
     </nav>
@@ -1786,7 +1786,7 @@ export function App() {
         {providerNoticeOpen && <section id="provider-notice" className="provider-notice-popover" role="dialog" aria-label="Provider status"><strong>{provider.health === "ready" ? "Provider connected" : "Prompt Optimizer is unavailable"}</strong><p>{provider.health === "missing" ? "Configure a provider and verify that its model responds." : provider.health === "invalid-credential" ? "The saved API key was rejected." : provider.health === "quota" ? "Requests are blocked by quota or balance." : provider.health === "rate-limit" ? "The provider is temporarily rate limited." : provider.health === "timeout" ? "The provider did not respond in time." : provider.health === "connectivity" ? "The provider could not be reached." : provider.health === "invalid-model" ? "The selected model is unavailable." : provider.health === "checking" ? "Checking the selected model…" : "The provider has not been checked."}</p>{provider.health !== "ready" && <button type="button" className="primary" onClick={() => { setProviderNoticeOpen(false); openSettings(); }}>Open provider settings</button>}</section>}
       </span></div>
     </header><section className="content"><div className="prompt-workflow home-workflow">
-      {sessionMode === "loading" && <article className="work-card empty-state" aria-live="polite"><span className="section-label">Opening workspace</span><h1>Loading DWI state…</h1></article>}
+      {sessionMode === "loading" && <article className="work-card empty-state" aria-live="polite"><span className="section-label">Opening workspace</span><h1>Loading Prompt Optimizer state…</h1></article>}
       {sessionMode === "generic" && <article className="work-card empty-state"><div className="empty-icon"><Icon name="folder" /></div><span className="section-label">No project open</span><h1>Open a folder to begin</h1><p>{projectActionMessage || openFolderMessageForReason("no-workspace")}</p><button className="primary" type="button" onClick={openFolderFromExplorer}>Open Explorer</button></article>}
       {sessionMode === "recovery" && <article className="work-card empty-state"><div className="empty-icon warning"><Icon name="warning" /></div><span className="section-label">Saved state needs attention</span><h1>Review the local session</h1><p>Your project files are unchanged.</p><button className="primary" type="button" onClick={activateInitializer}>Open Project Meta Context</button></article>}
       {sessionMode === "workspace" && (stage === "consent" || stage === "brief") && <article className="work-card home-primary-card"><div className="card-heading"><span className="section-label">Project Meta Context</span><h1>{stage === "consent" ? "Initialize this project" : "Review Project Meta Context"}</h1><p>{stage === "consent" ? "Build a bounded, consent-based knowledge layer before project-aware prompt work." : "Confirm the reviewed project metadata Prompt Optimizer will use."}</p></div><button className="primary" type="button" onClick={activateInitializer}>{stage === "consent" ? "Start initialization" : "Continue review"} <span aria-hidden="true">→</span></button></article>}
@@ -1833,7 +1833,7 @@ export function App() {
         {(sessionMode === "workspace" || sessionMode === "recovery") && (stage === "consent" || stage === "brief") && <WorkflowStrip stage={stage} resetPending={resetPending} resetting={isResetting} onRequestReset={requestReset} onCancelReset={() => setResetPending(false)} onConfirmReset={confirmReset} />}
 
         {sessionMode === "generic" && <>
-          <article className="work-card empty-state"><div className="empty-icon"><Icon name="folder" /></div><span className="section-label">No project open</span><h1>Open a folder to begin</h1><p>DWI keeps each prompt session tied to one workspace.</p></article>
+          <article className="work-card empty-state"><div className="empty-icon"><Icon name="folder" /></div><span className="section-label">No project open</span><h1>Open a folder to begin</h1><p>Prompt Optimizer keeps each prompt session tied to one workspace.</p></article>
           <article className="work-card empty-state">
             <div className="project-inline-message">{projectActionMessage || openFolderMessageForReason("no-workspace")}</div>
             <button className="primary full-width" type="button" onClick={openFolderFromExplorer}>Open folder in Explorer</button>
@@ -1843,7 +1843,7 @@ export function App() {
         {sessionMode === "recovery" && <article className="work-card empty-state"><div className="empty-icon warning"><Icon name="warning" /></div><span className="section-label">Saved session needs attention</span><h1>Start a clean local session</h1><p>Your project files are unchanged.</p><button className="primary" type="button" onClick={requestReset}>Review reset</button></article>}
 
         {sessionMode !== "generic" && sessionMode !== "recovery" && stage === "consent" && <article className="work-card consent-card">
-          <div className="card-heading"><div className="section-heading-with-info"><span className="section-label">Project Meta Context · Access</span><button type="button" className="mini-info" aria-label="About project metadata collection" title="About project metadata collection" aria-describedby="project-access-help" onClick={(event) => { const help = event.currentTarget.nextElementSibling as HTMLSpanElement | null; if (help) help.hidden = !help.hidden; }}><Icon name="info" size={13} /></button><span id="project-access-help" className="inline-help" hidden>DWI collects only bounded project-level metadata to build a reviewable brief for later prompts. Nothing is sent until you approve the project brief.</span></div><h1>Build Project Meta Context</h1></div>
+          <div className="card-heading"><div className="section-heading-with-info"><span className="section-label">Project Meta Context · Access</span><button type="button" className="mini-info" aria-label="About project metadata collection" title="About project metadata collection" aria-describedby="project-access-help" onClick={(event) => { const help = event.currentTarget.nextElementSibling as HTMLSpanElement | null; if (help) help.hidden = !help.hidden; }}><Icon name="info" size={13} /></button><span id="project-access-help" className="inline-help" hidden>Prompt Optimizer collects only bounded project-level metadata to build a reviewable brief for later prompts. Nothing is sent until you approve the project brief.</span></div><h1>Build Project Meta Context</h1></div>
           <ul className="scope-list"><li><Icon name="database" /><span>Manifests</span></li><li><Icon name="folder" /><span>Workspace</span></li><li><Icon name="file" /><span>Guidance</span></li></ul>
           {consentError && <div className="inline-alert" role="alert"><Icon name="warning" /><span>{consentError}</span></div>}
           <div className="primary-stack"><button className="primary full-width" onClick={approve} disabled={isApproving || sessionMode === "loading"}>{sessionMode === "loading" ? "Opening project…" : isApproving ? "Checking project…" : <>Check this project <span aria-hidden="true">→</span></>}</button><button className="text-button centered" type="button" onClick={() => openEditorDocument({ kind: "privacy" })}><Icon name="external" size={13} />Review data boundaries in editor</button></div>

@@ -9,7 +9,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const brief = {
   version: "dwi.brief.v1" as const,
-  projectName: "DWI",
+  projectName: "Prompt Optimizer",
   archetype: "TypeScript monorepo",
   stack: ["TypeScript", "React"],
   packageManager: "pnpm",
@@ -29,7 +29,7 @@ const managedLibrary = {
 
 function hostMessage(data: unknown) { window.dispatchEvent(new MessageEvent("message", { data })); }
 
-describe("DWI Home, Initializer, and Prompt Optimizer", () => {
+describe("Prompt Optimizer Home, Initializer, and Prompt Optimizer", () => {
   it("keeps initialization separate and makes local preview, LLM rewrite, cancellation, and recents explicit", async () => {
     const posted: unknown[] = [];
     Object.defineProperty(globalThis, "acquireVsCodeApi", { configurable: true, value: () => ({ postMessage: (message: unknown) => posted.push(message) }) });
@@ -45,6 +45,8 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     expect(deltaLabel?.({ absoluteTokens: 0, percentageChange: 0 })).toBe("No projected token change");
 
     expect(screen.getByRole("button", { name: "Home" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getAllByText("Prompt Optimizer").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Developer Workspace Intelligence")).toBeNull();
     expect(screen.getByRole("button", { name: "Project Meta Context" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Prompt Optimizer" })).toBeTruthy();
     expect(screen.getByText("Local")).toBeTruthy();
@@ -63,13 +65,13 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
 
     await act(async () => {
       hostMessage({ type: "dwi.library.state", state: managedLibrary });
-      hostMessage({ type: "dwi.project.snapshot", snapshot: { ...PROJECT_UI_FIXTURES.current, projectName: "DWI", reviewed: true } });
+      hostMessage({ type: "dwi.project.snapshot", snapshot: { ...PROJECT_UI_FIXTURES.current, projectName: "Prompt Optimizer", reviewed: true } });
       hostMessage({ type: "dwi.brief.confirmed", brief });
       hostMessage({ type: "dwi.provider.state", settings: { mode: "gemini", model: "gemini-2.5-flash", configured: true, health: "ready", checkedAt: "2026-08-28T00:00:00.000Z" } });
       hostMessage({ type: "prompt.v2.recents", recents: [{ id: "recent-1", title: "Secure provider setup", preview: "Implement provider verification…", promptType: "Security review", updatedAt: "2026-08-28T00:00:00.000Z", provider: "gemini", model: "gemini-2.5-flash" }] });
     });
 
-    expect(screen.getByRole("heading", { name: "DWI" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Prompt Optimizer" })).toBeTruthy();
     expect(screen.getByText("Secure provider setup")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Open Prompt Optimizer" }));
     expect(screen.getByRole("navigation", { name: "Prompt Optimizer steps" })).toBeTruthy();
@@ -91,11 +93,11 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     expect(compile).not.toHaveProperty("selectedModuleIds");
 
     const localCandidate = compileDwiCandidate(brief, DWI_MODULES.filter(({ defaultSelected }) => defaultSelected).map(({ id }) => id), { task: "Implement a safe provider retry flow.", promptType: "General", outputSize: "low" });
-    const sourcePlan = resolvePromptSourcesV2({ task: "Implement a safe provider retry flow.", template: { id: "general", label: "General delivery brief" }, project: { sourceId: "project:dwi", label: "Reviewed project: DWI", approved: true, current: true, provenance: ["review:sha256:abc"], facts: [{ label: "Workspace", value: "pnpm" }], conflicts: [], questions: [{ id: "question:one", prompt: "Which retry errors are recoverable?", targetSectionId: "relevant-context", reason: "The project does not establish retry policy." }], assumptions: [] } });
+    const sourcePlan = resolvePromptSourcesV2({ task: "Implement a safe provider retry flow.", template: { id: "general", label: "General delivery brief" }, project: { sourceId: "project:dwi", label: "Reviewed project: Prompt Optimizer", approved: true, current: true, provenance: ["review:sha256:abc"], facts: [{ label: "Workspace", value: "pnpm" }], conflicts: [], questions: [{ id: "question:one", prompt: "Which retry errors are recoverable?", targetSectionId: "relevant-context", reason: "The project does not establish retry policy." }], assumptions: [] } });
     await act(async () => { hostMessage({ type: "prompt.v2.compiled", requestId: compile.requestId, candidate: localCandidate, sourcePlan }); });
     expect(screen.getByRole("heading", { name: "Confirm the local interpretation" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "What will shape this prompt" })).toBeTruthy();
-    expect(screen.getByText("Reviewed project: DWI")).toBeTruthy();
+    expect(screen.getByText("Reviewed project: Prompt Optimizer")).toBeTruthy();
     expect(screen.getByText("Which retry errors are recoverable?")).toBeTruthy();
     expect(screen.getByRole("button", { name: /2 Resolve/ }).getAttribute("aria-current")).toBe("step");
     expect(screen.queryByRole("textbox", { name: "Task to optimize" })).toBeNull();
@@ -188,7 +190,7 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Review Project Meta Context" }));
     expect(screen.getByRole("button", { name: "Project Meta Context" }).getAttribute("aria-current")).toBe("page");
     await act(async () => {
-      hostMessage({ type: "dwi.project.snapshot", snapshot: { ...PROJECT_UI_FIXTURES.current, projectName: "DWI", reviewed: true } });
+      hostMessage({ type: "dwi.project.snapshot", snapshot: { ...PROJECT_UI_FIXTURES.current, projectName: "Prompt Optimizer", reviewed: true } });
       hostMessage({ type: "dwi.brief.ready", brief: { ...brief, confirmed: false } });
       hostMessage({ type: "dwi.brief.confirmed", brief });
     });
@@ -204,15 +206,15 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     await act(async () => { hostMessage({ type: "dwi.brief.ready", brief: { ...brief, confirmed: false } }); });
     expect(screen.queryByRole("button", { name: "Reset Prompt Optimizer" })).toBeNull();
     await act(async () => {
-      hostMessage({ type: "dwi.project.snapshot", snapshot: { ...PROJECT_UI_FIXTURES.stale, projectName: "DWI", reviewed: false } });
+      hostMessage({ type: "dwi.project.snapshot", snapshot: { ...PROJECT_UI_FIXTURES.stale, projectName: "Prompt Optimizer", reviewed: false } });
       hostMessage({ type: "dwi.brief.confirmed", brief });
     });
     expect(screen.queryByRole("button", { name: "Reset Prompt Optimizer" })).toBeNull();
     await act(async () => {
-      hostMessage({ type: "dwi.project.snapshot", snapshot: { ...PROJECT_UI_FIXTURES.current, projectName: "DWI", reviewed: true } });
+      hostMessage({ type: "dwi.project.snapshot", snapshot: { ...PROJECT_UI_FIXTURES.current, projectName: "Prompt Optimizer", reviewed: true } });
       hostMessage({ type: "dwi.brief.confirmed", brief });
     });
-    fireEvent.click(screen.getByRole("button", { name: "DWI settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Prompt Optimizer settings" }));
     fireEvent.click(screen.getByRole("button", { name: "Reset Prompt Optimizer" }));
     expect(screen.getByRole("alertdialog", { name: "Reset Prompt Optimizer?" })).toBeTruthy();
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));

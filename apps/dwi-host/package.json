@@ -22,17 +22,17 @@
       {
         "command": "dwi.openPromptOptimizer",
         "title": "Open Prompt Optimizer",
-        "category": "DWI"
+        "category": "Prompt Optimizer"
       },
       {
         "command": "dwi.exportProjectSnapshot",
         "title": "Export Project Snapshot",
-        "category": "DWI"
+        "category": "Prompt Optimizer"
       },
       {
         "command": "dwi.exportBackstageComponent",
         "title": "Export Backstage Component",
-        "category": "DWI"
+        "category": "Prompt Optimizer"
       }
     ],
     "viewsContainers": {
@@ -86,7 +86,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": true,
-      "description": "DWI reads only bounded manifest/config evidence after explicit project consent and does not execute workspace code."
+      "description": "Prompt Optimizer reads only bounded manifest/config evidence after explicit project consent and does not execute workspace code."
     }
   }
 }
