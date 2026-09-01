@@ -131,7 +131,7 @@ async function run() {
   optimizer = await waitForSurfaceText('optimizer', 'Saved to recent prompts.');
   console.log('DWI_SMOKE_LOCAL_OPTIMIZER_SAVED');
 
-  await clickWebviewButton(optimizer.target, 'DWI settings');
+  await clickWebviewButton(optimizer.target, 'Prompt Optimizer settings');
   optimizer = await waitForSurfaceText('optimizer', 'Reset Prompt Optimizer');
   await clickWebviewButton(optimizer.target, 'Reset Prompt Optimizer');
   optimizer = await waitForSurfaceText('optimizer', 'Reset prompt progress');

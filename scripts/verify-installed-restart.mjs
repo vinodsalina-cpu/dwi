@@ -341,7 +341,7 @@ async function launchCode(port) {
   optimizer = await waitForWebview(port - 1, 'optimizer', 'installed restart persistence task');
   if (!/Review the local preview/.test(optimizer.state.text)) throw new Error('Installed optimizer did not resume its saved review after restart.');
   console.log('DWI_SMOKE_RESTART_SESSION_RESTORED');
-  await clickWebviewButton(port - 1, 'optimizer', 'DWI settings');
+  await clickWebviewButton(port - 1, 'optimizer', 'Prompt Optimizer settings');
   await waitForWebview(port - 1, 'optimizer', 'Reset Prompt Optimizer');
   await clickWebviewButton(port - 1, 'optimizer', 'Reset Prompt Optimizer');
   await waitForWebview(port - 1, 'optimizer', 'Reset prompt progress');
