@@ -112,7 +112,7 @@ async function run() {
   await clickWebviewButton(home.target, 'Review and approve');
   home = await waitForSurfaceText('home', 'Confirm project brief');
   await clickWebviewButton(home.target, 'Confirm project brief');
-  home = await waitForSurfaceText('home', 'Project metadata is ready');
+  home = await waitForSurfaceText('optimizer', 'Shape the task');
   console.log('DWI_SMOKE_PROJECT_CONTEXT_APPROVED');
   await vscode.commands.executeCommand('dwi.open');
   home = await waitForSurfaceText('home', 'The reviewed knowledge layer is ready');
