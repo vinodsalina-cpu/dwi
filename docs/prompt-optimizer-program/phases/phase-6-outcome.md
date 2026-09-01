@@ -1,6 +1,6 @@
 # Phase 6 local POC qualification outcome
 
-State: broad local matrix executed; POC qualification incomplete because the packaged restart/resume gate remains open
+State: Phase 6 local POC qualification complete; broad local matrix and packaged installed restart/resume/reset pass
 
 ## Qualified matrix
 
@@ -11,11 +11,12 @@ State: broad local matrix executed; POC qualification incomplete because the pac
 - Source and privacy tests cover consent, stale reviewed knowledge, conflicts/contradictions, provenance, secret/absolute-path rejection, invalid encoding, bounded inspection, provider credential isolation, redirect refusal, and provider-unavailable deterministic fallback. Navigation and deterministic compilation do not invoke the provider port.
 - Atomic snapshot tests cover interrupted rename recovery, failed final rename rollback, stale-backup suppression after reset, copied/tampered state rejection, symlink rejection, and declaration preservation.
 - External deterministic model-host qualification passes 16 syntax checks, 20 tests, and recovered success/auth/rate-limit simulator scenarios. No real-provider or fixed-executor call occurred.
-- Independent adversarial review findings were repaired: stale-context route loss, competing recovery authority, reset ordering/remigration, reset keyboard recovery, and global recents duplication. A final exact-tree review is required before any later promotion decision.
+- Independent adversarial review findings were repaired: stale-context route loss, competing recovery authority, reset ordering/remigration, reset keyboard recovery, and global recents duplication. The exact current tree is recorded in local commits; any later promotion decision still needs a new review at that time.
+- The fresh 388-file VSIX (`ff1b9035fec6e9cb6be70f72da486edff7472af5c72f209d2fb9d0ac44afa87d`) passes `pnpm verify:extension:restart`: native consent/approval, deterministic local save, same-profile process restart/resume, optimizer-only reset, and Project Meta Context preservation after reset.
 
 ## Evidence boundary
 
-The installed harness proves the functional flow in one VS Code process. Direct storage and lifecycle integration suites prove persistence units, but they do not satisfy the frozen packaged restart/resume acceptance item. `@vscode/test-electron` exits with failure when the test intentionally reloads its window, and separate launches isolate the relevant Memento state. Phase 6 completion is therefore not claimed. Reinstall activation is qualified; reinstall-with-session-retention is not.
+The extension-test harness proves the functional flow in one VS Code process with a production-fail-closed development confirmation port. The direct installed verifier uses a normal installed extension in a disposable portable profile and clicks the production native confirmation sheets; three separate VS Code processes share the profile, so Memento session state is genuinely persisted across restart. Reinstall activation and the restart-with-session-retention path are both qualified locally.
 
 The Phase 4 readiness response remains preserved at 14,531 tokens against the immutable 12,000 ceiling. This phase neither retries nor alters that evidence. Real-provider compatibility, held-out semantic evaluation, fixed-executor comparison, merge, baseline promotion, and tagging remain later authority decisions.
 

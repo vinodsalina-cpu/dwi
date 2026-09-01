@@ -7,7 +7,7 @@
 - Phase 3 predecessor: `2e24151fff2a6b8836e79a96dc83205aa6870809`
 - Phase 4 exact local review SHA: `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`
 - Independent review SHA: `c8d1723` (`Record local Phase 6 qualification`); current HEAD advances evidence corrections only
-- Active phase: Phase 5 — implementation and broad local qualification complete, packaged restart/resume acceptance gate open
+- Active phase: Phase 5 — POC complete; Phase 6 local POC qualification complete
 - Working mode: local and reversible from exact Phase 4 SHA `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`. Phase 4 remains blocked and unqualified. No provider/fixed-executor retry, credential use, remote action, merge, tag, or promotion is authorized.
 
 ## Current product path
@@ -23,14 +23,15 @@ Prompt Optimizer is now a distinct native VS Code activity-bar container and vie
 ## Current local evidence
 
 - Focused evidence: 69 domain semantic/projection tests, 24 host transport/activity tests, and 6 webview UI tests passed.
-- Fresh full repository suite: 402 passed (104 prompt optimizer + 31 workspace + 66 core + 16 catalog + 154 host + 31 webview); the prior loopback environment failure is resolved.
+- Fresh full repository suite: 419 passed (104 prompt optimizer + 31 workspace + 66 core + 16 catalog + 171 host + 31 webview); the prior loopback environment failure is resolved.
 - All six package typechecks: passed.
 - Schema export: unchanged.
 - Build, VSIX package, and `git diff --check`: passed.
 - Exact review SHA: `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`; all tracked Phase 4 changes are frozen there and program records remain untracked.
-- Current VSIX: `/Users/vk/Projects/sub/apps/dwi-host/developer-work-intelligence-0.1.0.vsix`, 678,514 bytes, SHA-256 `cee97fcbb7b2292a684c676033d1ec2c5e1532ad5415fdfcb01725ef26965530`.
+- Current VSIX: `/Users/vk/Projects/sub/apps/dwi-host/developer-work-intelligence-0.1.0.vsix`, 684,180 bytes, SHA-256 `ff1b9035fec6e9cb6be70f72da486edff7472af5c72f209d2fb9d0ac44afa87d`.
 - Fresh installed smoke: install, activation, `dwi.open`, `dwi.openPromptOptimizer`, both open markers, clean extension-host exit, and final marker passed.
 - Fresh clean absence → install → uninstall → absence → fresh install: `DWI_CLEAN_REINSTALL_OK`.
+- Fresh `pnpm verify:extension:restart` passed against the current VSIX in disposable portable profile `/tmp/dwi-vscode-restart-0Nip4F`: native production consent sheets, initialization/review, deterministic Resolve/Review/save, graceful process restart, context/session restoration, optimizer-only reset, and reset persistence all passed.
 - Model-host verification under Node 24.18.0: 16 syntax checks, 20 active tests, and recovered simulator checks passed.
 - Frozen evaluation contract SHA-256: `c8dbded44e96933bf28c92d534831136445e5b0814ded115fcb8dcff27a8272b`; corpus SHA-256: `ca88bfbad8b018e6898024df61ca3b0d221c55b8094722fb6597094763df4aa7`.
 - Evaluator qualification: six focused harness tests and zero-network dry run passed; ten A/B identities, eight fake semantic paths, two no-egress fallbacks, and 30 strict request constructions were verified.
@@ -46,7 +47,7 @@ Prompt Optimizer is now a distinct native VS Code activity-bar container and vie
 - Production semantic-plus-projection calibration remains unqualified because the readiness call exhausted the frozen per-call budget before the semantic request.
 - Held-out/fixed-executor quality remains unqualified because the no-retry contract correctly prevented that lane from starting after calibration failed.
 - A further live attempt requires explicit authorization to supersede the frozen no-retry contract and live lock with revised ceilings. Existing evidence must remain immutable.
-- Phase 5 implementation passes 419 tests with versioned recovery, migration/downgrade coverage, dependency invalidation, optimizer-only reset gated on an exact approved/current/confirmed brief, and a serialized UTF-8 256 KiB session cap. Its installed harness passes the functional flow in one process but not the frozen packaged restart/resume acceptance gate.
-- DWI-PO-0030 adds the visible Project Meta Context module, exact stale-context return, authority/reset repairs, and reset focus recovery. The current 388-file VSIX SHA-256 is `cf6b400512e113d945512abce8acc93e3c93227b1eb9379cce7e5d6bf6f4adf6`.
-- The broad local Phase 6 matrix was executed, but Phase 6 completion is blocked by the inherited packaged restart gate. It cannot waive Phase 4 or authorize promotion.
+- Phase 5 implementation passes 419 tests with versioned recovery, migration/downgrade coverage, dependency invalidation, optimizer-only reset gated on an exact approved/current/confirmed brief, and a serialized UTF-8 256 KiB session cap. The installed harness now passes both same-process and cross-process packaged restart/resume/reset against the same isolated profile.
+- DWI-PO-0030 adds the visible Project Meta Context module, exact stale-context return, authority/reset repairs, and reset focus recovery. Commit `529516e` adds the direct installed restart verifier; the current 388-file VSIX SHA-256 is `ff1b9035fec6e9cb6be70f72da486edff7472af5c72f209d2fb9d0ac44afa87d`.
+- The broad local Phase 6 matrix and packaged restart gate pass locally. Phase 6 POC qualification is complete; it does not waive Phase 4 or authorize promotion.
 - The verified blocked-transition checkpoint is under `/Users/vk/Projects/sub/docs/prompt-optimizer-program/archives/2026-08-31-phase-4-blocked-transition/`.

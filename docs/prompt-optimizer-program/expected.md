@@ -6,6 +6,8 @@ Amendment 2026-09-01 (DWI-PO-0028): independent review found that optimizer-only
 
 Amendment 2026-09-01 (DWI-PO-0029): installed use exposed automatic workspace lifecycle messages that could replace the active Prompt Optimizer surface with Home. The authorized correction keeps explicit user navigation unchanged while making rewrite dispatch/pending and brief/root lifecycle updates preserve an already-active optimizer. Scope, provider budgets, and phase gates are unchanged.
 
+Amendment 2026-09-01 (DWI-PO-0032): the installed runtime restart gate is now exercised by a direct VS Code 1.134.0 process in an isolated portable profile. The verifier drives the production native consent sheets by exact button label, then terminates and relaunches the same installed profile twice to prove session resume, optimizer-only reset, and Project Meta Context preservation. The evidence is local-only; Phase 4 semantic/fixed-executor gates and all remote/provider boundaries are unchanged.
+
 ## Identity
 
 - Phase: 5 — product hardening and minimum durable state
@@ -66,9 +68,9 @@ Completion is observable when a packaged extension can initialize/review a proje
 - [x] Prove corruption, limits, partial write, downgrade tolerance, reset preservation, and isolation.
 - [x] Prove no recovery/navigation egress and deterministic preservation on provider failure.
 - [x] Run focused, repository, typecheck, schema, build, VSIX, archive, and diff gates.
-- [x] Run an isolated same-process installed Phase 5 functional flow and clean reinstall/activation checks; packaged restart/resume remains the unchecked acceptance item below.
+- [x] Run same-process and cross-process installed Phase 5 functional flows plus clean reinstall/activation checks.
 - [x] Review the final diff and archive the outcome.
-- [ ] Create an exact local review commit only if separately authorized; otherwise report that gate pending.
+- [x] Create atomic local implementation and evidence commits under the user-authorized local-only delivery mode.
 
 ## Acceptance
 
@@ -83,7 +85,7 @@ Completion is observable when a packaged extension can initialize/review a proje
 - [x] Recovery/reset controls are keyboard accessible, scoped, and disclose retained state.
 - [x] Existing initialization, legacy optimizer, library/template, and deterministic flows remain recoverable.
 - [x] Focused and repository-wide verification passes on the final candidate.
-- [ ] A packaged flow proves initialization/review → local session → restart/resume → reset → initialized-project preservation.
+- [x] A packaged flow proves initialization/review → local session → restart/resume → reset → initialized-project preservation.
 - [x] Final review discrepancies are classified and corrected with regression coverage; independent exact-candidate re-review remains part of the exact-SHA gate.
 - [x] Phase 4 remains blocked; Phase 5 is not semantic qualification or promotion readiness.
 
@@ -113,8 +115,8 @@ Migrations are additive and tolerant. Preserve older readers and never rewrite u
 
 ## Next-phase duty
 
-Phase 6 remains closed. Phase 5 cannot waive blocked Phase 4 semantic/fixed-executor gates. Default qualification, merge, and baseline tagging require complete evidence and explicit authority.
+Phase 6 local POC qualification is complete under the recorded matrix. Phase 5 and Phase 6 cannot waive blocked Phase 4 semantic/fixed-executor gates. Default qualification, merge, and baseline tagging require complete later evidence and explicit authority.
 
 ## 2026-09-01 local POC amendment
 
-The user superseded the earlier no-commit/no-Phase-6-local-work limits for this branch by explicitly requiring atomic local commits and a broad local Phase 6 POC matrix. Provider/fixed-executor transmission, credentials, push, merge, tag, release, and promotion remain unauthorized. Phase 5 still cannot close until the packaged functional restart/resume/reset journey and remaining authority/privacy findings pass; local Phase 6 checks are evidence collection only, not promotion.
+The user superseded the earlier no-commit/no-Phase-6-local-work limits for this branch by explicitly requiring atomic local commits and a broad local Phase 6 POC matrix. Provider/fixed-executor transmission, credentials, push, merge, tag, release, and promotion remain unauthorized. The packaged functional restart/resume/reset journey and remaining local authority/privacy checks now pass; the recorded Phase 5/6 outcomes are local POC evidence only, not semantic qualification or promotion.

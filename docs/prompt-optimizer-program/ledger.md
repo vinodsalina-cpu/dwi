@@ -378,3 +378,16 @@ Append consequential decisions and evidence. Supersede entries explicitly; do no
 - Boundary: Direct storage and lifecycle suites prove persistence units but cannot substitute for the packaged restart gate. The Electron installed runner cannot survive an intentional window reload, and separate launches isolate Memento state. The preserved Phase 4 14,531-token failure is unchanged; no provider/fixed-executor call occurred.
 - Consequence: Phase 5 and Phase 6 POC completion remain blocked. Real-provider compatibility, held-out semantics, fixed-executor comparison, promotion, merge, baseline tag, release, and any remote mutation also require later explicit authority.
 - Owner: Codex local session
+
+### DWI-PO-0032 — Installed cross-process restart and scoped reset qualified
+
+- Date: 2026-09-01
+- Type: packaged-runtime verification and phase-gate closure
+- Status: accepted local POC evidence
+- Context: The prior local matrix proved the same-process installed journey and all storage/lifecycle units, but the frozen Phase 5 acceptance item still required initialization/review → local session → restart/resume → reset → initialized-project preservation against one installed profile.
+- Decision or finding: Add `scripts/verify-installed-restart.mjs` and the `pnpm verify:extension:restart` command. The verifier installs the current VSIX into a disposable extension directory, launches normal VS Code 1.134.0 processes with an isolated short-path portable profile, drives the production native consent and brief-approval sheets by exact button label, saves a provider-free deterministic review, gracefully terminates, relaunches the same profile to verify Project Meta Context and optimizer Review restoration, resets only optimizer state, and relaunches again to verify reset persistence while the approved project remains.
+- Evidence: Current 388-file VSIX, 684,180 bytes, SHA-256 `ff1b9035fec6e9cb6be70f72da486edff7472af5c72f209d2fb9d0ac44afa87d`; markers `DWI_SMOKE_RESTART_INSTALL_OK`, `DWI_SMOKE_RESTART_PROJECT_READY`, `DWI_SMOKE_RESTART_SEED_OK`, `DWI_SMOKE_RESTART_CONTEXT_RESTORED`, `DWI_SMOKE_RESTART_SESSION_RESTORED`, `DWI_SMOKE_RESTART_RESET_OK`, `DWI_SMOKE_RESTART_RESET_PERSISTED`, and `DWI_SMOKE_RESTART_EXTENSION_OK`; current root suite 419 tests; six typechecks; schema export; build/package; same-process installed smoke; 16 proxy syntax checks, 20 proxy tests, and recovered simulator.
+- Boundary: No `DWI_PACKAGED_SMOKE` environment, extension-development path, provider/fixed-executor call, credential use, remote mutation, external CI, merge, tag, release, or promotion occurred. The `@vscode/test-electron` intentional-reload limitation remains documented, but it no longer blocks the installed cross-process acceptance item.
+- Consequence: Phase 5 POC and Phase 6 local POC qualification are complete on this branch. Phase 4 semantic/fixed-executor qualification remains blocked by the preserved 14,531-token readiness overrun and cannot be retried without a superseding contract; later provider compatibility, held-out quality, promotion, merge, tagging, and release require fresh explicit authority.
+- Supersedes: DWI-PO-0031 as the current Phase 5/6 local evidence status; historical blocked evidence remains preserved.
+- Owner: Codex local session
