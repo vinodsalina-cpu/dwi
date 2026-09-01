@@ -50,6 +50,11 @@ describe("DWI Home, Initializer, and Prompt Optimizer", () => {
     expect(screen.getByText("Local")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Provider status: missing/ })).toBeTruthy();
 
+    await act(async () => { hostMessage({ type: "dwi.surface.select", surface: "optimizer" }); });
+    expect(screen.getByRole("button", { name: "Prompt Optimizer" }).getAttribute("aria-current")).toBe("page");
+    await act(async () => { hostMessage({ type: "dwi.surface.select", surface: "home" }); });
+    expect(screen.getByRole("button", { name: "Home" }).getAttribute("aria-current")).toBe("page");
+
     await act(async () => { hostMessage({ type: "dwi.snapshot.absent" }); });
     expect(screen.getByRole("heading", { name: "Initialize this project" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Start initialization" }));

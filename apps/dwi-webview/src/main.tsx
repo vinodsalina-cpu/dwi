@@ -133,6 +133,7 @@ type HostLibraryDetail = {
 };
 type HostMessage = {
   type?: string;
+  surface?: "home" | "optimizer";
   code?: string;
   brief?: DwiBrief;
   candidate?: ReturnType<typeof compileDwiCandidate>;
@@ -884,6 +885,7 @@ export function App() {
   useEffect(() => {
     const listener = (event: MessageEvent<HostMessage>) => {
       const data = event.data;
+      if (data.type === "dwi.surface.select" && data.surface) setActiveSurface(data.surface);
       if (data.type === "prompt.v2.view.state" && data.view) restoredOptimizerStep.current = data.view;
       if (data.type === "prompt.v2.recents") setOptimizerRecents(data.recents ?? []);
       if (data.type === "prompt.v2.pending") {
@@ -1762,7 +1764,7 @@ export function App() {
   const homeProviderStatus = providerNotificationState(provider.health ?? "missing");
   return <div className="webview-surface">
     <main className={`shell${railExpanded ? " rail-expanded" : ""}`}>
-    <nav className="activity-rail" aria-label="Developer Workspace Intelligence">
+    <nav className="activity-rail" aria-label="Prompt Optimizer navigation">
       <div className="rail-primary">
         <button ref={workflowTriggerRef} className={`rail-button${activeSurface === "home" ? " active" : ""}`} type="button" aria-current={activeSurface === "home" ? "page" : undefined} aria-label="Home" onClick={activateWorkflow}><Icon name="home" /><span className="rail-label">Home</span></button>
         <button className={`rail-button${activeSurface === "initializer" ? " active" : ""}`} type="button" aria-current={activeSurface === "initializer" ? "page" : undefined} aria-label="Project Meta Context" onClick={() => { if (activeSurface === "optimizer") contextReviewReturnStep.current = optimizerStep; activateInitializer(); }}><Icon name="database" /><span className="rail-label">Meta Context</span></button>
@@ -1778,7 +1780,7 @@ export function App() {
     </nav>
 
     {activeSurface === "home" && <><header className="app-header">
-      <div className="app-title"><strong className="app-product-title" aria-hidden="true">Developer Workspace Intelligence</strong><span>Home</span></div>
+      <div className="app-title"><strong className="app-product-title" aria-hidden="true">Prompt Optimizer</strong><span>Home</span></div>
       <div className="header-status-group"><span className="local-indicator"><Icon name="lock" size={13} />Local</span><span ref={providerNoticeRef} className="provider-notice-anchor">
         <button className={`provider-warning-trigger provider-${homeProviderStatus.className}`} type="button" aria-label={`Provider status: ${provider.health ?? "missing"}. ${homeProviderStatus.label}.`} aria-expanded={providerNoticeOpen} aria-controls="provider-notice" onClick={() => setProviderNoticeOpen((open) => !open)}><span className="provider-status-wrap"><span className="provider-status-icon"><Icon name="bell" size={14} /></span>{homeProviderStatus.count > 0 && <span className="warning-count" aria-hidden="true">{homeProviderStatus.count}</span>}</span></button>
         {providerNoticeOpen && <section id="provider-notice" className="provider-notice-popover" role="dialog" aria-label="Provider status"><strong>{provider.health === "ready" ? "Provider connected" : "Prompt Optimizer is unavailable"}</strong><p>{provider.health === "missing" ? "Configure a provider and verify that its model responds." : provider.health === "invalid-credential" ? "The saved API key was rejected." : provider.health === "quota" ? "Requests are blocked by quota or balance." : provider.health === "rate-limit" ? "The provider is temporarily rate limited." : provider.health === "timeout" ? "The provider did not respond in time." : provider.health === "connectivity" ? "The provider could not be reached." : provider.health === "invalid-model" ? "The selected model is unavailable." : provider.health === "checking" ? "Checking the selected model…" : "The provider has not been checked."}</p>{provider.health !== "ready" && <button type="button" className="primary" onClick={() => { setProviderNoticeOpen(false); openSettings(); }}>Open provider settings</button>}</section>}

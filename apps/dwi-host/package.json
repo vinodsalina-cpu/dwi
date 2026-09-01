@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "displayName": "Developer Workspace Intelligence",
-  "description": "Local, consent-based project intelligence with project-aware Prompt Optimizer and required LLM provider configuration.",
+  "displayName": "Prompt Optimizer",
+  "description": "Consent-based, project-aware Prompt Optimizer with a reviewed Project Meta Context and optional explicit LLM enhancement.",
   "publisher": "dwi-poc",
   "preview": true,
   "engines": {
@@ -15,16 +15,10 @@
   "activationEvents": [
     "onCommand:dwi.open",
     "onCommand:dwi.openPromptOptimizer",
-    "onView:dwi-view",
     "onView:dwi-prompt-optimizer-view"
   ],
   "contributes": {
     "commands": [
-      {
-        "command": "dwi.open",
-        "title": "Open Developer Work Intelligence",
-        "category": "DWI"
-      },
       {
         "command": "dwi.openPromptOptimizer",
         "title": "Open Prompt Optimizer",
@@ -45,18 +39,13 @@
       "activitybar": [
         {
           "id": "dwi-sidebar",
-          "title": "Developer Workspace Intelligence",
-          "icon": "media/dwi.svg"
+          "title": "Prompt Optimizer",
+          "icon": "media/prompt-optimizer.svg"
         }
       ]
     },
     "views": {
       "dwi-sidebar": [
-        {
-          "type": "webview",
-          "id": "dwi-view",
-          "name": "Home"
-        },
         {
           "type": "webview",
           "id": "dwi-prompt-optimizer-view",

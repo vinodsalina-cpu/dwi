@@ -1,6 +1,6 @@
-# Developer Workspace Intelligence (DWI)
+# Prompt Optimizer
 
-Developer Workspace Intelligence is a VS Code extension that creates a local, consent-based project brief from bounded workspace evidence and uses it to provide project-aware prompt and tool guidance. Core DWI operation is local; LLM provider configuration is required.
+Prompt Optimizer is a VS Code extension that creates a consent-based Project Meta Context from bounded workspace evidence and uses the reviewed brief to produce project-aware prompts. Initialization and deterministic previews stay local. Provider configuration is optional and is used only when the developer explicitly chooses **Rewrite with LLM**.
 
 ## Prerequisites
 
@@ -80,7 +80,7 @@ After `pnpm vsix`, run:
 pnpm verify:extension
 ```
 
-This downloads the pinned verification build of VS Code, installs the generated VSIX into an isolated extensions directory, launches the installed extension, verifies activation, confirms the `dwi.open` command is registered, executes it, and exits non-zero if the smoke test fails.
+This downloads the pinned verification build of VS Code, installs the generated VSIX into an isolated extensions directory, launches the installed extension, verifies activation, exercises its single Prompt Optimizer native view plus internal initialization journey, and exits non-zero if the smoke test fails.
 
 ## Install in VS Code
 
@@ -92,9 +92,9 @@ If the `code` command is available on your PATH, the verified CLI form is:
 code --install-extension apps/dwi-host/developer-work-intelligence-0.1.0.vsix --force
 ```
 
-## Start DWI
+## Start Prompt Optimizer
 
-Open a project in VS Code. Select **Developer Work Intelligence** in the Activity Bar, or run **DWI: Open Developer Work Intelligence** / **Open Developer Work Intelligence** from the Command Palette.
+Open a project in VS Code. Select the sole **Prompt Optimizer** entry in the Activity Bar, or run **DWI: Open Prompt Optimizer** / **Open Prompt Optimizer** from the Command Palette. Home and Project Meta Context remain available inside that one view; they are not separate native Activity Bar products.
 
 ## What to expect
 
@@ -106,7 +106,7 @@ The self-contained [interactive UI mock](mockups/dwi-workflow-redesign/index.htm
 
 The collector has first-party packs for Node/JavaScript/TypeScript, Python, Go, Rust/Cargo, Maven and Gradle JVM projects, .NET, Composer/PHP, CMake/Meson/Make C and C++, Shell, and Terraform/HCL. Detection is deterministic and evidence-backed. DWI does not describe an unsupported project as high-confidence, and it does not execute repository commands while collecting metadata.
 
-For multi-root workspaces, DWI operates against the selected project root. Managed local journey state is kept in VS Code extension global storage, isolated by a local-root fingerprint, and is not written into the repository or shared automatically with another clone. The optional `.dwi/project.yaml` declaration is the only repository-local DWI state: it is designed to be checked in and is preserved across refresh and reset operations. LLM provider configuration is required; credentials are handled through VS Code secret/configuration facilities, while the local project-intelligence flow remains provider-independent.
+For multi-root workspaces, DWI operates against the selected project root. Managed local journey state is kept in VS Code extension global storage, isolated by a local-root fingerprint, and is not written into the repository or shared automatically with another clone. The optional `.dwi/project.yaml` declaration is the only repository-local DWI state: it is designed to be checked in and is preserved across refresh and reset operations. LLM provider configuration is optional for the explicit rewrite action; credentials are handled through VS Code secret/configuration facilities, while initialization, navigation, deterministic compilation, and recovery remain provider-independent.
 
 Use the command palette to export either the canonical JSON snapshot or a Backstage `Component` mapping. Backstage export requires an owner, component type, and lifecycle; DWI reports those missing fields instead of fabricating them.
 
@@ -153,9 +153,9 @@ If `pnpm install --frozen-lockfile` reports a runtime or package-manager mismatc
 
 If packaging fails after an interrupted or partial build, remove generated `dist` directories and rerun `pnpm build` followed by `pnpm vsix`. Build output, `.vscode-test`, and generated VSIX files are intentionally ignored and must be regenerated from source.
 
-If VS Code does not show DWI after installation, confirm the VSIX installed successfully, reload VS Code, open a workspace, and run the DWI open command from the Command Palette. If the webview is blank or a runtime module is missing, run `pnpm vsix` again and then `pnpm verify:extension`; do not copy files manually into the installed extension.
+If VS Code does not show Prompt Optimizer after installation, confirm the VSIX installed successfully, reload VS Code, open a workspace, and run **Open Prompt Optimizer** from the Command Palette. If the webview is blank or a runtime module is missing, run `pnpm vsix` again and then `pnpm verify:extension`; do not copy files manually into the installed extension.
 
-LLM provider settings are required for Prompt Optimizer, but not for local project initialization. DWI saves provider metadata and credentials only after a connection check and a real text response from the selected model. Authentication, unavailable model, quota/balance, rate limit, timeout, and network/TLS/proxy failures remain distinct recovery states.
+LLM provider settings are required only for **Rewrite with LLM**, not for project initialization or the local deterministic preview. Prompt Optimizer saves provider metadata and credentials only after a connection check and a real text response from the selected model. Authentication, unavailable model, quota/balance, rate limit, timeout, and network/TLS/proxy failures remain distinct recovery states.
 
 ## Agent Troubleshooting Context
 
@@ -173,7 +173,7 @@ fresh clone
 → archive inspection
 → packaged-extension install
 → activation
-→ dwi.open
+→ dwi.openPromptOptimizer
 → repository independence/public hygiene checks
 ```
 

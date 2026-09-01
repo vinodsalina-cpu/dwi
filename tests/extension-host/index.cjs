@@ -55,9 +55,9 @@ async function findWebview(surface) {
   const targets = (await debugTargets()).filter(({ type, url }) => type === 'iframe' && url.startsWith('vscode-webview://'));
   for (const target of targets) {
     const state = await evaluateTarget(target, '({ text: document.body.innerText, surface: document.documentElement.dataset.dwiInitialSurface })');
-    if (state.surface === surface) return { target, state };
+    if (state.surface === 'optimizer') return { target, state };
   }
-  throw new Error(`Installed ${surface} webview target was not found.`);
+  throw new Error(`Installed Prompt Optimizer webview target was not found while checking ${surface}.`);
 }
 
 async function clickWebviewButton(target, label) {

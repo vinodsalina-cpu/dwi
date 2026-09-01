@@ -181,9 +181,9 @@ async function findWebview(port, surface) {
   const targets = (await listTargets(port)).filter(({ type, url }) => type === 'iframe' && url.startsWith('vscode-webview://'));
   for (const target of targets) {
     const state = await evaluateWebview(target, '({ text: document.body.innerText, surface: document.documentElement.dataset.dwiInitialSurface })');
-    if (state.surface === surface) return { target, state };
+    if (state.surface === 'optimizer') return { target, state };
   }
-  throw new Error(`Installed ${surface} webview target was not found.`);
+  throw new Error(`Installed Prompt Optimizer webview target was not found while checking ${surface}.`);
 }
 
 async function waitForWebview(port, surface, expected, timeoutMs = 15000) {
@@ -302,9 +302,9 @@ async function launchCode(port) {
   let optimizer;
   let session = await launchCode(port++);
   try {
-  await runMainCommand(session.target, 'Open Developer Work Intelligence');
-  await waitForWebview(port - 1, 'home', 'Initialize this project');
-  await clickWebviewButton(port - 1, 'home', 'Start initialization');
+  await runMainCommand(session.target, 'Open Prompt Optimizer');
+  await waitForWebview(port - 1, 'optimizer', 'Initialize this project first');
+  await clickWebviewButton(port - 1, 'optimizer', 'Open Project Initializer');
   await waitForWebview(port - 1, 'home', 'Check this project');
   await clickWebviewButton(port - 1, 'home', 'Check this project');
   clickNativeButton('Allow bounded check');
@@ -313,7 +313,7 @@ async function launchCode(port) {
   clickNativeButton('Approve project details');
   await waitForWebview(port - 1, 'home', 'Confirm project brief');
   await clickWebviewButton(port - 1, 'home', 'Confirm project brief');
-  await waitForWebview(port - 1, 'home', 'The reviewed knowledge layer is ready');
+  await waitForWebview(port - 1, 'home', 'Project metadata is ready');
   console.log('DWI_SMOKE_RESTART_PROJECT_READY');
   await runMainCommand(session.target, 'Open Prompt Optimizer');
   await waitForWebview(port - 1, 'optimizer', 'Shape the task');
@@ -332,10 +332,12 @@ async function launchCode(port) {
 
   session = await launchCode(port++);
   try {
-  await runMainCommand(session.target, 'Open Developer Work Intelligence');
-  await waitForWebview(port - 1, 'home', 'The reviewed knowledge layer is ready');
-  console.log('DWI_SMOKE_RESTART_CONTEXT_RESTORED');
   await runMainCommand(session.target, 'Open Prompt Optimizer');
+  await waitForWebview(port - 1, 'optimizer', 'installed restart persistence task');
+  await clickWebviewButton(port - 1, 'optimizer', 'Project Meta Context');
+  await waitForWebview(port - 1, 'optimizer', 'Project metadata is ready');
+  console.log('DWI_SMOKE_RESTART_CONTEXT_RESTORED');
+  await clickWebviewButton(port - 1, 'optimizer', 'Prompt Optimizer');
   optimizer = await waitForWebview(port - 1, 'optimizer', 'installed restart persistence task');
   if (!/Review the local preview/.test(optimizer.state.text)) throw new Error('Installed optimizer did not resume its saved review after restart.');
   console.log('DWI_SMOKE_RESTART_SESSION_RESTORED');
@@ -353,8 +355,6 @@ async function launchCode(port) {
 
   session = await launchCode(port++);
   try {
-  await runMainCommand(session.target, 'Open Developer Work Intelligence');
-  await waitForWebview(port - 1, 'home', 'The reviewed knowledge layer is ready');
   await runMainCommand(session.target, 'Open Prompt Optimizer');
   optimizer = await waitForWebview(port - 1, 'optimizer', 'Shape the task');
   if (/installed restart persistence task|Review the local preview|Confirm the local interpretation/.test(optimizer.state.text)) throw new Error('Optimizer reset did not persist after the second restart.');

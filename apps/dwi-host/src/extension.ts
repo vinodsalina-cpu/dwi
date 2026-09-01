@@ -69,8 +69,8 @@ const MAX_ACTIVITY_CATEGORY_CHARS = 32;
 const MAX_ACTIVITY_TITLE_CHARS = 96;
 const MAX_ACTIVITY_DETAIL_CHARS = 240;
 type Message = { type: string; [key: string]: unknown };
-export const DWI_NATIVE_VIEW_ID = "dwi-view";
 export const DWI_PROMPT_OPTIMIZER_VIEW_ID = "dwi-prompt-optimizer-view";
+export const DWI_NATIVE_VIEW_ID = DWI_PROMPT_OPTIMIZER_VIEW_ID;
 const DWI_ACTIVITY_CONTAINER_ID = "dwi-sidebar";
 const DWI_CONSENT_RECEIPTS_KEY = "dwi.workspaceInspectionConsent.v1";
 const PROMPT_OPTIMIZER_RECENTS_KEY = "dwi.promptOptimizer.recents.v1";
@@ -379,7 +379,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     const { webview } = view;
     webview.options = { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, "dist")] };
     const js = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, "dist", "dwi-webview.js")); const css = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, "dist", "dwi-webview.css")); const nonce = randomUUID().replaceAll("-", "");
-    const initialSurface = view.viewType === DWI_PROMPT_OPTIMIZER_VIEW_ID ? "optimizer" : "home";
+    const initialSurface = "optimizer";
     webview.html = `<!doctype html><html data-dwi-initial-surface="${initialSurface}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}'"><link rel="stylesheet" href="${css}"></head><body><div id="root"></div><script nonce="${nonce}" type="module" src="${js}"></script></body></html>`;
     webview.onDidReceiveMessage((message: Message) => {
       void this.dispatch(message, webview).catch(async (error: unknown) => {
@@ -400,11 +400,12 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       });
     }, undefined, this.context.subscriptions);
   }
-  async reveal(viewId = DWI_NATIVE_VIEW_ID): Promise<void> {
+  async reveal(surface: "home" | "optimizer" = "optimizer"): Promise<void> {
     await vscode.commands.executeCommand(`workbench.view.extension.${DWI_ACTIVITY_CONTAINER_ID}`);
-    const view = this.views.get(viewId);
+    const view = this.views.get(DWI_PROMPT_OPTIMIZER_VIEW_ID);
     if (!view) return;
     await this.enqueueMutation(() => this.handle({ type: "dwi.session.open" }, view.webview));
+    await view.webview.postMessage({ type: "dwi.surface.select", surface });
     view.show(true);
   }
   workspaceChanged(): void {
@@ -2239,10 +2240,9 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     sidebar,
     output,
-    vscode.window.registerWebviewViewProvider(DWI_NATIVE_VIEW_ID, sidebar, { webviewOptions: { retainContextWhenHidden: true } }),
     vscode.window.registerWebviewViewProvider(DWI_PROMPT_OPTIMIZER_VIEW_ID, sidebar, { webviewOptions: { retainContextWhenHidden: true } }),
-    vscode.commands.registerCommand("dwi.open", () => sidebar.reveal()),
-    vscode.commands.registerCommand("dwi.openPromptOptimizer", () => sidebar.reveal(DWI_PROMPT_OPTIMIZER_VIEW_ID)),
+    vscode.commands.registerCommand("dwi.open", () => sidebar.reveal("home")),
+    vscode.commands.registerCommand("dwi.openPromptOptimizer", () => sidebar.reveal("optimizer")),
     vscode.commands.registerCommand("dwi.exportProjectSnapshot", () => sidebar.exportProjectSnapshot()),
     vscode.commands.registerCommand("dwi.exportBackstageComponent", () => sidebar.exportBackstageComponent()),
     vscode.workspace.onDidChangeWorkspaceFolders(() => sidebar.workspaceChanged()),
