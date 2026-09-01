@@ -22,7 +22,7 @@ export interface DwiBrief {
 export interface DwiModule { id: string; title: string; description: string; why: string; estimatedTokens: number; defaultSelected: boolean }
 export interface DwiEstimate { baselineTokens: number; optimizedTokens: number; estimatedAvoidedDuplication: number; method: string }
 export interface DwiCandidate { text: string; estimate: DwiEstimate; selectedModuleIds: string[] }
-export type DwiOutputSize = "low" | "medium" | "high";
+export type DwiOutputSize = "low" | "medium" | "high" | "auto";
 export interface DwiCandidateOptions {
   task?: string;
   promptType?: PromptType;
@@ -41,6 +41,7 @@ export const DWI_MODULES: readonly DwiModule[] = [
 
 function tokens(text: string): number { return Math.ceil(new TextEncoder().encode(text).byteLength / 4); }
 function outputFormatFor(size: DwiOutputSize): string {
+  if (size === "auto") return "Adapt response detail to task criticality: stay concise for routine work and expand decisions, verification, and risks when complexity warrants it.";
   if (size === "medium") return "Return a structured implementation summary, key decisions, changed files, verification results, remaining risks, and concise follow-ups.";
   if (size === "high") return "Return a detailed implementation report with decisions and tradeoffs, changed files and rationale, verification evidence, remaining risks, and actionable follow-ups.";
   return "Return only a concise outcome, changed files, verification, and remaining risks. Keep supporting prose compact.";

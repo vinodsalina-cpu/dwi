@@ -12,3 +12,20 @@ export function consumeConsentCapability(capability: ConsentCapability | undefin
     && capability.workspaceFingerprint === binding.workspaceFingerprint && capability.scopeDigest === binding.scopeDigest
     && capability.expiresAt >= now);
 }
+
+/** Keeps one-time consent capabilities isolated to the webview that received them. */
+export class ConsentCapabilityStore<Key> {
+  private readonly capabilities = new Map<Key, ConsentCapability>();
+  constructor(private readonly now = () => Date.now()) {}
+  issue(key: Key, binding: ConsentBinding): string {
+    const capability = issueConsentCapability(binding, this.now());
+    this.capabilities.set(key, capability);
+    return capability.token;
+  }
+  consume(key: Key, token: string, binding: ConsentBinding): boolean {
+    const capability = this.capabilities.get(key);
+    this.capabilities.delete(key);
+    return consumeConsentCapability(capability, token, binding, this.now());
+  }
+  clear(): void { this.capabilities.clear(); }
+}

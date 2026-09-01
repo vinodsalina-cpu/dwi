@@ -25,6 +25,28 @@ export const promptSectionIds = [
 
 export type PromptSectionId = (typeof promptSectionIds)[number];
 
+/** Maps draft fields to the canonical compiler section that owns their answer. */
+export const promptDraftFieldSectionIdsV2 = Object.freeze({
+  title: "task",
+  desiredOutcome: "desired-outcome",
+  inScope: "scope",
+  outOfScope: "scope",
+  hardConstraints: "constraints",
+  acceptanceCriteria: "acceptance-criteria",
+  outputFormat: "output-contract",
+  verification: "verification",
+} as const satisfies Readonly<Record<keyof PromptDraftFields, PromptSectionId>>);
+
+/** Supports persisted pre-Phase-1 draft-field answers while emitting canonical IDs. */
+export function promptQuestionTargetSectionIdV2(
+  target: string,
+): PromptSectionId | undefined {
+  if ((promptSectionIds as readonly string[]).includes(target)) {
+    return target as PromptSectionId;
+  }
+  return promptDraftFieldSectionIdsV2[target as keyof PromptDraftFields];
+}
+
 export const promptRefinementIds = [
   "questions",
   "context",

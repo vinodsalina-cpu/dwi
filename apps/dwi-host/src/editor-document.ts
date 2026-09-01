@@ -626,20 +626,20 @@ function renderShell(editorTitle: string, heading: string, summary: string, cont
   };
 }
 
-/** Renders a previously validated DWI editor document as a script-free,
+/** Renders a previously validated Prompt Optimizer editor document as a script-free,
  * theme-aware HTML document suitable for a VS Code WebviewPanel. */
 export function renderDwiEditorDocument(document: DwiEditorDocument): { title: string; html: string } {
   if (document.kind === "privacy") {
     return renderShell(
-      "DWI — Data Boundaries",
+      "Prompt Optimizer — Data Boundaries",
       "Local data boundaries",
-      "DWI inspects only the bounded project evidence you approve. Provider settings alone make no request.",
+      "Prompt Optimizer inspects only the bounded project evidence you approve. Provider settings alone make no request.",
       `<section class="section">
         <h2>Local by default</h2>
         <dl class="detail-grid">
           <div><dt>Read</dt><dd>Supported manifests, workspace structure, selected README files, and ownership files.</dd></div>
           <div><dt>Excluded</dt><dd>Secrets, environment files, dependencies, caches, build output, and unrestricted source code.</dd></div>
-          <div><dt>Commands</dt><dd>DWI reads declared command names; it does not run project commands during inspection.</dd></div>
+          <div><dt>Commands</dt><dd>Prompt Optimizer reads declared command names; it does not run project commands during inspection.</dd></div>
         </dl>
       </section>`,
     );
@@ -648,7 +648,7 @@ export function renderDwiEditorDocument(document: DwiEditorDocument): { title: s
   if (document.kind === "activity-log") {
     const count = document.entries.length;
     return renderShell(
-      "DWI — Activity Log",
+      "Prompt Optimizer — Activity Log",
       "Activity log",
       count ? `${count} recent local ${count === 1 ? "event" : "events"}. Sensitive prompt and credential contents are excluded.` : "No activity has been recorded in this session.",
       `<section class="section">
@@ -660,7 +660,7 @@ export function renderDwiEditorDocument(document: DwiEditorDocument): { title: s
   if (document.kind === "activity-detail") {
     const { entry } = document;
     return renderShell(
-      "DWI — Activity Detail",
+      "Prompt Optimizer — Activity Detail",
       entry.title,
       `${formatLabel(entry.level)} · ${entry.category} · ${entry.timestamp}`,
       `<section class="section">
@@ -684,7 +684,7 @@ export function renderDwiEditorDocument(document: DwiEditorDocument): { title: s
          <div><dt>Estimated reduction</dt><dd>${formatCount(data.candidate.estimate.estimatedAvoidedDuplication)} tokens</dd></div>`
       : "";
     return renderShell(
-      "DWI — Diagnostics",
+      "Prompt Optimizer — Diagnostics",
       "Session diagnostics",
       "A redacted local snapshot for troubleshooting. Prompt text, evidence bodies, corrections, credentials, and private notes are excluded.",
       `<section class="section">
@@ -713,7 +713,7 @@ export function renderDwiEditorDocument(document: DwiEditorDocument): { title: s
 
   if (document.kind === "evidence") {
     return renderShell(
-      "DWI — Project Evidence",
+      "Prompt Optimizer — Project Evidence",
       document.label,
       "The bounded source used for this project-brief fact.",
       `<section class="section">
@@ -728,7 +728,7 @@ export function renderDwiEditorDocument(document: DwiEditorDocument): { title: s
   if (document.kind === "questions") {
     const count = document.questions.length;
     return renderShell(
-      "DWI — Open Questions",
+      "Prompt Optimizer — Open Questions",
       "Open project questions",
       count ? `${count} ${count === 1 ? "question remains" : "questions remain"} explicit until the project brief is updated.` : "The current project brief has no open questions.",
       `<section class="section">
@@ -739,9 +739,9 @@ export function renderDwiEditorDocument(document: DwiEditorDocument): { title: s
 
   if (document.kind === "module") {
     const module = DWI_MODULES.find(({ id }) => id === document.moduleId);
-    if (!module) throw new Error("Cannot render an unknown DWI module.");
+    if (!module) throw new Error("Cannot render an unknown Prompt Optimizer module.");
     return renderShell(
-      `DWI — ${module.title}`,
+      `Prompt Optimizer — ${module.title}`,
       module.title,
       module.description,
       `<section class="section">
@@ -756,7 +756,7 @@ export function renderDwiEditorDocument(document: DwiEditorDocument): { title: s
 
   if (document.kind === "library") {
     return renderShell(
-      "DWI — Library",
+      "Prompt Optimizer — Library",
       "Library",
       "One place to review and manage reusable developer assets for project initialization.",
       `<section class="section">
@@ -777,7 +777,7 @@ export function renderDwiEditorDocument(document: DwiEditorDocument): { title: s
   if (document.kind === "guidance") {
     const guidance = PROMPT_GUIDANCE_PACKS.find(({ id }) => id === document.guidanceId)!;
     return renderShell(
-      `DWI — ${guidance.label}`,
+      `Prompt Optimizer — ${guidance.label}`,
       guidance.label,
       "Template guidance",
       `<section class="section"><h2>How this guidance helps</h2><p class="prose">${escapeHtml(guidance.description)}</p></section>`,
@@ -789,7 +789,7 @@ export function renderDwiEditorDocument(document: DwiEditorDocument): { title: s
       ? "Local deterministic preview"
       : `${document.provider === "gemini" ? "Gemini" : "OpenAI-compatible"} · ${document.model}`;
     return renderShell(
-      "DWI — Prompt Review",
+      "Prompt Optimizer — Prompt Review",
       document.title || "Prompt review",
       document.summary || `${source}. Opened from Prompt Optimizer for focused review in the editor area.`,
       `<section class="section">
@@ -804,7 +804,7 @@ export function renderDwiEditorDocument(document: DwiEditorDocument): { title: s
 
   const { estimate } = document;
   return renderShell(
-    "DWI — Token Estimate",
+    "Prompt Optimizer — Token Estimate",
     "Request-size estimate",
     "Deterministic planning figures for the current candidate, not provider billing.",
     `<section class="section">

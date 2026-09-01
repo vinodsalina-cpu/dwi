@@ -47,7 +47,12 @@ describe("PromptInputEditor", () => {
     expect(editor.getAttribute("placeholder")).toBe("Describe the work to optimize…");
     expect(editor.classList.contains("prompt-input-editor__textarea")).toBe(true);
     expect(screen.getByRole("button", { name: "Assignment: Assignment 1" }).getAttribute("aria-expanded")).toBe("false");
-    expect(screen.getByRole("button", { name: "Output size: Low" }).getAttribute("aria-expanded")).toBe("false");
+    expect(screen.getByRole("button", { name: "Criticality: Low" }).getAttribute("aria-expanded")).toBe("false");
+
+    const root = editor.closest(".prompt-input-editor");
+    expect(root?.firstElementChild?.querySelector("button")?.getAttribute("aria-label")).toBe("Assignment: Assignment 1");
+    expect(root?.children[1]?.querySelector("button")?.getAttribute("aria-label")).toBe("Criticality: Low");
+    expect(root?.lastElementChild).toBe(editor);
 
     fireEvent.change(editor, { target: { value: "Improve this prompt" } });
     expect((editor as HTMLTextAreaElement).value).toBe("Improve this prompt");
@@ -106,15 +111,15 @@ describe("PromptInputEditor", () => {
 
   it("changes the controlled output choice with keyboard navigation", async () => {
     render(<Harness options={assignments(2)} />);
-    const lowTrigger = screen.getByRole("button", { name: "Output size: Low" });
+    const lowTrigger = screen.getByRole("button", { name: "Criticality: Low" });
     fireEvent.click(lowTrigger);
 
-    const list = screen.getByRole("listbox", { name: "Output sizes" });
+    const list = screen.getByRole("listbox", { name: "Criticality levels" });
     expect(document.activeElement).toBe(list);
     fireEvent.keyDown(list, { key: "End" });
     fireEvent.keyDown(list, { key: "Enter" });
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Output size: High" })).toBeTruthy());
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Output size: High" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Criticality: High" })).toBeTruthy());
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Criticality: High" }));
   });
 });

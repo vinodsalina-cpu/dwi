@@ -37,6 +37,7 @@ const vscodeCliPath = process.platform === 'win32'
   : process.platform === 'darwin'
     ? join(dirname(dirname(vscodeExecutablePath)), 'Resources', 'app', 'bin', 'code')
     : join(dirname(vscodeExecutablePath), 'bin', 'code');
+const debugPort = 9333;
 const ciElectronArgs = process.platform === 'linux' && process.env.CI === 'true' ? ['--no-sandbox'] : [];
 
 console.log('DWI_SMOKE_INSTALL_BEGIN');
@@ -54,10 +55,11 @@ console.log('DWI_SMOKE_INSTALL_OK');
 const installed = (await readdir(extensionsDir)).find((name) => name.startsWith('dwi-poc.developer-work-intelligence-'));
 if (!installed) throw new Error('Installed DWI extension directory was not found.');
 
+process.env.DWI_PACKAGED_SMOKE = '1';
 await runTests({
   vscodeExecutablePath,
   extensionDevelopmentPath: join(extensionsDir, installed),
   extensionTestsPath: join(root, 'tests/extension-host/index.cjs'),
-  launchArgs: [workspaceDir, ...ciElectronArgs, '--extensions-dir', extensionsDir, '--user-data-dir', userDataDir, '--disable-workspace-trust']
+  launchArgs: [workspaceDir, ...ciElectronArgs, `--remote-debugging-port=${debugPort}`, '--extensions-dir', extensionsDir, '--user-data-dir', userDataDir, '--disable-workspace-trust']
 });
 console.log('DWI_SMOKE_EXTENSION_HOST_OK');

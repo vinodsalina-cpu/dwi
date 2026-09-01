@@ -39,18 +39,18 @@ function message(document: Record<string, unknown>) {
   return { type: "dwi.document.open", document };
 }
 
-describe("DWI editor documents", () => {
+describe("Prompt Optimizer editor documents", () => {
   it.each([
-    ["privacy", { kind: "privacy" }, "DWI — Data Boundaries", "Local data boundaries"],
-    ["activity log", { kind: "activity-log", entries: [activityEntry] }, "DWI — Activity Log", "Approved with gaps"],
-    ["activity detail", { kind: "activity-detail", entry: activityEntry }, "DWI — Activity Detail", "Two project questions remain explicit."],
-    ["diagnostics", { kind: "diagnostics", data: diagnosticDump }, "DWI — Diagnostics", "View redacted raw data"],
-    ["evidence", { kind: "evidence", label: "Workspace", value: "pnpm", evidence: "package.json" }, "DWI — Project Evidence", "package.json"],
-    ["questions", { kind: "questions", questions: ["Confirm the deployment target."] }, "DWI — Open Questions", "Confirm the deployment target."],
-    ["module", { kind: "module", moduleId: "verification" }, "DWI — Verification plan", "Makes completion evidence explicit."],
-    ["library", { kind: "library" }, "DWI — Library", "Templates preserve reusable prompt structure"],
-    ["guidance", { kind: "guidance", guidanceId: "scope-boundaries" }, "DWI — Scope boundaries", "Make inclusions and exclusions explicit."],
-    ["estimate", { kind: "estimate", estimate: { baselineTokens: 900, optimizedTokens: 610, estimatedAvoidedDuplication: 290, method: "UTF-8 bytes divided by four." } }, "DWI — Token Estimate", "290 tokens"],
+    ["privacy", { kind: "privacy" }, "Prompt Optimizer — Data Boundaries", "Local data boundaries"],
+    ["activity log", { kind: "activity-log", entries: [activityEntry] }, "Prompt Optimizer — Activity Log", "Approved with gaps"],
+    ["activity detail", { kind: "activity-detail", entry: activityEntry }, "Prompt Optimizer — Activity Detail", "Two project questions remain explicit."],
+    ["diagnostics", { kind: "diagnostics", data: diagnosticDump }, "Prompt Optimizer — Diagnostics", "View redacted raw data"],
+    ["evidence", { kind: "evidence", label: "Workspace", value: "pnpm", evidence: "package.json" }, "Prompt Optimizer — Project Evidence", "package.json"],
+    ["questions", { kind: "questions", questions: ["Confirm the deployment target."] }, "Prompt Optimizer — Open Questions", "Confirm the deployment target."],
+    ["module", { kind: "module", moduleId: "verification" }, "Prompt Optimizer — Verification plan", "Makes completion evidence explicit."],
+    ["library", { kind: "library" }, "Prompt Optimizer — Library", "Templates preserve reusable prompt structure"],
+    ["guidance", { kind: "guidance", guidanceId: "scope-boundaries" }, "Prompt Optimizer — Scope boundaries", "Make inclusions and exclusions explicit."],
+    ["estimate", { kind: "estimate", estimate: { baselineTokens: 900, optimizedTokens: 610, estimatedAvoidedDuplication: 290, method: "UTF-8 bytes divided by four." } }, "Prompt Optimizer — Token Estimate", "290 tokens"],
   ])("renders a secure, theme-aware %s document", (_label, document, title, expectedText) => {
     const resolved = resolveDwiEditorDocument(message(document));
 
@@ -77,7 +77,7 @@ describe("DWI editor documents", () => {
       summary: "Clarifies failure handling.",
     });
 
-    expect(resolved?.title).toBe("DWI — Prompt Review");
+    expect(resolved?.title).toBe("Prompt Optimizer — Prompt Review");
     expect(resolved?.html).toContain("OpenAI-compatible · gpt-4o-mini");
     expect(resolved?.html).toContain("Implement the bounded retry flow.");
     expect(resolvePersistedPromptReviewDocument(candidate, undefined)).toBeUndefined();

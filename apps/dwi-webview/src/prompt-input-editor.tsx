@@ -17,7 +17,7 @@ export interface PromptAssignmentOption {
   source: PromptAssignmentSource;
 }
 
-export type PromptOutputSize = "low" | "medium" | "high";
+export type PromptOutputSize = "low" | "medium" | "high" | "auto";
 
 export interface PromptInputEditorProps {
   text: string;
@@ -40,6 +40,8 @@ const OUTPUT_SIZES: readonly { id: PromptOutputSize; label: string }[] = [
   { id: "medium", label: "Medium" },
   { id: "high", label: "High" },
 ];
+
+const AUTO_OUTPUT_SIZE = { id: "auto" as const, label: "Auto" };
 
 function sourceLabel(source: PromptAssignmentSource): string {
   return source === "managed" ? "Managed" : "Developer";
@@ -80,7 +82,9 @@ export function PromptInputEditor({
   const [activeOutputIndex, setActiveOutputIndex] = useState(0);
 
   const selectedAssignment = assignments.find(({ id }) => id === assignmentId) ?? assignments[0];
-  const selectedOutput = OUTPUT_SIZES.find(({ id }) => id === outputSize) ?? OUTPUT_SIZES[0];
+  const selectedOutput = outputSize === "auto"
+    ? AUTO_OUTPUT_SIZE
+    : OUTPUT_SIZES.find(({ id }) => id === outputSize) ?? OUTPUT_SIZES[0];
   const searchable = assignments.length > 10;
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const filteredAssignments = useMemo(() => {
@@ -215,16 +219,6 @@ export function PromptInputEditor({
   }
 
   return <div ref={rootRef} className="prompt-input-editor">
-    <textarea
-      className="prompt-input-editor__textarea"
-      aria-label={label}
-      value={text}
-      maxLength={maxLength}
-      placeholder={placeholder}
-      disabled={disabled}
-      onChange={(event) => onTextChange(event.target.value)}
-    />
-
     <div className={`prompt-input-editor__control prompt-input-editor__control--assignment${openMenu === "assignment" ? " is-open" : ""}`}>
       <button
         ref={assignmentTriggerRef}
@@ -299,15 +293,15 @@ export function PromptInputEditor({
         ref={outputTriggerRef}
         className="prompt-input-editor__trigger prompt-input-editor__output-trigger"
         type="button"
-        aria-label={`Output size: ${selectedOutput.label}`}
+        aria-label={`Criticality: ${selectedOutput.label}`}
         aria-haspopup="listbox"
         aria-expanded={openMenu === "output"}
         aria-controls={outputListId}
-        title={`Output size: ${selectedOutput.label}`}
+        title={`Criticality: ${selectedOutput.label}`}
         disabled={disabled}
         onClick={openOutputMenu}
       >
-        <span className="prompt-input-editor__trigger-prefix">Output</span>
+        <span className="prompt-input-editor__trigger-prefix">Criticality</span>
         <strong>{selectedOutput.label}</strong>
         <span className="prompt-input-editor__chevron" aria-hidden="true">⌄</span>
       </button>
@@ -316,7 +310,7 @@ export function PromptInputEditor({
         id={outputMenuId}
         className="prompt-input-editor__popover prompt-input-editor__output-popover"
         role="dialog"
-        aria-label="Choose output size"
+        aria-label="Choose criticality"
         onKeyDown={handleOutputKeys}
       >
         <div
@@ -324,7 +318,7 @@ export function PromptInputEditor({
           id={outputListId}
           className="prompt-input-editor__list prompt-input-editor__output-list"
           role="listbox"
-          aria-label="Output sizes"
+          aria-label="Criticality levels"
           aria-activedescendant={activeOutputId}
           tabIndex={0}
         >
@@ -344,5 +338,15 @@ export function PromptInputEditor({
         </div>
       </section>}
     </div>
+
+    <textarea
+      className="prompt-input-editor__textarea"
+      aria-label={label}
+      value={text}
+      maxLength={maxLength}
+      placeholder={placeholder}
+      disabled={disabled}
+      onChange={(event) => onTextChange(event.target.value)}
+    />
   </div>;
 }

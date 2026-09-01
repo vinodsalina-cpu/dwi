@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { collectProjectIntelligence } from "@platform/domain-workspace";
 import { compileDwiCandidate, projectSnapshotToBrief, resolveProjectSnapshot } from "@platform/dwi-core";
 import { projectIntelligenceToSnapshot } from "./project-snapshot-adapter.js";
-import { DWI_SNAPSHOT_SCHEMA, type DwiWorkspaceSnapshot } from "./workspace-snapshot.js";
-import { bindBriefForProject, canCompileProjectBrief, confirmWorkspaceBrief, hasApprovedProjectReview } from "./workflow-state.js";
+import { DWI_SNAPSHOT_SCHEMA, clearPromptOptimizerState, type DwiWorkspaceSnapshot } from "./workspace-snapshot.js";
+import { bindBriefForProject, canCompileProjectBrief, canResetPromptOptimizerState, confirmWorkspaceBrief, hasApprovedProjectReview } from "./workflow-state.js";
 
 function approvedPartialProject() {
   const intelligence = collectProjectIntelligence({
@@ -66,6 +66,38 @@ describe("prompt workflow state", () => {
     expect(hasApprovedProjectReview(unreviewed)).toBe(false);
     expect(attempted.confirmed).toBe(false);
     expect(canCompileProjectBrief(unreviewed, attempted)).toBe(false);
+  });
+
+  it("allows optimizer reset only for the exact approved project and confirmed brief", () => {
+    const project = approvedPartialProject();
+    const brief = bindBriefForProject(project, { ...projectSnapshotToBrief(project), confirmed: true });
+    const snapshot: DwiWorkspaceSnapshot = {
+      schema: DWI_SNAPSHOT_SCHEMA,
+      status: "complete",
+      stage: "evaluate",
+      updatedAt: "2026-08-27T12:02:00.000Z",
+      project,
+      brief,
+      optimizerDraft: { task: "Keep the approved knowledge.", assignmentId: "general", promptType: "General", outputSize: "low" },
+      candidate: { text: "Candidate", selectedModuleIds: [], estimate: { baselineTokens: 2, optimizedTokens: 1, estimatedAvoidedDuplication: 1, method: "bounded" } },
+      optimizerReview: { source: "local" },
+    };
+    expect(canResetPromptOptimizerState(snapshot)).toBe(true);
+    const cleared = clearPromptOptimizerState(snapshot, "2026-08-27T12:03:00.000Z");
+    expect(cleared).toMatchObject({ stage: "compose", project, brief, status: "partial" });
+    expect(cleared).not.toHaveProperty("optimizerDraft");
+    expect(cleared).not.toHaveProperty("candidate");
+
+    const unreviewed = { ...project, metadata: { ...project.metadata, review: { state: "unreviewed" as const } } };
+    const changed = { ...project, metadata: { ...project.metadata, name: "Changed after review" } };
+    for (const ineligible of [
+      { ...snapshot, project: unreviewed },
+      { ...snapshot, project: changed },
+      { ...snapshot, brief: { ...brief, confirmed: false } },
+    ]) {
+      expect(canResetPromptOptimizerState(ineligible)).toBe(false);
+      expect(() => clearPromptOptimizerState(ineligible, "2026-08-27T12:03:00.000Z")).toThrow(/current approved project/i);
+    }
   });
 
   it("produces the persisted compose state before an immediate compile", () => {

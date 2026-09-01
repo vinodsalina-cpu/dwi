@@ -12,6 +12,9 @@ const valid = {
 } as const;
 
 describe("prompt compose protocol", () => {
+  it("accepts the reserved automatic criticality value", () => {
+    expect(parsePromptCompileRequest({ ...valid, outputSize: "auto" })).toMatchObject({ outputSize: "auto" });
+  });
   it("accepts the exact prompt editor payload and normalizes its task", () => {
     expect(parsePromptCompileRequest(valid)).toEqual({ ...valid, task: "Repair checkout retries." });
   });

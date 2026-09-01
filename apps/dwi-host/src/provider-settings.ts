@@ -1,9 +1,13 @@
 import {
+  buildPromptSemanticProviderInputV2,
   buildGeminiGenerateContentBody,
   buildPromptProviderInput,
   parseGeminiGenerateContentResponse,
   parsePromptProviderResultText,
   type PromptOptimizeResult,
+  SemanticProviderErrorV2,
+  type PromptSemanticProviderPortV2,
+  type PromptSemanticRequestV2,
 } from "@platform/domain-prompt-optimizer";
 
 export type ProviderMode = "none" | "gemini" | "openai-compatible";
@@ -174,7 +178,7 @@ export async function checkOpenAICompatibleProvider(model: string, baseUrl: stri
     if (!payload.choices?.[0]?.message?.content?.trim()) return { ok: false, health: "connectivity", message: "The provider accepted the request but returned no text response." };
     return { ok: true, checkedAt: new Date().toISOString() };
   } catch {
-    return { ok: false, health: "connectivity", message: "DWI could not reach the configured provider. Check your network or endpoint." };
+    return { ok: false, health: "connectivity", message: "Prompt Optimizer could not reach the configured provider. Check your network or endpoint." };
   }
 }
 
@@ -265,4 +269,117 @@ export async function rewritePromptWithProvider(
     }
     throw new ProviderRewriteError("connectivity", "The provider rewrite failed because of a network, TLS, proxy, endpoint, or invalid-response error.");
   }
+}
+
+function semanticFailure(error: ProviderRewriteError): SemanticProviderErrorV2 {
+  const code = error.health === "timeout"
+    ? "TIMEOUT"
+    : error.health === "invalid-credential"
+      ? "AUTHENTICATION"
+      : error.health === "rate-limit" || error.health === "quota"
+        ? "RATE_LIMITED"
+        : "PROVIDER_ERROR";
+  return new SemanticProviderErrorV2(code, error.message);
+}
+
+/** Host-only adapter: credentials and networking never enter domain orchestration. */
+export function semanticProviderPort(
+  settings: ProviderSettings,
+  key: string,
+  fetchImpl: FetchLike = fetch,
+): PromptSemanticProviderPortV2 {
+  return {
+    async execute(request: PromptSemanticRequestV2, signal?: AbortSignal) {
+      if (!settings.configured || settings.health !== "ready" || settings.mode === "none" || !settings.model) {
+        throw new SemanticProviderErrorV2("PROVIDER_ERROR", "Configure and verify an LLM provider before semantic enhancement.");
+      }
+      const startedAt = Date.now();
+      const input = buildPromptSemanticProviderInputV2(request);
+      const requestSignal = signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(45_000)])
+        : AbortSignal.timeout(45_000);
+      try {
+        if (settings.mode === "gemini") {
+          const response = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.model)}:generateContent`, {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-goog-api-key": key },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: input.system }] },
+              contents: [{ role: "user", parts: [{ text: input.prompt }] }],
+              generationConfig: {
+                temperature: input.temperature,
+                maxOutputTokens: input.maxOutputTokens,
+                responseMimeType: "application/json",
+              },
+            }),
+            signal: requestSignal,
+            redirect: "error",
+          });
+          if (!response.ok) {
+            const detail = await readError(response);
+            throw rewriteHttpFailure(response.status, detail.code);
+          }
+          const payload = await response.json() as {
+            candidates?: Array<{ finishReason?: string; content?: { parts?: Array<{ text?: string }> } }>;
+            usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+          };
+          const candidate = payload.candidates?.[0];
+          const text = candidate?.content?.parts?.map((part) => part.text ?? "").join("");
+          if (!candidate?.finishReason || !text?.trim()) throw new SemanticProviderErrorV2("INVALID_RESPONSE", "Gemini returned an incomplete semantic response.");
+          return {
+            text,
+            latencyMs: Date.now() - startedAt,
+            finishReason: candidate.finishReason,
+            actualProvider: "gemini",
+            actualModel: settings.model,
+            ...(payload.usageMetadata?.promptTokenCount === undefined ? {} : { inputTokens: payload.usageMetadata.promptTokenCount }),
+            ...(payload.usageMetadata?.candidatesTokenCount === undefined ? {} : { outputTokens: payload.usageMetadata.candidatesTokenCount }),
+            ...(candidate.finishReason === "MAX_TOKENS" ? { truncated: true } : {}),
+          };
+        }
+        if (!settings.baseUrl) throw new SemanticProviderErrorV2("PROVIDER_ERROR", "The provider endpoint is not configured.");
+        const response = await fetchImpl(`${settings.baseUrl.replace(/\/+$/, "")}/chat/completions`, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+          body: JSON.stringify({
+            model: settings.model,
+            messages: [{ role: "system", content: input.system }, { role: "user", content: input.prompt }],
+            temperature: input.temperature,
+            max_tokens: input.maxOutputTokens,
+            response_format: { type: "json_object" },
+          }),
+          signal: requestSignal,
+          redirect: "error",
+        });
+        if (!response.ok) {
+          const detail = await readError(response);
+          throw rewriteHttpFailure(response.status, detail.code);
+        }
+        const payload = await response.json() as {
+          choices?: Array<{ finish_reason?: string; message?: { content?: string } }>;
+          usage?: { prompt_tokens?: number; completion_tokens?: number };
+          model?: string;
+        };
+        const choice = payload.choices?.[0];
+        if (!choice?.finish_reason || !choice.message?.content?.trim()) throw new SemanticProviderErrorV2("INVALID_RESPONSE", "The provider returned an incomplete semantic response.");
+        return {
+          text: choice.message.content,
+          latencyMs: Date.now() - startedAt,
+          finishReason: choice.finish_reason,
+          actualProvider: "openai",
+          ...(payload.model ? { actualModel: payload.model } : {}),
+          ...(payload.usage?.prompt_tokens === undefined ? {} : { inputTokens: payload.usage.prompt_tokens }),
+          ...(payload.usage?.completion_tokens === undefined ? {} : { outputTokens: payload.usage.completion_tokens }),
+          ...(choice.finish_reason === "length" ? { truncated: true } : {}),
+        };
+      } catch (error) {
+        if (error instanceof SemanticProviderErrorV2) throw error;
+        if (error instanceof ProviderRewriteError) throw semanticFailure(error);
+        const candidate = error as { name?: string; code?: string; message?: string };
+        if (candidate.name === "AbortError" && signal?.aborted) throw new SemanticProviderErrorV2("CANCELLED", "Semantic enhancement was cancelled.");
+        if (candidate.name === "TimeoutError" || candidate.code === "ETIMEDOUT" || candidate.message?.toLowerCase().includes("timeout")) throw new SemanticProviderErrorV2("TIMEOUT", "Semantic enhancement timed out.");
+        throw new SemanticProviderErrorV2("PROVIDER_ERROR", "Semantic provider transport failed.");
+      }
+    },
+  };
 }

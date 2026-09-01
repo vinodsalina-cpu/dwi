@@ -8,6 +8,7 @@ import {
   type DwiProjectSnapshot,
 } from "@platform/dwi-core";
 import { PROMPT_TEXT_LIMIT_CHARS } from "@platform/domain-prompt-optimizer";
+import { canResetPromptOptimizerState } from "./workflow-state.js";
 import type { WorkspaceIdentity } from "./workspace-identity.js";
 import { isPromptComposeInput, type PromptComposeInput } from "./prompt-compose-protocol.js";
 
@@ -63,6 +64,29 @@ export interface DwiWorkspaceSnapshot {
   optimizerReview?: DwiOptimizerReview;
   evaluationMarkdown?: string;
   feedback?: DwiFeedback;
+}
+
+export function clearPromptOptimizerState(snapshot: DwiWorkspaceSnapshot, updatedAt: string): DwiWorkspaceSnapshot {
+  if (!canResetPromptOptimizerState(snapshot)) {
+    throw new Error("A current approved project and confirmed brief are required before resetting Prompt Optimizer state.");
+  }
+  const {
+    candidate: _candidate,
+    candidateInput: _candidateInput,
+    optimizerDraft: _optimizerDraft,
+    optimizerReview: _optimizerReview,
+    evaluationMarkdown: _evaluationMarkdown,
+    feedback: _feedback,
+    ...retained
+  } = snapshot;
+  const cleared: DwiWorkspaceSnapshot = {
+    ...retained,
+    status: "partial",
+    stage: "compose",
+    updatedAt,
+  };
+  assertSnapshot(cleared);
+  return cleared;
 }
 export interface SnapshotFs<Path> {
   exists(path: Path): Promise<boolean>;
@@ -152,18 +176,18 @@ export class DwiWorkspaceSnapshotStore<Path> {
   }
 
   async updatePartial(snapshot: DwiWorkspaceSnapshot): Promise<void> {
-    if (snapshot.status !== "partial") throw new Error("DWI partial persistence requires a partial snapshot.");
+    if (snapshot.status !== "partial") throw new Error("Prompt Optimizer partial persistence requires a partial snapshot.");
     await this.write({ ...snapshot, updatedAt: this.stamp() }, undefined, snapshot.generation ?? 0);
   }
 
   async complete(snapshot: DwiWorkspaceSnapshot): Promise<void> {
-    if (snapshot.status !== "complete") throw new Error("DWI completion requires a complete snapshot.");
+    if (snapshot.status !== "complete") throw new Error("Prompt Optimizer completion requires a complete snapshot.");
     await this.write({ ...snapshot, updatedAt: this.stamp() }, undefined, snapshot.generation ?? 0);
   }
 
   async reset(): Promise<void> {
     if (!await this.fs.exists(this.dwi)) return;
-    if (!await this.isSafeDirectory(this.dwi)) throw new Error("DWI refuses to reset a symlinked or non-directory .dwi path.");
+    if (!await this.isSafeDirectory(this.dwi)) throw new Error("Prompt Optimizer refuses to reset a symlinked or non-directory .dwi path.");
     const legacy = await this.migrateLegacyState();
     if (legacy?.reason || legacy?.unexpected) {
       await this.recoverLegacyState();
@@ -180,7 +204,7 @@ export class DwiWorkspaceSnapshotStore<Path> {
 
   private async prepareForFreshJourney(): Promise<void> {
     if (!await this.fs.exists(this.dwi)) await this.fs.createDirectory(this.dwi);
-    if (!await this.isSafeDirectory(this.dwi)) throw new Error("DWI refuses to use a symlinked or non-directory .dwi path.");
+    if (!await this.isSafeDirectory(this.dwi)) throw new Error("Prompt Optimizer refuses to use a symlinked or non-directory .dwi path.");
     const legacy = await this.migrateLegacyState();
     if (legacy?.reason || legacy?.unexpected) await this.recoverLegacyState();
     await this.restoreInterruptedSwap();
@@ -235,7 +259,7 @@ export class DwiWorkspaceSnapshotStore<Path> {
     const initialState = await this.currentTrustedState();
     const initialGeneration = initialState.snapshot?.generation ?? 0;
     if (expectedGeneration !== undefined && (!initialState.snapshot || initialGeneration !== expectedGeneration)) {
-      throw new Error("DWI workspace state changed before this update; reload and retry.");
+      throw new Error("Prompt Optimizer workspace state changed before this update; reload and retry.");
     }
     const persisted: DwiWorkspaceSnapshot = { ...snapshot, generation: initialGeneration + 1 };
     assertSnapshot(persisted);
@@ -247,7 +271,7 @@ export class DwiWorkspaceSnapshotStore<Path> {
     let movedCurrent = false;
     try {
       if (await this.fs.exists(staging) || await this.fs.exists(backup)) {
-        throw new Error("DWI staging paths already exist.");
+        throw new Error("Prompt Optimizer staging paths already exist.");
       }
       await this.fs.createDirectory(staging);
       await this.fs.writeFile(this.paths.join(staging, INITIALIZATION_FILE), init);
@@ -259,13 +283,13 @@ export class DwiWorkspaceSnapshotStore<Path> {
       );
       const verified = await this.classify(staging);
       if (!verified.snapshot || verified.snapshot.status !== persisted.status || verified.snapshot.generation !== persisted.generation) {
-        throw new Error("DWI staging snapshot did not validate.");
+        throw new Error("Prompt Optimizer staging snapshot did not validate.");
       }
       if (await this.fs.exists(this.managed)) {
         const current = await this.classify(this.managed);
-        if (current.unexpected || current.reason) throw new Error("DWI cannot replace untrusted workspace files.");
+        if (current.unexpected || current.reason) throw new Error("Prompt Optimizer cannot replace untrusted workspace files.");
         if (expectedGeneration !== undefined && (!current.snapshot || (current.snapshot.generation ?? 0) !== expectedGeneration)) {
-          throw new Error("DWI workspace state changed before this update; reload and retry.");
+          throw new Error("Prompt Optimizer workspace state changed before this update; reload and retry.");
         }
         await this.fs.rename(this.managed, backup);
         movedCurrent = true;
@@ -274,11 +298,11 @@ export class DwiWorkspaceSnapshotStore<Path> {
           if (!moved.snapshot || (moved.snapshot.generation ?? 0) !== expectedGeneration) {
             await this.fs.rename(backup, this.managed);
             movedCurrent = false;
-            throw new Error("DWI workspace state changed before this update; reload and retry.");
+            throw new Error("Prompt Optimizer workspace state changed before this update; reload and retry.");
           }
         }
       } else if (expectedGeneration !== undefined) {
-        throw new Error("DWI workspace state changed before this update; reload and retry.");
+        throw new Error("Prompt Optimizer workspace state changed before this update; reload and retry.");
       }
       await this.fs.rename(staging, this.managed);
       if (movedCurrent && await this.fs.exists(backup)) {
@@ -296,13 +320,13 @@ export class DwiWorkspaceSnapshotStore<Path> {
 
   private async currentTrustedState(): Promise<{ snapshot?: DwiWorkspaceSnapshot }> {
     if (!await this.fs.exists(this.dwi)) return {};
-    if (!await this.isSafeDirectory(this.dwi)) throw new Error("DWI cannot use an unsafe .dwi path.");
+    if (!await this.isSafeDirectory(this.dwi)) throw new Error("Prompt Optimizer cannot use an unsafe .dwi path.");
     const legacy = await this.migrateLegacyState();
-    if (legacy?.reason || legacy?.unexpected) throw new Error("DWI cannot replace untrusted legacy workspace files.");
+    if (legacy?.reason || legacy?.unexpected) throw new Error("Prompt Optimizer cannot replace untrusted legacy workspace files.");
     await this.restoreInterruptedSwap();
     if (!await this.fs.exists(this.managed)) return {};
     const current = await this.classify(this.managed);
-    if (current.unexpected || current.reason) throw new Error("DWI cannot replace untrusted workspace files.");
+    if (current.unexpected || current.reason) throw new Error("Prompt Optimizer cannot replace untrusted workspace files.");
     return { snapshot: current.snapshot };
   }
 
@@ -342,7 +366,7 @@ export class DwiWorkspaceSnapshotStore<Path> {
 
     const unique = `${safeStamp(this.stamp())}-${safeStamp(this.nonce())}`;
     const staging = this.paths.join(this.dwi, `.managed.migration-${unique}`);
-    if (await this.fs.exists(staging)) throw new Error("DWI migration staging path already exists.");
+    if (await this.fs.exists(staging)) throw new Error("Prompt Optimizer migration staging path already exists.");
     await this.fs.createDirectory(staging);
     try {
       for (const name of legacyFiles) {
@@ -350,8 +374,8 @@ export class DwiWorkspaceSnapshotStore<Path> {
         await this.fs.writeFile(this.paths.join(staging, name), await this.readManagedFile(source));
       }
       const verified = await this.classify(staging);
-      if (!verified.snapshot) throw new Error("Legacy DWI state did not validate after migration.");
-      if (await this.fs.exists(this.managed)) throw new Error("DWI managed state appeared during migration; reload and retry.");
+      if (!verified.snapshot) throw new Error("Legacy Prompt Optimizer state did not validate after migration.");
+      if (await this.fs.exists(this.managed)) throw new Error("Prompt Optimizer managed state appeared during migration; reload and retry.");
       await this.fs.rename(staging, this.managed);
       await this.quarantineLegacyFiles(legacyFiles);
       return undefined;
@@ -376,7 +400,7 @@ export class DwiWorkspaceSnapshotStore<Path> {
   private async quarantineLegacyFiles(legacyFiles: readonly string[]): Promise<void> {
     if (legacyFiles.length === 0) return;
     const quarantine = this.paths.join(this.dwi, `.managed.legacy-${safeStamp(this.stamp())}-${safeStamp(this.nonce())}`);
-    if (await this.fs.exists(quarantine)) throw new Error("DWI legacy quarantine path already exists.");
+    if (await this.fs.exists(quarantine)) throw new Error("Prompt Optimizer legacy quarantine path already exists.");
     await this.fs.createDirectory(quarantine);
     for (const name of legacyFiles) {
       const source = this.paths.join(this.dwi, name);
@@ -395,7 +419,7 @@ export class DwiWorkspaceSnapshotStore<Path> {
 
   private async readManagedFile(path: Path): Promise<Uint8Array> {
     const value = await this.fs.stat(path);
-    if (value.isSymbolicLink || value.isDirectory) throw new Error("DWI managed paths must be regular files.");
+    if (value.isSymbolicLink || value.isDirectory) throw new Error("Prompt Optimizer managed paths must be regular files.");
     return this.fs.readFile(path);
   }
 
@@ -454,41 +478,41 @@ export class DwiWorkspaceSnapshotStore<Path> {
 }
 
 function assertSnapshot(value: unknown): asserts value is DwiWorkspaceSnapshot {
-  const snapshot = asRecord(value, "DWI snapshot");
+  const snapshot = asRecord(value, "Prompt Optimizer snapshot");
   onlyKeys(snapshot, [
     "schema", "status", "stage", "updatedAt", "generation", "consent", "project", "brief",
     "selectedModuleIds", "candidate", "candidateInput", "optimizerDraft", "optimizerReview", "evaluationMarkdown", "feedback",
-  ], "DWI snapshot");
+  ], "Prompt Optimizer snapshot");
   if (
     snapshot.schema !== DWI_SNAPSHOT_SCHEMA ||
     (snapshot.status !== "partial" && snapshot.status !== "complete") ||
     !["consent", "brief", "compose", "evaluate"].includes(String(snapshot.stage)) ||
     !isIsoTimestamp(snapshot.updatedAt) ||
     (snapshot.generation !== undefined && (!Number.isSafeInteger(snapshot.generation) || Number(snapshot.generation) < 1))
-  ) throw new Error("DWI snapshot schema is invalid.");
+  ) throw new Error("Prompt Optimizer snapshot schema is invalid.");
 
   if (snapshot.consent !== undefined) validateConsent(snapshot.consent);
   if (snapshot.project !== undefined && !validateProjectSnapshot(snapshot.project).valid) {
-    throw new Error("DWI project snapshot schema is invalid.");
+    throw new Error("Prompt Optimizer project snapshot schema is invalid.");
   }
   if (snapshot.brief !== undefined) validateBrief(snapshot.brief);
   if (snapshot.selectedModuleIds !== undefined) validateStringArray(snapshot.selectedModuleIds, "selectedModuleIds", 64, 128);
   if (snapshot.candidate !== undefined) validateCandidate(snapshot.candidate);
   if (snapshot.candidateInput !== undefined && !isPromptComposeInput(snapshot.candidateInput)) {
-    throw new Error("DWI candidate input is invalid.");
+    throw new Error("Prompt Optimizer candidate input is invalid.");
   }
   if (snapshot.optimizerDraft !== undefined && !isOptimizerDraft(snapshot.optimizerDraft)) {
-    throw new Error("DWI optimizer draft is invalid.");
+    throw new Error("Prompt Optimizer optimizer draft is invalid.");
   }
   if (snapshot.optimizerReview !== undefined) validateOptimizerReview(snapshot.optimizerReview);
   if (snapshot.evaluationMarkdown !== undefined) boundedString(snapshot.evaluationMarkdown, "evaluationMarkdown", MAX_CANDIDATE_BYTES, true);
   if (snapshot.feedback !== undefined) validateFeedback(snapshot.feedback);
-  if (snapshot.candidate !== undefined && snapshot.brief === undefined) throw new Error("DWI candidate requires a project brief.");
-  if (snapshot.candidateInput !== undefined && snapshot.candidate === undefined) throw new Error("DWI candidate input requires a candidate.");
-  if (snapshot.optimizerReview !== undefined && snapshot.candidate === undefined) throw new Error("DWI optimizer review requires a candidate.");
+  if (snapshot.candidate !== undefined && snapshot.brief === undefined) throw new Error("Prompt Optimizer candidate requires a project brief.");
+  if (snapshot.candidateInput !== undefined && snapshot.candidate === undefined) throw new Error("Prompt Optimizer candidate input requires a candidate.");
+  if (snapshot.optimizerReview !== undefined && snapshot.candidate === undefined) throw new Error("Prompt Optimizer optimizer review requires a candidate.");
   if (snapshot.status === "complete") {
     if (snapshot.stage !== "evaluate" || snapshot.brief === undefined || snapshot.candidate === undefined || typeof snapshot.evaluationMarkdown !== "string") {
-      throw new Error("DWI completion snapshot is incomplete.");
+      throw new Error("Prompt Optimizer completion snapshot is incomplete.");
     }
   }
 }
@@ -501,53 +525,69 @@ function isOptimizerDraft(value: unknown): value is PromptComposeInput {
 }
 
 function validateOptimizerReview(value: unknown): void {
-  const review = asRecord(value, "DWI optimizer review");
+  const review = asRecord(value, "Prompt Optimizer optimizer review");
   if (review.source === "local") {
-    onlyKeys(review, ["source"], "DWI optimizer review");
+    onlyKeys(review, ["source"], "Prompt Optimizer optimizer review");
     return;
   }
-  onlyKeys(review, ["source", "provider", "model", "title", "summary"], "DWI optimizer review");
+  onlyKeys(review, ["source", "provider", "model", "title", "summary"], "Prompt Optimizer optimizer review");
   if (
     review.source !== "provider" ||
     (review.provider !== "gemini" && review.provider !== "openai") ||
     typeof review.model !== "string" || !review.model || review.model.length > 256
-  ) throw new Error("DWI optimizer review is invalid.");
+  ) throw new Error("Prompt Optimizer optimizer review is invalid.");
   if (review.title !== undefined) boundedString(review.title, "optimizer review title", 256, true);
   if (review.summary !== undefined) boundedString(review.summary, "optimizer review summary", 2_048, true);
 }
 
+export function isValidPromptOptimizerRecovery(
+  candidate: unknown,
+  draft: unknown,
+  review: unknown,
+): candidate is DwiCandidate {
+  try {
+    if (candidate === undefined && review === undefined) return draft === undefined || isOptimizerDraft(draft);
+    if (candidate === undefined || review === undefined || !isOptimizerDraft(draft)) return false;
+    validateCandidate(candidate);
+    validateOptimizerReview(review);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function assertInitialization(value: unknown): asserts value is DwiInitializationRecord {
-  const initialization = asRecord(value, "DWI initialization");
-  onlyKeys(initialization, ["schema", "workspace", "createdAt"], "DWI initialization");
-  const workspace = asRecord(initialization.workspace, "DWI initialization workspace");
-  onlyKeys(workspace, ["kind", "value", "fingerprint"], "DWI initialization workspace");
+  const initialization = asRecord(value, "Prompt Optimizer initialization");
+  onlyKeys(initialization, ["schema", "workspace", "createdAt"], "Prompt Optimizer initialization");
+  const workspace = asRecord(initialization.workspace, "Prompt Optimizer initialization workspace");
+  onlyKeys(workspace, ["kind", "value", "fingerprint"], "Prompt Optimizer initialization workspace");
   if (
     initialization.schema !== DWI_INITIALIZATION_SCHEMA ||
     !isIsoTimestamp(initialization.createdAt) ||
     (workspace.kind !== "remote" && workspace.kind !== "canonical-folder") ||
     typeof workspace.value !== "string" || !workspace.value || workspace.value.length > MAX_SHORT_TEXT ||
     typeof workspace.fingerprint !== "string" || !/^[a-f0-9]{24}$/.test(workspace.fingerprint)
-  ) throw new Error("DWI initialization schema is invalid.");
+  ) throw new Error("Prompt Optimizer initialization schema is invalid.");
 }
 
 function validateConsent(value: unknown): void {
-  const consent = asRecord(value, "DWI consent");
-  onlyKeys(consent, ["policyVersion", "scopeDigest", "workspaceFingerprint", "approvedAt"], "DWI consent");
+  const consent = asRecord(value, "Prompt Optimizer consent");
+  onlyKeys(consent, ["policyVersion", "scopeDigest", "workspaceFingerprint", "approvedAt"], "Prompt Optimizer consent");
   if (
     typeof consent.policyVersion !== "string" || !consent.policyVersion || consent.policyVersion.length > 256 ||
     typeof consent.scopeDigest !== "string" || !/^[a-f0-9]{64}$/.test(consent.scopeDigest) ||
     typeof consent.workspaceFingerprint !== "string" || !/^[a-f0-9]{24}$/.test(consent.workspaceFingerprint) ||
     !isIsoTimestamp(consent.approvedAt)
-  ) throw new Error("DWI consent receipt is invalid.");
+  ) throw new Error("Prompt Optimizer consent receipt is invalid.");
 }
 
 function validateBrief(value: unknown): void {
-  const brief = asRecord(value, "DWI brief");
+  const brief = asRecord(value, "Prompt Optimizer brief");
   onlyKeys(brief, [
     "version", "projectName", "archetype", "stack", "packageManager", "scripts", "modules", "facts",
     "unknowns", "confirmed", "corrections",
-  ], "DWI brief");
-  if (brief.version !== "dwi.brief.v1" || typeof brief.confirmed !== "boolean") throw new Error("DWI brief schema is invalid.");
+  ], "Prompt Optimizer brief");
+  if (brief.version !== "dwi.brief.v1" || typeof brief.confirmed !== "boolean") throw new Error("Prompt Optimizer brief schema is invalid.");
   boundedString(brief.projectName, "brief.projectName", MAX_SHORT_TEXT);
   boundedString(brief.archetype, "brief.archetype", MAX_SHORT_TEXT);
   boundedString(brief.packageManager, "brief.packageManager", MAX_SHORT_TEXT, true);
@@ -556,47 +596,47 @@ function validateBrief(value: unknown): void {
   validateStringArray(brief.scripts, "brief.scripts", MAX_LIST_ITEMS, MAX_SHORT_TEXT);
   validateStringArray(brief.modules, "brief.modules", MAX_LIST_ITEMS, MAX_SHORT_TEXT);
   validateStringArray(brief.unknowns, "brief.unknowns", MAX_LIST_ITEMS, MAX_SHORT_TEXT);
-  if (!Array.isArray(brief.facts) || brief.facts.length > MAX_LIST_ITEMS) throw new Error("DWI brief facts are invalid.");
+  if (!Array.isArray(brief.facts) || brief.facts.length > MAX_LIST_ITEMS) throw new Error("Prompt Optimizer brief facts are invalid.");
   for (const item of brief.facts) {
-    const fact = asRecord(item, "DWI brief fact");
-    onlyKeys(fact, ["id", "label", "value", "confidence", "evidence"], "DWI brief fact");
+    const fact = asRecord(item, "Prompt Optimizer brief fact");
+    onlyKeys(fact, ["id", "label", "value", "confidence", "evidence"], "Prompt Optimizer brief fact");
     boundedString(fact.id, "brief.fact.id", 512);
     boundedString(fact.label, "brief.fact.label", MAX_SHORT_TEXT);
     boundedString(fact.value, "brief.fact.value", MAX_SHORT_TEXT, true);
     boundedString(fact.evidence, "brief.fact.evidence", MAX_SHORT_TEXT, true);
-    if (!["high", "medium", "low"].includes(String(fact.confidence))) throw new Error("DWI brief fact confidence is invalid.");
+    if (!["high", "medium", "low"].includes(String(fact.confidence))) throw new Error("Prompt Optimizer brief fact confidence is invalid.");
   }
 }
 
 function validateCandidate(value: unknown): void {
-  const candidate = asRecord(value, "DWI candidate");
-  onlyKeys(candidate, ["text", "estimate", "selectedModuleIds"], "DWI candidate");
+  const candidate = asRecord(value, "Prompt Optimizer candidate");
+  onlyKeys(candidate, ["text", "estimate", "selectedModuleIds"], "Prompt Optimizer candidate");
   boundedString(candidate.text, "candidate.text", MAX_CANDIDATE_BYTES);
   validateEstimate(candidate.estimate);
   validateStringArray(candidate.selectedModuleIds, "candidate.selectedModuleIds", 64, 128);
 }
 
 function validateEstimate(value: unknown): asserts value is DwiEstimate {
-  const estimate = asRecord(value, "DWI estimate");
-  onlyKeys(estimate, ["baselineTokens", "optimizedTokens", "estimatedAvoidedDuplication", "method"], "DWI estimate");
+  const estimate = asRecord(value, "Prompt Optimizer estimate");
+  onlyKeys(estimate, ["baselineTokens", "optimizedTokens", "estimatedAvoidedDuplication", "method"], "Prompt Optimizer estimate");
   for (const field of ["baselineTokens", "optimizedTokens", "estimatedAvoidedDuplication"] as const) {
-    if (!Number.isSafeInteger(estimate[field]) || Number(estimate[field]) < 0) throw new Error(`DWI estimate ${field} is invalid.`);
+    if (!Number.isSafeInteger(estimate[field]) || Number(estimate[field]) < 0) throw new Error(`Prompt Optimizer estimate ${field} is invalid.`);
   }
   boundedString(estimate.method, "estimate.method", MAX_SHORT_TEXT);
 }
 
 function validateFeedback(value: unknown): void {
-  const feedback = asRecord(value, "DWI feedback");
-  onlyKeys(feedback, ["id", "createdAt", "rating", "tags", "note", "selectedModuleIds", "estimate", "elapsedMs"], "DWI feedback");
+  const feedback = asRecord(value, "Prompt Optimizer feedback");
+  onlyKeys(feedback, ["id", "createdAt", "rating", "tags", "note", "selectedModuleIds", "estimate", "elapsedMs"], "Prompt Optimizer feedback");
   boundedString(feedback.id, "feedback.id", 1_024);
   if (!isIsoTimestamp(feedback.createdAt) || !["helpful", "mixed", "not-helpful"].includes(String(feedback.rating))) {
-    throw new Error("DWI feedback schema is invalid.");
+    throw new Error("Prompt Optimizer feedback schema is invalid.");
   }
   validateStringArray(feedback.tags, "feedback.tags", 8, 256);
   if (feedback.note !== undefined) boundedString(feedback.note, "feedback.note", 500, true);
   validateStringArray(feedback.selectedModuleIds, "feedback.selectedModuleIds", 64, 128);
   validateEstimate(feedback.estimate);
-  if (!Number.isSafeInteger(feedback.elapsedMs) || Number(feedback.elapsedMs) < 0) throw new Error("DWI feedback elapsed time is invalid.");
+  if (!Number.isSafeInteger(feedback.elapsedMs) || Number(feedback.elapsedMs) < 0) throw new Error("Prompt Optimizer feedback elapsed time is invalid.");
 }
 
 function asRecord(value: unknown, label: string): Record<string, unknown> {

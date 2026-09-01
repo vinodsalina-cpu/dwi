@@ -8,6 +8,8 @@ import type { DwiOutputSize } from "@platform/dwi-core";
 
 export const PROMPT_COMMAND_SCHEMA = "prompt-command.v2" as const;
 
+export type PromptOptimizerView = "input" | "resolve" | "review";
+
 interface PromptCommandIdentity {
   schemaVersion: typeof PROMPT_COMMAND_SCHEMA;
   requestId: string;
@@ -32,7 +34,8 @@ export type PromptOptimizerCommand =
   | Pick<PromptCommandIdentity, "schemaVersion" | "requestId" | "correlationId" | "documentId"> & { type: "prompt.v2.record.save" }
   | { type: "prompt.v2.draft.save"; schemaVersion: typeof PROMPT_COMMAND_SCHEMA; input: PromptOptimizerInput }
   | { type: "prompt.v2.review.open"; schemaVersion: typeof PROMPT_COMMAND_SCHEMA }
-  | { type: "prompt.v2.view.set"; schemaVersion: typeof PROMPT_COMMAND_SCHEMA; view: "input" | "review" };
+  | { type: "prompt.v2.session.reset"; schemaVersion: typeof PROMPT_COMMAND_SCHEMA }
+  | { type: "prompt.v2.view.set"; schemaVersion: typeof PROMPT_COMMAND_SCHEMA; view: PromptOptimizerView };
 
 const ID = /^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$/;
 const HASH = /^[a-f0-9]{64}$/;
@@ -60,7 +63,7 @@ function optimizerInput(value: unknown, allowEmptyTask = false): value is Prompt
   if (!record(value) || !exact(value, ["task", "assignmentId", "promptType", "outputSize"])) return false;
   return typeof value.task === "string" && (allowEmptyTask || value.task.trim().length > 0) && value.task.length <= PROMPT_TEXT_LIMIT_CHARS &&
     isEntityId(value.assignmentId) && (promptTypes as readonly unknown[]).includes(value.promptType) &&
-    (value.outputSize === "low" || value.outputSize === "medium" || value.outputSize === "high");
+    (value.outputSize === "low" || value.outputSize === "medium" || value.outputSize === "high" || value.outputSize === "auto");
 }
 
 export function parsePromptOptimizerCommand(value: unknown): PromptOptimizerCommand | undefined {
@@ -69,8 +72,12 @@ export function parsePromptOptimizerCommand(value: unknown): PromptOptimizerComm
     if (!exact(value, ["type", "schemaVersion"]) || value.schemaVersion !== PROMPT_COMMAND_SCHEMA) return undefined;
     return value as PromptOptimizerCommand;
   }
+  if (value.type === "prompt.v2.session.reset") {
+    if (!exact(value, ["type", "schemaVersion"]) || value.schemaVersion !== PROMPT_COMMAND_SCHEMA) return undefined;
+    return value as PromptOptimizerCommand;
+  }
   if (value.type === "prompt.v2.view.set") {
-    if (!exact(value, ["type", "schemaVersion", "view"]) || value.schemaVersion !== PROMPT_COMMAND_SCHEMA || (value.view !== "input" && value.view !== "review")) return undefined;
+    if (!exact(value, ["type", "schemaVersion", "view"]) || value.schemaVersion !== PROMPT_COMMAND_SCHEMA || (value.view !== "input" && value.view !== "resolve" && value.view !== "review")) return undefined;
     return value as PromptOptimizerCommand;
   }
   if (value.type === "prompt.v2.draft.save") {
