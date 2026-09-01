@@ -6,7 +6,7 @@ DWI gives developers a safer and more consistent way to prepare AI-assisted work
 
 The project-management connection, adaptive AI usage allowances, and group-level outcome feedback are future ideas. They are not built today.
 
-Phase 4 exposed a clear decision-governance failure. The owner approved calls, no retries, and monetary ceilings, but the contract prepared by the AI assistant added token ceilings that were never explicitly approved. One of those numbers became a decisive gate. The stop control worked; the earlier policy-authoring and authorization process did not.
+Phase 4 exposed a clear decision-governance failure. The human approver approved calls, no retries, and monetary ceilings, but the contract prepared by the AI assistant added token ceilings that were never explicitly approved. One of those numbers became a decisive gate. The stop control worked; the earlier policy-authoring and authorization process did not.
 
 ## Slide guidance
 
@@ -47,7 +47,7 @@ Define each future term when it first appears:
 
 - A **project-management system** is the tool holding planned tasks, priority, risk, and timing.
 - An **adaptive AI allowance** is a planned cap based on approved task and project needs, sprint capacity, expected output, and fixed service overhead. It stays inside hard privacy, spending, and call limits. It may also be called a token budget.
-- A **decision provenance record** names the approved requirement, owner, calculation, version, test, and rollback behind a pivotal rule.
+- A **decision provenance record** names the approved requirement, human approver, calculation, version, test, and rollback behind a pivotal rule.
 - **Outcome-only feedback** records whether the workflow helped without copying prompts, output, code, project content, file paths, or employee names.
 
 The allowance never approves spending or external AI use. A declarative file can record an approved rule, but it cannot create approval. An imperative policy check must reject missing authority before execution. Adaptive means planned for the work—not a number DWI can raise after seeing a result. The developer still reviews the result. Group-level feedback improves guidance, training, and delivery processes; it must never rank employees.
@@ -65,7 +65,7 @@ Report by workflow or group. Never copy work content, rank people, or use feedba
 
 The next decision is not production rollout. The proposed sequence is:
 
-1. Run a focused four-day management proof of concept using the current product and report; this is a planning target, not a production promise.
+1. Try the current local demo.
 2. Finish the guided question and repeat the restart check on the same version.
 3. Audit every pivotal limit, default, multiplier, exception, fallback, and approval claim.
 4. Build and dry-run an approval-led decision mechanism that cannot make an unapproved number executable.
@@ -84,10 +84,10 @@ The next decision is not production rollout. The proposed sequence is:
 
 - The guided one-question answer and application step is incomplete.
 - The packaged restart, resume, reset, and project-context preservation journey has passed. A later automated repeat was blocked because macOS automation could not reach the consent window; this was not a product-flow failure or a new pass.
-- The owner approved maximum calls, no retries, and monetary ceilings. The contract prepared by the AI assistant separately introduced 20,000 aggregate, 120,000 evaluation, and 12,000 per-completion token ceilings without explicit owner approval.
+- The human approver approved maximum calls, no retries, and monetary ceilings. The contract prepared by the AI assistant separately introduced 20,000 aggregate, 120,000 evaluation, and 12,000 per-completion token ceilings without explicit approval from the human approver.
 - The successful readiness response reported 14,531 tokens and crossed the unapproved 12,000 ceiling. The budget control then closed the run before any business task, optimized output, or quality comparison. Fail-closed enforcement worked; the policy-authoring and approval process failed.
 - The token check happened after the response, so it could stop later calls but not the first call’s use. The approved dollar ceilings were recorded, but available pricing and billing data could not enforce or prove actual cost.
-- Phase 4 is deliberately frozen. The owner did not authorize a retry or ceiling increase, and the AI assistant did not perform either action. The evidence remains retained so the failure cannot be tuned into a pass.
+- Phase 4 is deliberately frozen. The human approver did not authorize a retry or ceiling increase, and the AI assistant did not perform either action. The evidence remains retained so the failure cannot be tuned into a pass.
 - Before Phase 4 resumes, audit every decision-bearing limit, default, multiplier, exception, fallback, routing choice, data rule, scoring threshold, and phase gate. Missing approval must stop execution before an external call.
 - The future mechanism must be approval-led and imperative in decision: derive an adaptive allowance from approved inputs, explain it, and keep privacy, spending, and maximum-call limits fixed.
 - Project-management integration, adaptive task allowances, and management reporting are future ideas.
@@ -95,4 +95,4 @@ The next decision is not production rollout. The proposed sequence is:
 
 ## Recommended question
 
-Should management authorize the four-day proof of concept, decision-rule audit, and dry-run of an explicitly approved adaptive model before Phase 4 resumes?
+Is the current workflow useful enough to justify a small, controlled dry-run of the future project-management, AI-limit, and feedback model?

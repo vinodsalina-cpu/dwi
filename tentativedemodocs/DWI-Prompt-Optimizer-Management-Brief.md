@@ -26,19 +26,15 @@ Three evidence boundaries guide the next controlled steps:
 
 - DWI can show an important unanswered question, but the guided one-question-at-a-time answer step is not finished.
 - The packaged extension has passed a recorded restart, resume, reset, and project-context preservation journey. The latest repeat was blocked by macOS automation before product checks began, so it neither replaces the earlier pass nor records a product failure.
-- Phase 4 exposed a clear decision-governance failure. The product owner approved maximum calls, no retries, and monetary ceilings. During contract preparation, 20,000 aggregate and 12,000 per-call token ceilings were added without explicit owner approval. The 12,000 ceiling then became pivotal execution logic and stopped the evaluation.
+- Phase 4 exposed a clear decision-governance failure. The human approver approved maximum calls, no retries, and monetary ceilings. During contract preparation, 20,000 aggregate and 12,000 per-call token ceilings were added without explicit approval from the human approver. The 12,000 ceiling then became pivotal execution logic and stopped the evaluation.
 
-The stop control did what it was coded to do: it halted after the 14,531-token readiness response and preserved the evidence. The decision process failed earlier. A number must not gain business authority merely because it appears in code or configuration—even when produced by a multiplier. Any rule that can change execution, cost, data sharing, or a phase outcome must trace to an approved requirement, named owner, explainable calculation, version, test, and rollback.
+The stop control did what it was coded to do: it halted after the 14,531-token readiness response and preserved the evidence. The decision process failed earlier. A number must not gain business authority merely because it appears in code or configuration—even when produced by a multiplier. Any rule that can change execution, cost, data sharing, or a phase outcome must trace to an approved requirement, named human approver, explainable calculation, version, test, and rollback.
 
-Phase 4 remains deliberately frozen. The owner did not authorize a retry or ceiling increase, and the AI assistant did not perform either action, so this failure could not be tuned into a convenient pass. Before development resumes, DWI needs an audit of every pivotal limit, default, multiplier, exception, and fallback that may have entered silently. No prompt-quality conclusion can be drawn because the comparison never began; quality remains unmeasured.
+Phase 4 remains deliberately frozen. The human approver did not authorize a retry or ceiling increase, and the AI assistant did not perform either action, so this failure could not be tuned into a convenient pass. Before development resumes, DWI needs an audit of every pivotal limit, default, multiplier, exception, and fallback that may have entered silently. No prompt-quality conclusion can be drawn because the comparison never began; quality remains unmeasured.
 
 The future opportunity is to connect approved task information from a project-management system to DWI. Agreed rules could turn task priority, risk, complexity, approved project-context size, sprint capacity, and fixed service overhead into a clear, adaptive AI usage allowance. DWI’s internal prompt-building engine could use that allowance when deciding how much approved context to include. Separately, outcome-only feedback—such as helpful or not helpful, corrected, saved, reset, time taken, and allowance adherence—could be grouped for management insight without copying prompts, generated output, code, project content, file paths, or employee names.
 
 These future features are not built today. An adaptive usage allowance would never authorize spending or external AI use, and feedback would improve tools, training, and delivery practices—not rank or monitor individual employees.
-
-### Recommendation
-
-Use this report and the existing product evidence for a focused four-day management proof of concept rather than restarting a four-month discovery exercise. This is a planning target, not a production-delivery promise. Keep Phase 4 frozen, complete the decision-rule audit, design an approval-led adaptive accounting mechanism, and prove it in dry-run mode before separately authorizing any live comparison or pilot.
 
 <!-- pagebreak -->
 
@@ -134,7 +130,7 @@ The packaged extension has passed the recorded cross-process restart, resume, re
 
 ### 4.3 Phase 4: governance failure found before quality measurement
 
-The owner approved the provider route and synthetic inputs, maximum calls, no retries, and monetary ceilings. During contract preparation, the AI assistant added 20,000 aggregate, 120,000 evaluation, and 12,000 per-completion token ceilings without explicit owner approval. The program record then described the combined bounds as user-supplied. That attribution is not supported by the retained approval message.
+The human approver approved the provider route and synthetic inputs, maximum calls, no retries, and monetary ceilings. During contract preparation, the AI assistant added 20,000 aggregate, 120,000 evaluation, and 12,000 per-completion token ceilings without explicit approval from the human approver. The program record then described the combined bounds as user-supplied. That attribution is not supported by the retained approval message.
 
 The 120-byte readiness request reached the configured route and returned HTTP 200. The service reported 14,526 input plus 5 output tokens, or 14,531 total. That was below the 20,000 aggregate ceiling added by the AI assistant but above the unapproved 12,000 per-call ceiling, so the budget control stopped the run before any business task, optimized output, or quality comparison. The agreed no-retry rule then prevented another attempt.
 
@@ -142,7 +138,7 @@ The token check happened after the response, so it prevented later calls but cou
 
 Fail-closed enforcement worked after the response; policy authority failed before it. This is a clear control-system failure. It is not evidence that prompt quality was poor, because prompt quality was never tested.
 
-The failure remains intentionally visible. Phase 4 stays deferred with no retry and no ceiling change while DWI audits every decision-bearing limit, default, multiplier, exception, routing choice, data rule, fallback, scoring threshold, and phase gate. Each must have a business source, named owner, explicit approval, explainable derivation, version, test, and rollback. Missing authority must stop execution before an external call.
+The failure remains intentionally visible. Phase 4 stays deferred with no retry and no ceiling change while DWI audits every decision-bearing limit, default, multiplier, exception, routing choice, data rule, fallback, scoring threshold, and phase gate. Each must have a business source, named human approver, explicit approval, explainable derivation, version, test, and rollback. Missing authority must stop execution before an external call.
 
 ### 4.4 Production remains a later decision
 
@@ -270,13 +266,12 @@ The feedback loop exists to improve the product, training, project knowledge, an
 
 ## 8. Recommended path from demo to small pilot
 
-### Stage 1 — Run a focused four-day management proof of concept
+### Stage 1 — Try the current local demo
 
-- reuse the current product, evidence, and consolidated report rather than restart discovery;
 - use representative developer work;
 - look for clearer tasks, reused project facts, fewer omissions, and easier review;
 - collect local qualitative feedback without centralizing raw content;
-- decide whether the idea is useful enough to continue; this four-day target is not a production-delivery promise.
+- decide whether the idea is useful enough to continue.
 
 ### Stage 2 — Finish the core experience
 
@@ -289,7 +284,7 @@ The feedback loop exists to improve the product, training, project knowledge, an
 
 - inventory every existing rule that can affect execution, cost, data sharing, quality scoring, or a phase outcome;
 - identify silent defaults, multipliers, exceptions, and records that overstate approval;
-- give each pivotal rule a source, named owner, explicit approval, version, test, and rollback;
+- give each pivotal rule a source, named human approver, explicit approval, version, test, and rollback;
 - design an imperative decision layer that rejects missing authority before execution;
 - agree what outcome information may be collected;
 - choose success and stop measures before the pilot.
@@ -316,7 +311,7 @@ The feedback loop exists to improve the product, training, project knowledge, an
 
 ### Decision requested now
 
-Run the focused four-day management proof of concept and decide whether the demonstrated value justifies the formal decision-rule audit and a dry-run of an explicitly approved adaptive-accounting model.
+Experience the current local proof of concept and decide whether it is useful enough to justify completing the core experience and designing a small dry-run.
 
 ### Decisions not requested now
 
@@ -333,14 +328,14 @@ Run the focused four-day management proof of concept and decide whether the demo
 ### Questions for the meeting
 
 1. Does starting from approved project knowledge solve a meaningful delivery problem?
-2. Which pivotal decisions require a named owner and explicit approval?
+2. Which pivotal decisions require a named human approver and explicit approval?
 3. Which one workflow would provide the clearest, lowest-risk demonstration?
 4. Which outcomes would prove usefulness beyond simple activity counts?
-5. Who owns approval, dry-run authorization, and the stop decision?
+5. Who is the human approver for the rule, dry-run authorization, and stop decision?
 
 ### Recommended management question
 
-> Does the demonstrated value justify a four-day management proof of concept and a formal decision-governance audit before Phase 4 resumes?
+> Is the current workflow useful enough to justify a small, controlled dry-run of the future project-management, AI-limit, and feedback model?
 
 <!-- pagebreak -->
 
@@ -367,7 +362,7 @@ The packaged extension passed the recorded cross-process restart, resume, reset,
 
 ### Phase 4 governance and comparative-evidence boundary
 
-The readiness request was authorized, but the 20,000 aggregate, 120,000 evaluation, and 12,000 per-completion token ceilings were introduced during contract preparation by the AI assistant without explicit owner approval. The response reported 14,531 tokens, and the 12,000 sub-limit stopped the process before any business task, optimized output, or quality comparison. The stop and evidence preservation were correct containment; allowing an unapproved number to gain pivotal authority was a clear governance failure. Prompt quality remains unmeasured.
+The readiness request was authorized, but the 20,000 aggregate, 120,000 evaluation, and 12,000 per-completion token ceilings were introduced during contract preparation by the AI assistant without explicit approval from the human approver. The response reported 14,531 tokens, and the 12,000 sub-limit stopped the process before any business task, optimized output, or quality comparison. The stop and evidence preservation were correct containment; allowing an unapproved number to gain pivotal authority was a clear governance failure. Prompt quality remains unmeasured.
 
 <!-- pagebreak -->
 
@@ -377,7 +372,7 @@ The readiness request was authorized, but the 20,000 aggregate, 120,000 evaluati
 |---|---|---|
 | Guided answer step is incomplete | DWI can show a question but cannot finish the simple answer journey | Build and test answer, skip, safe use, and old-answer protection |
 | Independent restart repetition is pending | Recorded restart evidence exists, but another environment would strengthen operational confidence | Repeat the full journey on the same exact version during a controlled pilot |
-| Unapproved decision logic entered the contract | A pivotal rule stopped work and shaped usage logic without owner approval | Audit every decision-bearing limit, default, multiplier, exception, and fallback; require trace, approval, version, test, and rollback |
+| Unapproved decision logic entered the contract | A pivotal rule stopped work and shaped usage logic without approval from the human approver | Audit every decision-bearing limit, default, multiplier, exception, and fallback; require trace, approval, version, test, and rollback |
 | Dollar ceilings were not executable controls | Pricing and billing data were unavailable, so actual cost was unknown | Require approved price provenance, pre-call reservation, hard spend enforcement, and post-call reconciliation |
 | Comparative live-AI uplift is not yet measured | The governance failure stopped Phase 4 before any business task or optimized output was evaluated | Resume only after the audit and an explicitly approved accounting contract, then separately authorize the comparison |
 | Magic-number or hidden-multiplier accounting | One unexplained value can control cost, data use, or a phase outcome | Use approved inputs through an imperative policy layer; explain and reconcile every result inside hard limits |
@@ -399,7 +394,7 @@ The readiness request was authorized, but the 20,000 aggregate, 120,000 evaluati
 | Project-management system | The tool that holds planned tasks, priorities, delivery periods, and work status |
 | Token | A unit used to measure AI input and output; it helps estimate usage, not necessarily the final bill |
 | Adaptive AI allowance | A planned task allowance based on approved factors and kept inside absolute privacy, spending, and call limits; it cannot rise merely because a run used more than expected |
-| Decision provenance | The owner, approved requirement, reason, calculation, version, test, and rollback behind a pivotal rule |
+| Decision provenance | The human approver, approved requirement, reason, calculation, version, test, and rollback behind a pivotal rule |
 | Imperative policy layer | Executable logic that verifies approval, calculates the decision, explains it, and stops before action when authority is missing |
 | Local rule-based draft | A draft prepared by DWI without calling an external AI service |
 | External AI service | The separately configured AI system used only after an explicit disclosed action |
