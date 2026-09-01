@@ -219,16 +219,6 @@ export function PromptInputEditor({
   }
 
   return <div ref={rootRef} className="prompt-input-editor">
-    <textarea
-      className="prompt-input-editor__textarea"
-      aria-label={label}
-      value={text}
-      maxLength={maxLength}
-      placeholder={placeholder}
-      disabled={disabled}
-      onChange={(event) => onTextChange(event.target.value)}
-    />
-
     <div className={`prompt-input-editor__control prompt-input-editor__control--assignment${openMenu === "assignment" ? " is-open" : ""}`}>
       <button
         ref={assignmentTriggerRef}
@@ -348,5 +338,15 @@ export function PromptInputEditor({
         </div>
       </section>}
     </div>
+
+    <textarea
+      className="prompt-input-editor__textarea"
+      aria-label={label}
+      value={text}
+      maxLength={maxLength}
+      placeholder={placeholder}
+      disabled={disabled}
+      onChange={(event) => onTextChange(event.target.value)}
+    />
   </div>;
 }

@@ -49,6 +49,11 @@ describe("PromptInputEditor", () => {
     expect(screen.getByRole("button", { name: "Assignment: Assignment 1" }).getAttribute("aria-expanded")).toBe("false");
     expect(screen.getByRole("button", { name: "Criticality: Low" }).getAttribute("aria-expanded")).toBe("false");
 
+    const root = editor.closest(".prompt-input-editor");
+    expect(root?.firstElementChild?.querySelector("button")?.getAttribute("aria-label")).toBe("Assignment: Assignment 1");
+    expect(root?.children[1]?.querySelector("button")?.getAttribute("aria-label")).toBe("Criticality: Low");
+    expect(root?.lastElementChild).toBe(editor);
+
     fireEvent.change(editor, { target: { value: "Improve this prompt" } });
     expect((editor as HTMLTextAreaElement).value).toBe("Improve this prompt");
   });
