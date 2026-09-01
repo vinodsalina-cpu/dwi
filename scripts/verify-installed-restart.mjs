@@ -1,5 +1,5 @@
 import { downloadAndUnzipVSCode } from '@vscode/test-electron';
-import { mkdtemp, mkdir, readdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +8,8 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const vsix = join(root, 'apps/dwi-host/developer-work-intelligence-0.1.0.vsix');
 // Keep the portable profile path short enough for VS Code's Unix IPC socket.
 const sandbox = await mkdtemp(join('/tmp', 'dwi-vscode-restart-'));
+let liveChild;
+try {
 const extensionsDir = join(sandbox, 'extensions');
 const userDataDir = join(sandbox, 'user-data');
 const portableDir = join(sandbox, 'portable');
@@ -249,18 +251,25 @@ function clickNativeButton(label) {
 }
 
 async function stopCode(child) {
-  if (child.exitCode !== null || child.signalCode !== null) return;
+  if (child.exitCode !== null || child.signalCode !== null) {
+    if (liveChild === child) liveChild = undefined;
+    return;
+  }
   try { process.kill(child.pid, 'SIGTERM'); } catch {}
   const exited = await new Promise((resolveExit) => {
     const timer = setTimeout(() => resolveExit(false), 15000);
     child.once('exit', () => { clearTimeout(timer); resolveExit(true); });
   });
-  if (exited) return;
+  if (exited) {
+    if (liveChild === child) liveChild = undefined;
+    return;
+  }
   const pids = [...descendants(child.pid), child.pid];
   for (const pid of pids.reverse()) {
     try { process.kill(pid, 'SIGKILL'); } catch {}
   }
   if (child.exitCode === null && child.signalCode === null) await new Promise((resolveExit) => child.once('exit', resolveExit));
+  if (liveChild === child) liveChild = undefined;
 }
 
 async function launchCode(port) {
@@ -283,15 +292,16 @@ async function launchCode(port) {
   child.stdout.on('data', (data) => process.stderr.write(String(data)));
   child.stderr.on('data', (data) => process.stderr.write(String(data)));
   child.on('error', (error) => { throw error; });
+  liveChild = child;
   const target = await waitForMainTarget(port);
   return { child, target };
 }
 
-console.log('DWI_SMOKE_RESTART_INSTALL_OK');
-let port = 9461;
-let optimizer;
-let session = await launchCode(port++);
-try {
+  console.log('DWI_SMOKE_RESTART_INSTALL_OK');
+  let port = 9461;
+  let optimizer;
+  let session = await launchCode(port++);
+  try {
   await runMainCommand(session.target, 'Open Developer Work Intelligence');
   await waitForWebview(port - 1, 'home', 'Initialize this project');
   await clickWebviewButton(port - 1, 'home', 'Start initialization');
@@ -316,12 +326,12 @@ try {
   await clickWebviewButton(port - 1, 'optimizer', 'Save to recents');
   await waitForWebview(port - 1, 'optimizer', 'Saved to recent prompts.');
   console.log('DWI_SMOKE_RESTART_SEED_OK');
-} finally {
-  await stopCode(session.child);
-}
+  } finally {
+    await stopCode(session.child);
+  }
 
-session = await launchCode(port++);
-try {
+  session = await launchCode(port++);
+  try {
   await runMainCommand(session.target, 'Open Developer Work Intelligence');
   await waitForWebview(port - 1, 'home', 'The reviewed knowledge layer is ready');
   console.log('DWI_SMOKE_RESTART_CONTEXT_RESTORED');
@@ -337,19 +347,27 @@ try {
   optimizer = await waitForWebview(port - 1, 'optimizer', 'Shape the task');
   if (optimizer.state.text.includes('installed restart persistence task')) throw new Error('Installed optimizer reset retained the draft.');
   console.log('DWI_SMOKE_RESTART_RESET_OK');
-} finally {
-  await stopCode(session.child);
-}
+  } finally {
+    await stopCode(session.child);
+  }
 
-session = await launchCode(port++);
-try {
+  session = await launchCode(port++);
+  try {
   await runMainCommand(session.target, 'Open Developer Work Intelligence');
   await waitForWebview(port - 1, 'home', 'The reviewed knowledge layer is ready');
   await runMainCommand(session.target, 'Open Prompt Optimizer');
   optimizer = await waitForWebview(port - 1, 'optimizer', 'Shape the task');
   if (/installed restart persistence task|Review the local preview|Confirm the local interpretation/.test(optimizer.state.text)) throw new Error('Optimizer reset did not persist after the second restart.');
   console.log('DWI_SMOKE_RESTART_RESET_PERSISTED');
+  } finally {
+    await stopCode(session.child);
+  }
+  console.log('DWI_SMOKE_RESTART_EXTENSION_OK');
 } finally {
-  await stopCode(session.child);
+  if (liveChild) await stopCode(liveChild);
+  if (process.env.DWI_KEEP_RESTART_SANDBOX === '1') {
+    console.error(`DWI_SMOKE_RESTART_SANDBOX_KEPT=${sandbox}`);
+  } else {
+    await rm(sandbox, { recursive: true, force: true });
+  }
 }
-console.log('DWI_SMOKE_RESTART_EXTENSION_OK');

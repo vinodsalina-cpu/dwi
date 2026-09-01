@@ -53,7 +53,7 @@ import { parsePromptOptimizerCommand, type PromptOptimizerInput, type PromptOpti
 import { PromptOptimizerRequestBoundary, persistedPromptOptimizerView, restorePromptOptimizerView, type PersistedPromptOptimizerView } from "./prompt-optimizer-session.js";
 import { PromptOptimizerSessionStore, type PromptOptimizerSession, type PromptOptimizerSessionRecent } from "./prompt-optimizer-session-store.js";
 import { resolveDwiEditorDocument, resolvePersistedPromptReviewDocument, type ResolvedDwiEditorDocument } from "./editor-document.js";
-import { consumeConsentCapability, issueConsentCapability, type ConsentCapability } from "./consent-capability.js";
+import { ConsentCapabilityStore } from "./consent-capability.js";
 import { reviewedProjectSourceContribution } from "./prompt-source-adapter.js";
 import { packagedSmokeConfirmationsEnabled } from "./confirmation-mode.js";
 
@@ -72,7 +72,6 @@ type Message = { type: string; [key: string]: unknown };
 export const DWI_NATIVE_VIEW_ID = "dwi-view";
 export const DWI_PROMPT_OPTIMIZER_VIEW_ID = "dwi-prompt-optimizer-view";
 const DWI_ACTIVITY_CONTAINER_ID = "dwi-sidebar";
-const DWI_PROMPT_OPTIMIZER_ACTIVITY_CONTAINER_ID = "dwi-prompt-optimizer-sidebar";
 const DWI_CONSENT_RECEIPTS_KEY = "dwi.workspaceInspectionConsent.v1";
 const PROMPT_OPTIMIZER_RECENTS_KEY = "dwi.promptOptimizer.recents.v1";
 const PROMPT_OPTIMIZER_VIEWS_KEY = "dwi.promptOptimizer.views.v1";
@@ -356,7 +355,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
   private readonly activityEntries: DwiActivityEntry[] = [];
   private activityOutputEntries = 0;
   private rootEpoch = 0;
-  private pendingConsentCapability: ConsentCapability | undefined;
+  private readonly pendingConsentCapabilities = new ConsentCapabilityStore<vscode.Webview>();
   private readonly optimizerControllers = new Map<string, AbortController>();
   private readonly optimizerRequests = new PromptOptimizerRequestBoundary();
   constructor(
@@ -369,6 +368,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
   dispose(): void {
     this.editorDocumentPanel?.dispose();
     this.editorDocumentPanel = undefined;
+    this.pendingConsentCapabilities.clear();
     this.views.clear();
   }
   resolveWebviewView(view: vscode.WebviewView): void {
@@ -401,16 +401,16 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     }, undefined, this.context.subscriptions);
   }
   async reveal(viewId = DWI_NATIVE_VIEW_ID): Promise<void> {
-    const containerId = viewId === DWI_PROMPT_OPTIMIZER_VIEW_ID
-      ? DWI_PROMPT_OPTIMIZER_ACTIVITY_CONTAINER_ID
-      : DWI_ACTIVITY_CONTAINER_ID;
-    await vscode.commands.executeCommand(`workbench.view.extension.${containerId}`);
-    this.views.get(viewId)?.show(true);
+    await vscode.commands.executeCommand(`workbench.view.extension.${DWI_ACTIVITY_CONTAINER_ID}`);
+    const view = this.views.get(viewId);
+    if (!view) return;
+    await this.enqueueMutation(() => this.handle({ type: "dwi.session.open" }, view.webview));
+    view.show(true);
   }
   workspaceChanged(): void {
     this.rootEpoch += 1;
     this.selectedRootUri = undefined;
-    this.pendingConsentCapability = undefined;
+    this.pendingConsentCapabilities.clear();
     this.optimizerRequests.invalidate();
     this.recordActivity({
       level: "warning",
@@ -1435,7 +1435,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       try {
         const operation = await this.workspaceOperation();
         const { folder, epoch, identity, store } = operation;
-        if (!this.consumeConsentCapability(String(message.consentCapability ?? ""), operation)) {
+        if (!this.consumeConsentCapability(webview, String(message.consentCapability ?? ""), operation)) {
           await this.postWorkspaceMessage(webview, operation, { type: "dwi.consent.required", message: "This approval expired. Review the bounded inspection scope and approve it again." });
           return;
         }
@@ -1778,7 +1778,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
     message: unknown,
   ): Promise<void> {
     const safeMessage = message && typeof message === "object" && "type" in message && (message as { type?: unknown }).type === "dwi.consent.required"
-      ? { ...(message as Record<string, unknown>), consentCapability: this.issueConsentCapability(operation) }
+      ? { ...(message as Record<string, unknown>), consentCapability: this.issueConsentCapability(webview, operation) }
       : message;
     await runWhileWorkspaceCurrent(
       () => this.assertWorkspaceOperation(operation.folder, operation.epoch),
@@ -1790,7 +1790,7 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
   private async postProjectOnboarding(webview: vscode.Webview, operation: WorkspaceOperation): Promise<void> {
     await this.postWorkspaceMessage(webview, operation, {
       type: "dwi.project.snapshot",
-      consentCapability: this.issueConsentCapability(operation),
+      consentCapability: this.issueConsentCapability(webview, operation),
       snapshot: {
         status: "unsupported",
         projectName: operation.folder.name,
@@ -2201,14 +2201,11 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       .slice(0, 256));
     await this.context.globalState.update(DWI_CONSENT_RECEIPTS_KEY, bounded);
   }
-  private issueConsentCapability(operation: WorkspaceOperation): string {
-    this.pendingConsentCapability = issueConsentCapability({ workspaceFingerprint: operation.identity.localFingerprint, scopeDigest: workspaceInspectionScopeDigest(), epoch: operation.epoch });
-    return this.pendingConsentCapability.token;
+  private issueConsentCapability(webview: vscode.Webview, operation: WorkspaceOperation): string {
+    return this.pendingConsentCapabilities.issue(webview, { workspaceFingerprint: operation.identity.localFingerprint, scopeDigest: workspaceInspectionScopeDigest(), epoch: operation.epoch });
   }
-  private consumeConsentCapability(token: string, operation: WorkspaceOperation): boolean {
-    const capability = this.pendingConsentCapability;
-    this.pendingConsentCapability = undefined;
-    return consumeConsentCapability(capability, token, { workspaceFingerprint: operation.identity.localFingerprint, scopeDigest: workspaceInspectionScopeDigest(), epoch: operation.epoch });
+  private consumeConsentCapability(webview: vscode.Webview, token: string, operation: WorkspaceOperation): boolean {
+    return this.pendingConsentCapabilities.consume(webview, token, { workspaceFingerprint: operation.identity.localFingerprint, scopeDigest: workspaceInspectionScopeDigest(), epoch: operation.epoch });
   }
   private async identity(folder: vscode.WorkspaceFolder): Promise<WorkspaceIdentity> {
     const repository = activeGitRepository(folder);

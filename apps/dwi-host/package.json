@@ -47,11 +47,6 @@
           "id": "dwi-sidebar",
           "title": "Developer Workspace Intelligence",
           "icon": "media/dwi.svg"
-        },
-        {
-          "id": "dwi-prompt-optimizer-sidebar",
-          "title": "Prompt Optimizer",
-          "icon": "media/prompt-optimizer.svg"
         }
       ]
     },
@@ -61,9 +56,7 @@
           "type": "webview",
           "id": "dwi-view",
           "name": "Home"
-        }
-      ],
-      "dwi-prompt-optimizer-sidebar": [
+        },
         {
           "type": "webview",
           "id": "dwi-prompt-optimizer-view",
