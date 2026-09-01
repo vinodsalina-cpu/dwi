@@ -317,11 +317,13 @@ textarea { min-height: 60px; resize: vertical; line-height: 1.4; }
 .estimate-trigger span { color: var(--dwi-success); font-size: 11px; font-weight: 700; }
 .prompt-output { margin-top: 11px; overflow: hidden; border: 1px solid var(--dwi-soft-border); border-radius: 6px; background: var(--vscode-textCodeBlock-background, var(--dwi-muted-surface)); }
 .prompt-output pre { max-height: min(40vh, 310px); margin: 0; overflow: auto; padding: 10px; color: var(--dwi-text); font: 10px/1.5 var(--vscode-editor-font-family, ui-monospace, monospace); white-space: pre-wrap; }
-.review-card { display: flex; min-height: 0; max-height: calc(100vh - 112px); flex-direction: column; overflow: auto; }
-.review-card .prompt-output { min-height: 96px; flex: 1 1 auto; }
-.review-card .prompt-output pre { height: 100%; max-height: none; }
+.review-card { display: block; min-height: 0; max-height: none; overflow: visible; }
+.review-card .prompt-output { min-height: 96px; }
+.review-card .prompt-output pre { max-height: clamp(180px, 42vh, 360px); overflow: auto; }
 .review-heading-copy { min-width: 0; flex: 1 1 auto; }
-.review-heading-copy h1, .review-heading-copy p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.review-heading-copy h1, .review-heading-copy p { overflow: visible; text-overflow: clip; white-space: normal; }
+.review-context-actions { min-width: 0; flex-wrap: wrap; }
+.review-source { min-width: 0; max-width: 100%; overflow-wrap: anywhere; white-space: normal; }
 .projection-disclaimer { color: var(--dwi-warning); font-weight: 600; }
 .projection-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin: 7px 0; }
 .projection-totals > div, .projection-breakdown > div { min-width: 0; border: 1px solid var(--dwi-soft-border); border-radius: 5px; padding: 6px; background: var(--dwi-muted-surface); }
@@ -479,6 +481,7 @@ textarea { min-height: 60px; resize: vertical; line-height: 1.4; }
   .scope-list { margin-top: 9px; }
   .primary-stack { margin-top: 9px; }
   .prompt-output pre { max-height: 180px; }
+  .review-card .prompt-output pre { max-height: 180px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

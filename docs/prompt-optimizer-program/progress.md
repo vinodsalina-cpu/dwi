@@ -46,7 +46,9 @@
 ## Verification status
 
 - Focused tests: domain semantic/projection 69; host transport/activity 24; webview UI 6.
-- Fresh current suite evidence: 420 passed (104 + 31 + 66 + 16 + 172 + 31); the earlier catalog loopback environment failure is resolved.
+- Fresh current suite evidence: 421 passed (104 + 31 + 66 + 16 + 172 + 32); the earlier catalog loopback environment failure is resolved.
+- DWI-PO-0035 removes the nested Step 3 card scroller, bounds only the generated-prompt region, wraps review heading/source context, keeps status and actions before optional detail, and opens rejected semantic evidence so the stable failure code is immediately visible. Six typechecks, unchanged schema, build/package, same-process installed verification, and a 360×640 rendered layout pass.
+- The current cross-process restart verifier is blocked at its macOS native-consent automation seam: three disposable attempts exposed no Code window or sheet through System Events and therefore could not click `Allow bounded check`. Each extension host exited 0 and each temporary profile was cleaned. No product-flow failure or provider call occurred; prior restart/resume/reset evidence is unchanged.
 - All six package typechecks: passed.
 - Schema export: unchanged.
 - Build and VSIX: passed.
@@ -74,7 +76,7 @@
 - The 30-run fixed A/B/C comparison remains pending because the calibration stop condition fired first.
 - Any second attempt requires explicit authorization to supersede the no-retry contract and preserve the failed lock/evidence. Do not delete the lock, change the existing evidence, or silently raise thresholds.
 - Phase 4 semantic-plus-projection calibration and fixed-executor comparison remain blocked and cannot be silently retried or waived.
-- Any provider/fixed-executor transmission, cost, credentials, push, merge, tag, release, or promotion remains explicitly unauthorized. Broad local Phase 6 evidence collection was authorized.
+- Any provider/fixed-executor transmission, cost, credentials, merge, tag, release, or promotion remains explicitly unauthorized. DWI-PO-0035 authorizes only a clean non-force push of the Step 3 correction to the existing upstream of `feature/po-05-product-hardening`.
 - The single authorized desktop Rewrite click on 2026-09-01 was stopped by the current-project review gate before provider dispatch; it was not retried. The restart verifier separately exercises only the provider-free deterministic path and does not claim a provider call.
 
 ## Known deviations

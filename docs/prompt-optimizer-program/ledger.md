@@ -403,3 +403,16 @@ Append consequential decisions and evidence. Supersede entries explicitly; do no
 - Evidence: Focused host/webview suites and typechecks pass before the full exact-candidate gates. Final source commit, artifact hash, archive inspection, installed package checks, and adversarial review are recorded in the handoff.
 - Supersedes: DWI-PO-0033 only where its two-native-view arrangement described the final visible identity; its consent isolation and verifier-cleanup corrections remain valid.
 - Owner: Codex local session
+
+### DWI-PO-0035 — Compact Step 3 review and visible fallback class
+
+- Date: 2026-09-01
+- Type: installed UI and observability correction authorization
+- Status: accepted verified correction
+- Context: Installed Step 3 review showed nested scrolling, visually clipped generated-prompt context, and required actions below optional projection/provenance detail. The generic fallback message did not expose the stable failure class unless the semantic evidence disclosure was opened during the transient session; that trace is not durably persisted.
+- Decision or finding: Correct only the Step 3 layout and transient failure presentation: retain one surface scroller and one bounded generated-prompt scroller, wrap heading/source context, show status and rejected semantic evidence before the prompt, keep primary actions before optional detail, and open fallback evidence automatically. Preserve the deterministic candidate and all provider/call-budget behavior.
+- Authorization boundary: A clean verified correction may be committed and pushed only to the existing upstream of `feature/po-05-product-hardening`, without force. No provider retry, credential use, policy/threshold change, evidence mutation, hygiene branch, user-owned artifact staging, merge, tag, release, or promotion is authorized.
+- Consequence: Future fallback sessions expose whether the stable class was transport/provider, validation, truncation, stale-result, authentication, rate-limit, or cancellation. The already-observed exact cause remains unrecoverable from persistent state because the prior transient trace was not stored or logged.
+- Evidence: 32 focused webview tests; 421 repository tests; six package typechecks; unchanged schema; build and 387-file VSIX packaging; same-process installed functional flow; 360×640 rendered layout with no horizontal overflow, visible actions, wrapped context, review-card overflow visible, and generated-prompt overflow auto. Three cross-process verifier attempts were blocked before product-flow assertions because macOS System Events exposed no disposable Code window/sheet for the native consent click; extension hosts exited 0, profiles were cleaned, and no provider call occurred. Independent adversarial review reported no actionable findings.
+- Supersedes: None.
+- Owner: Codex local session

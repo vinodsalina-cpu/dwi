@@ -129,8 +129,19 @@ describe("Prompt Optimizer Home, Initializer, and Prompt Optimizer", () => {
     expect(screen.getByText("The provider connection was interrupted.")).toBeTruthy();
     const fallbackTrace = { schemaVersion: "dwi.optimization-trace.v1", session: { sessionId: String(semantic.requestId), documentId: "current-prompt", revision: 2, baseHash: "a".repeat(64) }, calls: [{ ordinal: 1, purpose: "restructure", provider: "gemini", model: "gemini-2.5-flash", baseHash: "a".repeat(64), result: "rejected", failureCode: "INVALID_RESPONSE" }], outcome: "fallback" };
     await act(async () => { hostMessage({ type: "prompt.v2.semantic.fallback", requestId: semantic.requestId, localCandidate, sourcePlan, trace: fallbackTrace, failureCode: "INVALID_RESPONSE", message: "The provider result was rejected. The unchanged local candidate remains available." }); });
-    expect(screen.getByText("The provider result was rejected. The unchanged local candidate remains available.")).toBeTruthy();
-    expect(screen.getByText(/Local fallback retained/)).toBeTruthy();
+    const fallbackAlert = screen.getByText("The provider result was rejected. The unchanged local candidate remains available.");
+    const fallbackSummary = screen.getByText(/Local fallback retained/);
+    const fallbackDetails = fallbackSummary.closest("details") as HTMLDetailsElement;
+    const generatedPrompt = screen.getByRole("region", { name: "Generated prompt" });
+    const promptActions = screen.getByRole("button", { name: "Copy prompt" }).closest(".prompt-actions") as HTMLElement;
+    const rewriteActions = screen.getByRole("button", { name: "Rewrite with LLM" }).closest(".regenerate-actions") as HTMLElement;
+    const provenance = screen.getByText(/Source provenance/).closest("details") as HTMLDetailsElement;
+    expect(fallbackDetails.open).toBe(true);
+    expect(fallbackDetails.textContent).toContain("INVALID_RESPONSE");
+    expect(fallbackAlert.compareDocumentPosition(generatedPrompt) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(fallbackDetails.compareDocumentPosition(generatedPrompt) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(promptActions.compareDocumentPosition(provenance) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(rewriteActions.compareDocumentPosition(provenance) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     const optimized = { ...localCandidate, text: "Optimized implementation prompt" };
     const projection = { estimationId: "estimate-1", estimationStatus: "estimate_only", baselineProjection: { totalTokens: 1_000, breakdown: { planning: 100, contextIngestion: 200, promptInput: 100, toolProviderCalls: 300, retries: 100, finalOutput: 200 } }, optimizedProjection: { totalTokens: 800, breakdown: { planning: 100, contextIngestion: 100, promptInput: 100, toolProviderCalls: 300, retries: 50, finalOutput: 150 } }, projectedDelta: { absoluteTokens: 200, percentageChange: 20 }, cost: { status: "cost_unavailable" }, assumptions: ["One retry is expected."], metadataUsed: ["moduleCount", "criticality"], uncertainty: { baselineMin: 800, baselineMax: 1_200, optimizedMin: 650, optimizedMax: 1_000 }, confidence: "medium", routing: { requestedProvider: "gemini", requestedModel: "gemini-2.5-flash", actualProvider: "gemini", actualModel: "gemini-2.5-flash" }, optimizationRationale: "Reduces repeated context.", telemetry: { scope: "optimizer_call", inputTokens: 120, outputTokens: 80, totalTokens: 200 } } as const;

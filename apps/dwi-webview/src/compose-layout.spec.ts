@@ -32,4 +32,14 @@ describe("Compose compact layout", () => {
     expect(css).not.toMatch(/(?:font-size|font):\s*[89]px\b/);
     expect(css).not.toContain("color-scheme:dark");
   });
+
+  it("keeps Step 3 compact without a nested card scroller or clipped context", async () => {
+    const css = await readFile("src/redesign.css", "utf8");
+
+    expect(css).toMatch(/\.review-card\s*\{[^}]*max-height: none[^}]*overflow: visible/);
+    expect(css).toMatch(/\.review-card \.prompt-output pre\s*\{[^}]*max-height: clamp\(180px, 42vh, 360px\)[^}]*overflow: auto/);
+    expect(css).toMatch(/\.review-heading-copy h1, \.review-heading-copy p\s*\{[^}]*white-space: normal/);
+    expect(css).toMatch(/\.review-source\s*\{[^}]*overflow-wrap: anywhere/);
+    expect(css).toMatch(/@media \(max-height: 540px\)[\s\S]*\.review-card \.prompt-output pre\s*\{[^}]*max-height: 180px/);
+  });
 });

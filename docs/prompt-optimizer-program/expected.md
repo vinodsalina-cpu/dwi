@@ -12,6 +12,8 @@ Amendment 2026-09-01 (DWI-PO-0033): the one-icon Activity Bar correction resolve
 
 Amendment 2026-09-01 (DWI-PO-0034): the final product-identity correction makes Prompt Optimizer the sole contributed Activity Bar container, native view, display name, and visible open command. Home and Project Meta Context remain internal destinations in that webview, and the hidden legacy `dwi.open` command routes to internal Home for compatibility. Step 1 places Assignment/type and Criticality before the prompt editor. Packaging derives its filename from the staged manifest, cleans temporary staging in `finally`, and emits source-commit/hash evidence. Scope, provider budgets, and phase gates are unchanged.
 
+Amendment 2026-09-01 (DWI-PO-0035): installed Step 3 review exposed nested whole-card scrolling, clipped heading/source context, actions below optional detail, and a collapsed fallback trace behind a generic rejection message. The authorized correction keeps one surface scroller plus a bounded prompt scroller, wraps review context, places required status/fallback evidence before the prompt, places primary actions before optional detail, and automatically opens rejected semantic evidence so its stable failure class is visible. No provider retry, provider-policy change, phase transition, merge, tag, release, or promotion is authorized. If the exact functional branch verifies cleanly, commit and push it to its existing upstream without force.
+
 ## Identity
 
 - Phase: 5 — product hardening and minimum durable state

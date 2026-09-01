@@ -7,9 +7,9 @@
 - Phase 3 predecessor: `2e24151fff2a6b8836e79a96dc83205aa6870809`
 - Phase 4 exact local review SHA: `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`
 - Independent Phase 6 review baseline: `c8d1723` (`Record local Phase 6 qualification`); later local commits contain evidence corrections and the final one-icon/runtime hardening.
-- Current committed checkpoint before final identity correction: `aa2a1ba` (`Consolidate DWI activity bar and isolate consent`); final local commit and artifact identifiers are reported in the handoff. All commits are local and the preserved Phase 4 review SHA remains the rollback boundary.
+- Current pushed functional checkpoint: `2bafbb649a4ecec6b82e56b0fc1339f194d43a03` on `origin/feature/po-05-product-hardening`; the preserved Phase 4 review SHA remains the rollback boundary.
 - Active phase: Phase 5 — POC complete; Phase 6 local POC qualification complete
-- Working mode: local and reversible from exact Phase 4 SHA `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`. Phase 4 remains blocked and unqualified. No provider/fixed-executor retry, credential use, remote action, merge, tag, or promotion is authorized.
+- Working mode: reversible from exact Phase 4 SHA `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`. Phase 4 remains blocked and unqualified. A clean Step 3 correction may be committed and pushed only to the existing functional-branch upstream. No provider/fixed-executor retry, credential use, other remote mutation, merge, tag, or promotion is authorized.
 
 ## Current product path
 
@@ -24,7 +24,9 @@ Prompt Optimizer is the sole visible product identity, Activity Bar container, n
 ## Current local evidence
 
 - Focused evidence: 69 domain semantic/projection tests, 24 host transport/activity tests, and 6 webview UI tests passed.
-- Fresh full repository suite: 420 passed (104 prompt optimizer + 31 workspace + 66 core + 16 catalog + 172 host + 31 webview); the prior loopback environment failure is resolved.
+- Fresh full repository suite: 421 passed (104 prompt optimizer + 31 workspace + 66 core + 16 catalog + 172 host + 32 webview); the prior loopback environment failure is resolved.
+- Step 3 correction evidence: all six typechecks, unchanged schema, build/VSIX packaging, same-process installed functional flow, and a 360×640 rendered review with no horizontal overflow. The review card uses the surface scroller, the generated prompt remains a bounded inner scroller, required status/actions precede optional details, and rejected semantic evidence opens with its stable failure code.
+- The cross-process restart verifier is currently blocked before product-flow assertions because macOS System Events exposes no windows or sheets for the disposable VS Code process, so it cannot click the native `Allow bounded check` confirmation. Three attempts exited the extension host cleanly and removed their temporary profiles. This is a harness/accessibility limitation, not a Step 3 failure; the previously qualified restart/resume/reset evidence remains unchanged.
 - All six package typechecks: passed.
 - Schema export: unchanged.
 - Build, VSIX package, and `git diff --check`: passed.
