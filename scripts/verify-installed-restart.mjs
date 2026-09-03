@@ -1,13 +1,21 @@
 import { downloadAndUnzipVSCode } from '@vscode/test-electron';
 import { mkdtemp, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const vsix = join(root, 'apps/dwi-host/developer-work-intelligence-0.1.0.vsix');
+const version = process.env.DWI_VSCODE_VERSION ?? '1.134.0';
+if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`Invalid DWI_VSCODE_VERSION: ${version}`);
+const nativeConsent = process.argv.includes('--native-consent');
+if (nativeConsent && process.platform !== 'darwin') {
+  throw new Error('Native production-consent verification is blocked: this lane requires macOS and System Events.');
+}
 // Keep the portable profile path short enough for VS Code's Unix IPC socket.
-const sandbox = await mkdtemp(join('/tmp', 'dwi-vscode-restart-'));
+const sandbox = await mkdtemp(join(tmpdir(), 'dwi-vscode-restart-'));
 let liveChild;
 try {
 const extensionsDir = join(sandbox, 'extensions');
@@ -30,7 +38,7 @@ await writeFile(join(workspaceDir, 'tsconfig.json'), JSON.stringify({
 }, null, 2));
 await writeFile(join(workspaceDir, 'src/index.ts'), 'export const answer = 42;\n');
 await writeFile(join(workspaceDir, 'README.md'), '# DWI restart smoke workspace\n');
-const downloadedExecutablePath = await downloadAndUnzipVSCode('1.134.0');
+const downloadedExecutablePath = process.env.DWI_VSCODE_EXECUTABLE_PATH ?? await downloadAndUnzipVSCode(version);
 const vscodeExecutablePath = process.platform === 'darwin'
   ? join(dirname(downloadedExecutablePath), 'Code')
   : downloadedExecutablePath;
@@ -54,6 +62,17 @@ const installed = (await readdir(extensionsDir)).find((name) => name.startsWith(
 if (!installed) throw new Error('Installed DWI extension directory was not found.');
 
 function sleep(ms) { return new Promise((resolveSleep) => setTimeout(resolveSleep, ms)); }
+
+async function freePort() {
+  return new Promise((resolvePort, rejectPort) => {
+    const server = createServer();
+    server.once('error', rejectPort);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      server.close(() => resolvePort(address.port));
+    });
+  });
+}
 
 async function listTargets(port) {
   const response = await fetch(`http://127.0.0.1:${port}/json/list`);
@@ -250,6 +269,10 @@ function clickNativeButton(label) {
   }
 }
 
+function confirmProductAction(label) {
+  if (nativeConsent) clickNativeButton(label);
+}
+
 async function stopCode(child) {
   if (child.exitCode !== null || child.signalCode !== null) {
     if (liveChild === child) liveChild = undefined;
@@ -270,14 +293,18 @@ async function stopCode(child) {
   }
   if (child.exitCode === null && child.signalCode === null) await new Promise((resolveExit) => child.once('exit', resolveExit));
   if (liveChild === child) liveChild = undefined;
+  throw new Error('VS Code did not exit within 15 seconds of SIGTERM and required SIGKILL.');
 }
 
 async function launchCode(port) {
   const environment = { ...process.env, VSCODE_PORTABLE: portableDir };
-  delete environment.DWI_PACKAGED_SMOKE;
+  if (nativeConsent) delete environment.DWI_PACKAGED_SMOKE;
+  else environment.DWI_PACKAGED_SMOKE = '1';
   delete environment.DWI_SMOKE_PHASE;
+  const developmentArgs = nativeConsent ? [] : [`--extensionDevelopmentPath=${join(extensionsDir, installed)}`];
   const child = spawn(vscodeExecutablePath, [
     workspaceDir,
+    ...developmentArgs,
     '--no-sandbox',
     '--disable-gpu-sandbox',
     '--disable-updates',
@@ -298,71 +325,78 @@ async function launchCode(port) {
 }
 
   console.log('DWI_SMOKE_RESTART_INSTALL_OK');
-  let port = 9461;
+  let port = await freePort();
   let optimizer;
-  let session = await launchCode(port++);
+  let session = await launchCode(port);
   try {
   await runMainCommand(session.target, 'Open Prompt Optimizer');
-  await waitForWebview(port - 1, 'optimizer', 'Initialize this project first');
-  await clickWebviewButton(port - 1, 'optimizer', 'Open Project Initializer');
-  await waitForWebview(port - 1, 'home', 'Check this project');
-  await clickWebviewButton(port - 1, 'home', 'Check this project');
-  clickNativeButton('Allow bounded check');
-  await waitForWebview(port - 1, 'home', 'Review and approve');
-  await clickWebviewButton(port - 1, 'home', 'Review and approve');
-  clickNativeButton('Approve project details');
-  await waitForWebview(port - 1, 'home', 'Confirm project brief');
-  await clickWebviewButton(port - 1, 'home', 'Confirm project brief');
-  await waitForWebview(port - 1, 'optimizer', 'Shape the task');
+  await waitForWebview(port, 'optimizer', 'Initialize this project first');
+  await clickWebviewButton(port, 'optimizer', 'Open Project Initializer');
+  await waitForWebview(port, 'home', 'Check this project');
+  await clickWebviewButton(port, 'home', 'Check this project');
+  confirmProductAction('Allow bounded check');
+  await waitForWebview(port, 'home', 'Review and approve');
+  await clickWebviewButton(port, 'home', 'Review and approve');
+  confirmProductAction('Approve project details');
+  await waitForWebview(port, 'home', 'Confirm project brief');
+  await clickWebviewButton(port, 'home', 'Confirm project brief');
+  await waitForWebview(port, 'optimizer', 'Shape the task');
   console.log('DWI_SMOKE_RESTART_PROJECT_READY');
   await runMainCommand(session.target, 'Open Prompt Optimizer');
-  await waitForWebview(port - 1, 'optimizer', 'Shape the task');
-  await setWebviewTextarea(port - 1, 'optimizer', 'Task to optimize', 'installed restart persistence task');
-  await clickWebviewButton(port - 1, 'optimizer', 'Continue to resolve');
-  optimizer = await waitForWebview(port - 1, 'optimizer', 'Confirm the local interpretation');
+  await waitForWebview(port, 'optimizer', 'Shape the task');
+  await setWebviewTextarea(port, 'optimizer', 'Task to optimize', 'installed restart persistence task');
+  await clickWebviewButton(port, 'optimizer', 'Continue to resolve');
+  optimizer = await waitForWebview(port, 'optimizer', 'Confirm the local interpretation');
   if (!/Local deterministic[\s\S]*Provider[\s\S]*Not required/.test(optimizer.state.text)) throw new Error('Installed restart seed did not produce a provider-free local candidate.');
-  await clickWebviewButton(port - 1, 'optimizer', 'Continue to review');
-  await waitForWebview(port - 1, 'optimizer', 'Review the local preview');
-  await clickWebviewButton(port - 1, 'optimizer', 'Save to recents');
-  await waitForWebview(port - 1, 'optimizer', 'Saved to recent prompts.');
+  await clickWebviewButton(port, 'optimizer', 'Continue to review');
+  await waitForWebview(port, 'optimizer', 'Review the local preview');
+  await clickWebviewButton(port, 'optimizer', 'Save to recents');
+  await waitForWebview(port, 'optimizer', 'Saved to recent prompts.');
   console.log('DWI_SMOKE_RESTART_SEED_OK');
   } finally {
     await stopCode(session.child);
   }
 
-  session = await launchCode(port++);
+  port = await freePort();
+  session = await launchCode(port);
   try {
   await runMainCommand(session.target, 'Open Prompt Optimizer');
-  await waitForWebview(port - 1, 'optimizer', 'installed restart persistence task');
-  await clickWebviewButton(port - 1, 'optimizer', 'Project Meta Context');
-  await waitForWebview(port - 1, 'optimizer', 'Project metadata is ready');
+  await waitForWebview(port, 'optimizer', 'installed restart persistence task');
+  await clickWebviewButton(port, 'optimizer', 'Project Meta Context');
+  await waitForWebview(port, 'optimizer', 'Project metadata is ready');
   console.log('DWI_SMOKE_RESTART_CONTEXT_RESTORED');
-  await clickWebviewButton(port - 1, 'optimizer', 'Prompt Optimizer');
-  optimizer = await waitForWebview(port - 1, 'optimizer', 'installed restart persistence task');
+  await clickWebviewButton(port, 'optimizer', 'Prompt Optimizer');
+  optimizer = await waitForWebview(port, 'optimizer', 'installed restart persistence task');
   if (!/Review the local preview/.test(optimizer.state.text)) throw new Error('Installed optimizer did not resume its saved review after restart.');
   console.log('DWI_SMOKE_RESTART_SESSION_RESTORED');
-  await clickWebviewButton(port - 1, 'optimizer', 'Prompt Optimizer settings');
-  await waitForWebview(port - 1, 'optimizer', 'Reset Prompt Optimizer');
-  await clickWebviewButton(port - 1, 'optimizer', 'Reset Prompt Optimizer');
-  await waitForWebview(port - 1, 'optimizer', 'Reset prompt progress');
-  await clickWebviewButton(port - 1, 'optimizer', 'Reset prompt progress');
-  optimizer = await waitForWebview(port - 1, 'optimizer', 'Shape the task');
+  await clickWebviewButton(port, 'optimizer', 'Prompt Optimizer settings');
+  await waitForWebview(port, 'optimizer', 'Reset Prompt Optimizer');
+  await clickWebviewButton(port, 'optimizer', 'Reset Prompt Optimizer');
+  await waitForWebview(port, 'optimizer', 'Reset prompt progress');
+  await clickWebviewButton(port, 'optimizer', 'Reset prompt progress');
+  optimizer = await waitForWebview(port, 'optimizer', 'Shape the task');
   if (optimizer.state.text.includes('installed restart persistence task')) throw new Error('Installed optimizer reset retained the draft.');
   console.log('DWI_SMOKE_RESTART_RESET_OK');
   } finally {
     await stopCode(session.child);
   }
 
-  session = await launchCode(port++);
+  port = await freePort();
+  session = await launchCode(port);
   try {
   await runMainCommand(session.target, 'Open Prompt Optimizer');
-  optimizer = await waitForWebview(port - 1, 'optimizer', 'Shape the task');
+  optimizer = await waitForWebview(port, 'optimizer', 'Shape the task');
   if (/installed restart persistence task|Review the local preview|Confirm the local interpretation/.test(optimizer.state.text)) throw new Error('Optimizer reset did not persist after the second restart.');
+  await clickWebviewButton(port, 'optimizer', 'Project Meta Context');
+  await waitForWebview(port, 'optimizer', 'Project metadata is ready');
+  console.log('DWI_SMOKE_RESTART_CONTEXT_RETAINED');
   console.log('DWI_SMOKE_RESTART_RESET_PERSISTED');
   } finally {
     await stopCode(session.child);
   }
   console.log('DWI_SMOKE_RESTART_EXTENSION_OK');
+  console.log(`DWI_SMOKE_RESTART_VSCODE_VERSION=${version}`);
+  console.log(nativeConsent ? 'DWI_SMOKE_NATIVE_PRODUCTION_CONSENT_OK' : 'DWI_SMOKE_TEST_CONFIRMATION_ADAPTER_OK');
 } finally {
   if (liveChild) await stopCode(liveChild);
   if (process.env.DWI_KEEP_RESTART_SANDBOX === '1') {

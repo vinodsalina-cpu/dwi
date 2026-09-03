@@ -20,7 +20,7 @@ const compareCodeUnits = (left, right) => left < right ? -1 : left > right ? 1 :
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
-const DEFAULT_FIXTURES_ROOT = resolve(repositoryRoot, "..", "dwi-language-fixtures");
+const DEFAULT_FIXTURES_ROOT = resolve(repositoryRoot, "tests", "fixtures", "languages");
 const collectorModulePath = join(
   repositoryRoot,
   "packages/domain/workspace/dist/index.js",

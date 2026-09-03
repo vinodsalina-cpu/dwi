@@ -10,7 +10,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -22,10 +22,16 @@ jobs:
           corepack prepare pnpm@11.17.0 --activate
           test "$(node --version)" = "v24.18.0"
           test "$(pnpm --version)" = "11.17.0"
+          pnpm --workspace-root exec node -e 'if (process.version !== "v24.18.0") process.exit(1)'
+          pnpm -r --workspace-concurrency=1 exec sh -euc 'test "$(node --version)" = "v24.18.0"; test "$(pnpm --version)" = "11.17.0"'
       - name: Frozen install
         run: pnpm install --frozen-lockfile
       - name: Tests
         run: pnpm test
+      - name: Six package typechecks
+        run: pnpm -r --workspace-concurrency=1 --if-present typecheck
+      - name: Repository-owned language fixtures
+        run: pnpm verify:fixtures
       - name: Canonical schema drift
         run: |
           pnpm schema:export
@@ -48,7 +54,17 @@ jobs:
           grep -q 'extension/dist/node_modules/@platform/domain-workspace/dist/index.js' /tmp/vsix.txt
           ! grep -Eq 'node_modules/.*/src/|\.spec\.|coverage/|\.cache/|\.env|\.d\.ts|tsconfig\.tsbuildinfo' /tmp/vsix.txt
       - name: Install activate and open packaged extension
-        run: timeout --signal=KILL 240s xvfb-run -a pnpm verify:extension
+        env:
+          DWI_VSCODE_VERSION: 1.134.0
+        run: timeout --signal=KILL 360s xvfb-run -a pnpm verify:extension
+      - name: Three-process packaged persistence and routing
+        env:
+          DWI_VSCODE_VERSION: 1.134.0
+        run: timeout --signal=KILL 360s xvfb-run -a pnpm verify:extension:restart
+      - name: Advertised minimum VS Code compatibility
+        env:
+          DWI_VSCODE_VERSION: 1.125.0
+        run: timeout --signal=KILL 360s xvfb-run -a pnpm verify:extension
       - name: Repository independence and public hygiene
         shell: bash
         run: |
@@ -56,7 +72,7 @@ jobs:
           mapfile -t CHECK_FILES < <(find apps packages scripts tests \
             \( -type d \( -name node_modules -o -name dist -o -name coverage -o -name .vscode-test \) -prune \) -o \
             \( -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' -o -name '*.cjs' -o -name 'package.json' -o -name '*.json' -o -name '*.yaml' -o -name '*.yml' \) ! -name '*.spec.ts' ! -name '*.spec.tsx' -print \) | sort)
-          CHECK_FILES+=(package.json pnpm-workspace.yaml tsconfig.base.json tsconfig.plugin.json)
+          CHECK_FILES+=(package.json pnpm-workspace.yaml tsconfig.base.json tsconfig.plugin.json README.md AGENTS.md docs/prompt-optimizer-program/context.md docs/prompt-optimizer-program/expected.md docs/prompt-optimizer-program/progress.md docs/prompt-optimizer-program/recovery-evidence.md docs/prompt-optimizer-program/recovery-runbook.md)
           ! grep -InE '(\.\./dwl|file:\.\./|link:\.\./|/Users/|/home/[A-Za-z0-9._-]+/|vinods-MacBook)' "${CHECK_FILES[@]}"
           ! grep -InE '(^|[^A-Za-z])dwl([^A-Za-z]|$)' "${CHECK_FILES[@]}"
           ! find . -type f \( -name '.env' -o -name '.env.local' -o -name '*.pem' -o -name '*.key' \) -print -quit | grep -q .
@@ -67,9 +83,9 @@ jobs:
           path: apps/dwi-host/developer-work-intelligence-0.1.0.vsix
 
   readme-replay:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -81,6 +97,10 @@ jobs:
           rm -rf dwi
           git clone https://github.com/vinodsalina-cpu/dwi.git
           cd dwi
+          git fetch origin "$GITHUB_SHA"
+          git checkout --detach "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
           corepack enable
           corepack prepare pnpm@11.17.0 --activate
           node --version
@@ -88,13 +108,17 @@ jobs:
           test "$(node --version)" = "v24.18.0"
           test "$(pnpm --version)" = "11.17.0"
           pnpm install --frozen-lockfile
+          pnpm --workspace-root exec node -e 'if (process.version !== "v24.18.0") process.exit(1)'
+          pnpm -r --workspace-concurrency=1 exec sh -euc 'test "$(node --version)" = "v24.18.0"; test "$(pnpm --version)" = "11.17.0"'
           pnpm build
           pnpm test
+          pnpm -r --workspace-concurrency=1 --if-present typecheck
+          pnpm verify:fixtures
+          pnpm schema:export
+          git diff --exit-code -- docs/project-snapshot.schema.json
           pnpm vsix
           test -f apps/dwi-host/developer-work-intelligence-0.1.0.vsix
           Xvfb :99 -screen 0 1280x1024x24 >/tmp/dwi-xvfb.log 2>&1 &
           export DISPLAY=:99
-          pnpm verify:extension
-          export PATH="$PWD/.vscode-test/vscode-linux-x64-1.134.0/bin:$PATH"
-          code --install-extension apps/dwi-host/developer-work-intelligence-0.1.0.vsix --force
+          DWI_VSCODE_VERSION=1.134.0 pnpm verify:extension
           stat -c 'README_REPLAY_VSIX_BYTES=%s' apps/dwi-host/developer-work-intelligence-0.1.0.vsix

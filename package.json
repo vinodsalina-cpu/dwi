@@ -12,6 +12,7 @@
     "vsix": "pnpm build && node apps/dwi-host/scripts/package-vsix.mjs",
     "verify:extension": "node scripts/verify-installed-extension.mjs",
     "verify:extension:restart": "node scripts/verify-installed-restart.mjs",
+    "verify:extension:native-consent": "node scripts/verify-installed-restart.mjs --native-consent",
     "verify:fixtures": "node scripts/verify-language-fixtures.mjs",
     "schema:export": "pnpm --filter @platform/dwi-core build && node scripts/export-project-schema.mjs"
   },

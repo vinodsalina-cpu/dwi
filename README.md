@@ -53,10 +53,12 @@ This builds the Prompt Optimizer domain, workspace intelligence domain, Prompt O
 ## Run the tests
 
 ```sh
+pnpm -r --workspace-concurrency=1 --if-present typecheck
 pnpm test
+pnpm verify:fixtures
 ```
 
-The current suite covers Prompt Optimizer behavior and boundaries, workspace intelligence, Prompt Optimizer core, extension-host helpers, and the webview.
+The current suite covers Prompt Optimizer behavior and boundaries, workspace intelligence, Prompt Optimizer core, extension-host helpers, the webview, all six package typechecks, and repository-owned Go/Python/Rust fixture replay.
 
 ## Build the VSIX
 
@@ -82,7 +84,15 @@ After `pnpm vsix`, run:
 pnpm verify:extension
 ```
 
-This downloads the pinned verification build of VS Code, installs the generated VSIX into an isolated extensions directory, launches the installed extension, verifies activation, exercises its single Prompt Optimizer native view plus internal initialization journey, and exits non-zero if the smoke test fails.
+This downloads VS Code 1.134.0 by default, verifies absence/install/uninstall/reinstall in an isolated profile, and exercises the exact installed package through no-workspace, initialization, local and loopback-semantic, clipboard, fallback, compact/focus, reset, and Project Meta Context retention paths. The package directory is loaded as an extension-development path so the explicit non-production confirmation adapter can drive consent; this is packaged-functional evidence, not native production-modal proof.
+
+Run the OS-neutral three-process persistence lane separately:
+
+```sh
+pnpm verify:extension:restart
+```
+
+It reuses one disposable profile across three ordinary VS Code processes, requires SIGTERM shutdown without a SIGKILL fallback, restores project knowledge and the saved optimizer review, persists optimizer-only reset, and proves approved project knowledge remains. On macOS, `pnpm verify:extension:native-consent` instead exercises the installed extension in Production mode through System Events; no test confirmation adapter is enabled in that lane. Set `DWI_VSCODE_VERSION=1.125.0` to test the advertised minimum separately.
 
 ## Install in VS Code
 
@@ -142,7 +152,10 @@ packages/domain/prompt-optimizer/  Prompt Optimizer domain and guidance logic
 packages/domain/workspace/         Workspace/project intelligence domain
 mockups/dwi-workflow-redesign/     Self-contained interactive UI mock and QA report
 scripts/verify-installed-extension.mjs
-                                   Packaged VSIX install/activation smoke verifier
+                                   Exact-package installed journey verifier
+scripts/verify-installed-restart.mjs
+                                   Portable restart/native-consent verifier
+tests/fixtures/languages/           Repository-owned bounded fixture manifests
 tests/extension-host/              Installed-extension smoke test entrypoint
 .github/workflows/verify.yml        Clean build/package/runtime verification
 ```
