@@ -19,6 +19,13 @@ function command(executable, args) {
   if (result.status !== 0) throw new Error(`${executable} failed with status ${result.status}, signal ${result.signal}`);
 }
 
+function listedExtensions(executable, args) {
+  const result = spawnSync(executable, args, { encoding: 'utf8', timeout: 120000, killSignal: 'SIGKILL' });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(`${executable} failed with status ${result.status}, signal ${result.signal}: ${result.stderr}`);
+  return result.stdout.split(/\r?\n/).map((value) => value.trim().toLowerCase()).filter(Boolean);
+}
+
 async function freePort() {
   return new Promise((resolvePort, rejectPort) => {
     const server = createServer();
@@ -76,16 +83,15 @@ try {
   const ciElectronArgs = process.platform === 'linux' && process.env.CI === 'true' ? ['--no-sandbox'] : [];
   const installArgs = ['--extensions-dir', extensionsDir, '--user-data-dir', userDataDir];
 
-  command(vscodeCliPath, [...ciElectronArgs, '--list-extensions', ...installArgs]);
-  if ((await readdir(extensionsDir)).some((name) => name.startsWith('dwi-poc.developer-work-intelligence-'))) {
+  if (listedExtensions(vscodeCliPath, [...ciElectronArgs, '--list-extensions', ...installArgs]).includes('dwi-poc.developer-work-intelligence')) {
     throw new Error('DWI unexpectedly existed in the disposable extensions directory.');
   }
   console.log('DWI_SMOKE_ABSENCE_OK');
   command(vscodeCliPath, [...ciElectronArgs, '--install-extension', vsix, '--force', ...installArgs]);
   console.log('DWI_SMOKE_INSTALL_OK');
   command(vscodeCliPath, [...ciElectronArgs, '--uninstall-extension', 'dwi-poc.developer-work-intelligence', ...installArgs]);
-  if ((await readdir(extensionsDir)).some((name) => name.startsWith('dwi-poc.developer-work-intelligence-'))) {
-    throw new Error('DWI remained in the disposable extensions directory after uninstall.');
+  if (listedExtensions(vscodeCliPath, [...ciElectronArgs, '--list-extensions', ...installArgs]).includes('dwi-poc.developer-work-intelligence')) {
+    throw new Error('DWI remained registered in the disposable profile after uninstall.');
   }
   console.log('DWI_SMOKE_UNINSTALL_OK');
   command(vscodeCliPath, [...ciElectronArgs, '--install-extension', vsix, '--force', ...installArgs]);
