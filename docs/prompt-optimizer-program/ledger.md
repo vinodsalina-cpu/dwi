@@ -429,3 +429,15 @@ Append consequential decisions and evidence. Supersede entries explicitly; do no
 - Evidence: fetched Git refs and clean branch base on 2026-09-03; root `AGENTS.md`; current source/state-store paths; supplied recovery pack; DWI-scoped personal-history retrieval; active `expected.md` and `recovery-evidence.md`.
 - Supersedes: DWI-PO-0035 only as the current execution contract; its product correction and evidence remain historical. It corrects the ledger's missing DWI-PO-0033 reference without fabricating that entry.
 - Owner: Recovery Lead
+
+### DWI-PO-0037 — Portable installed qualification and repository-owned fixtures
+
+- Date: 2026-09-03
+- Type: smallest corrective verification development
+- Status: accepted; exact installed CI pending
+- Context: Phase 0 inventory found that the packaged verifier omitted no-workspace, uninstall/reinstall, loopback semantic, exact clipboard, compact keyboard, minimum-editor, and cross-platform restart assertions. The restart verifier was macOS-only, fixed to VS Code 1.134.0, and silently accepted SIGKILL. Language verification depended by default on an absent sibling checkout and could pass without the canonical snapshot adapter.
+- Decision or finding: Keep product source and production confirmation behavior unchanged. Expand the exact-package test harness with an out-of-process loopback server, byte-identical deterministic fallback assertion, dynamic ports, disposable cleanup, and explicit current/minimum editor rows. Split restart evidence into an OS-neutral exact-installed-code lane using the existing non-production confirmation adapter and a named macOS Production/native-consent lane with the adapter removed. Commit three bounded first-party language manifests and require canonical adapter validation.
+- Evidence boundary: The portable lanes are packaged-functional and persistence/routing evidence, not native Production-modal proof. The loopback uses only `127.0.0.1` with a synthetic secret and does not qualify real-provider compatibility or Phase 4. Native macOS consent and frozen Phase 4 remain blocked.
+- Evidence: First clean replay at `0947d4ede41b8fc0dd548b4e2a0800b650b120f0` passed the pinned parent/child toolchain, frozen install, 421 tests, six typechecks, schema drift, build, archive inspection, and hygiene. It exposed the fixture false-positive; `18837b3d623d50f3f23720d7341bb942e7c96367` corrected it and passed 53 canonical fixture checks. Local installed entry remained environmentally blocked before product assertions.
+- Supersedes: None.
+- Owner: Recovery Lead
