@@ -1,128 +1,69 @@
-# Active phase contract
+# Active exact-tree recovery contract
 
-Status: frozen 2026-08-31 under DWI-PO-0024. Amend only within authorized local scope with a dated reason, consequence, and ledger entry. Provider transmission, cost, credentials, remote action, promotion, or safety/privacy waivers require explicit action-specific authorization.
-
-Amendment 2026-09-01 (DWI-PO-0028): independent review found that optimizer-only reset could promote an unreviewed brief into Compose and that the 256 KiB limit counted JavaScript string code units rather than serialized UTF-8 bytes. The authorized correction narrows enforcement to the existing approved/current/confirmed brief predicate and measures the persisted JSON representation in UTF-8 bytes. Scope and phase gates are unchanged.
-
-Amendment 2026-09-01 (DWI-PO-0029): installed use exposed automatic workspace lifecycle messages that could replace the active Prompt Optimizer surface with Home. The authorized correction keeps explicit user navigation unchanged while making rewrite dispatch/pending and brief/root lifecycle updates preserve an already-active optimizer. Scope, provider budgets, and phase gates are unchanged.
-
-Amendment 2026-09-01 (DWI-PO-0032): the installed runtime restart gate is now exercised by a direct VS Code 1.134.0 process in an isolated portable profile. The verifier drives the production native consent sheets by exact button label, then terminates and relaunches the same installed profile twice to prove session resume, optimizer-only reset, and Project Meta Context preservation. The evidence is local-only; Phase 4 semantic/fixed-executor gates and all remote/provider boundaries are unchanged.
-
-Amendment 2026-09-01 (DWI-PO-0033): the one-icon Activity Bar correction resolves both native views under `dwi-sidebar`. Because both webviews can initialize concurrently, consent capabilities are now one-time and per-webview, and opening a native view rehydrates it from the host-owned workspace state. The restart verifier removes its temporary profile in `finally`, and the corrected VSIX was installed into the authorized main profile without closing VS Code. Scope, provider budgets, and phase gates are unchanged.
-
-Amendment 2026-09-01 (DWI-PO-0034): the final product-identity correction makes Prompt Optimizer the sole contributed Activity Bar container, native view, display name, and visible open command. Home and Project Meta Context remain internal destinations in that webview, and the hidden legacy `dwi.open` command routes to internal Home for compatibility. Step 1 places Assignment/type and Criticality before the prompt editor. Packaging derives its filename from the staged manifest, cleans temporary staging in `finally`, and emits source-commit/hash evidence. Scope, provider budgets, and phase gates are unchanged.
-
-Amendment 2026-09-01 (DWI-PO-0035): installed Step 3 review exposed nested whole-card scrolling, clipped heading/source context, actions below optional detail, and a collapsed fallback trace behind a generic rejection message. The authorized correction keeps one surface scroller plus a bounded prompt scroller, wraps review context, places required status/fallback evidence before the prompt, places primary actions before optional detail, and automatically opens rejected semantic evidence so its stable failure class is visible. No provider retry, provider-policy change, phase transition, merge, tag, release, or promotion is authorized. If the exact functional branch verifies cleanly, commit and push it to its existing upstream without force.
+Status: frozen 2026-09-03 under DWI-PO-0036. Do not silently change acceptance after corrective development begins. Within existing authority, any necessary amendment must be dated and ledgered; provider transmission, credentials, cost, safety/privacy changes, merge, tag, release, or administration still require separate approval.
 
 ## Identity
 
-- Phase: 5 — product hardening and minimum durable state
-- Owner: Codex
-- Starting SHA: `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`
-- Branch: `feature/po-05-product-hardening`
-- Transition: explicitly accepted blocked transition from Phase 4; Phase 4 remains blocked and unqualified
-- Delivery mode: local and reversible; no push, pull request, merge, tag, release, external CI, provider/fixed-executor call, or other remote mutation
-- Effort: E3 — host/webview persistence, migration, recovery, and installed-runtime behavior
+- Program: DWI / Prompt Optimizer exact-tree recovery and requalification
+- Branch: `recovery/exact-tree-requalification-2026-09-03`
+- Base: `origin/main@f1c69f8d713a32af0ef011946ec0a3bad28d8120`
+- Product source: `5088dbf6e5fdeea2415b991c429de8e5229d7a7b`
+- Effort: E4 — package, installed runtime, persistence, portability, evidence, and CI interact
+- Owner: Recovery Lead; one writer for active records and integrated changes
 
-## Objective and observable completion
+## Objective
 
-Finish a recoverable standalone Prompt Optimizer experience while preserving initialization as the consent-based project knowledge prerequisite. Consolidate optimizer-session durability around the revalidated existing workspace fingerprint, expose compact accessible recovery/reset behavior, and prove that restart, corruption, migration, downgrade tolerance, size limits, and workspace isolation cannot destroy initialized project knowledge or the deterministic fallback.
-
-Completion is observable when a packaged extension can initialize/review a project, create a local optimizer session, restart and resume the bounded session, reset optimizer state without deleting initialized project knowledge, reject corrupt/oversized/cross-workspace state safely, and preserve local output through provider failure. Phase 4 semantic qualification remains a separately blocked gate and is not implied.
+Replace inaccessible machine-local qualification evidence with a reproducible exact-tree and exact-package result, fix only observed product or harness defects, and leave one portable entry point that another agent can execute from a fresh clone without chat history or machine-local paths.
 
 ## In scope
 
-- Revalidate current persistence readers/writers, keys, scopes, limits, and reset paths.
-- Consolidate legacy PromptSaved/Recent, V2 persistence, and host workspace snapshot/global recents into one bounded versioned optimizer-session store in extension-managed storage.
-- Key project sessions by the revalidated existing workspace fingerprint; keep generic/no-workspace behavior bounded.
-- Persist only minimum recovery data and content-free call/evaluation summaries required by current behavior.
-- Add additive/tolerant migration and version handling while preserving rollback readers.
-- Add restart/resume, optimizer-only reset, corruption, size-limit, partial-write, downgrade-tolerance, and cross-workspace isolation tests.
-- Complete compact accessible recovery/provenance controls required by the installed flow.
-- Prove navigation remains provider-free and provider failure preserves the deterministic candidate.
-- Add phase-specific packaged flow evidence beyond activation-only smoke.
+- Exact ref, tag, worktree, CI, document, package, state-store, fixture, and evidence inventory.
+- Pinned Node `24.18.0` and pnpm `11.17.0`, including proof that package-script child processes resolve those binaries.
+- Disposable exact-SHA fresh clone; frozen install; six package typechecks; 421-test baseline or explained new count; schema no-drift; build; VSIX; archive; public hygiene; `git diff --check`.
+- CI correction so fresh-clone replay checks out the triggering SHA rather than moving `main`.
+- Exact installed VSIX absence/install/discovery/activation/open, uninitialized and initialized flows, deterministic Input → Resolve → Review, save, reset, uninstall/reinstall, accessibility, focus, and clipboard checks.
+- Explicit installed semantic success and failure through an out-of-process loopback OpenAI-compatible server using the production transport contract and no real credential.
+- OS-neutral three-process same-profile restoration/reset proof, separately reported from production-native consent UI.
+- VS Code `1.134.0` verification and separate `1.125.0` minimum-compatibility row.
+- Smallest evidence-driven product/test-harness corrections, followed by affected and full clean-candidate reruns.
+- Independent GPT-5.6 Sol/max adversarial review, exact-SHA CI, atomic commits, and normal push of this dedicated branch.
 
 ## Non-goals
 
-- No Phase 4 retry, revised evaluation ceiling, semantic qualification, fixed-executor run, or held-out transmission.
-- No automatic learning, semantic/final-candidate cache, route cache, cross-session semantic reuse, or generic engine extraction.
-- No Platform, gateway, Atlas, PMS, MCP, organization-policy, or sibling-repository dependency.
-- No target execution, arbitrary tools, assessment shell/workspace writes, or navigation-triggered egress.
-- No push, pull request, merge, tag, release, repository settings, external CI, credential use, or paid/external provider action.
-- No deletion or mutation of the Phase 4 lock, evidence, frozen contract, or checkpoint.
-- No Phase 6 default switch or promotion work.
-
-## Preserved invariants
-
-- Consent-based initialization, bounded evidence, developer review/correction, and approved project knowledge precede Prompt Optimizer use.
-- `.dwi/project.yaml` remains the only checked-in DWI product state; optimizer sessions use extension-managed storage.
-- Back, Next, fast-forward, recovery, and reset navigation remain local-only.
-- Provider use remains a disclosed explicit action; deterministic compile/recovery do not require provider health.
-- The host owns identity, revision, base hash, workspace epoch, networking, and secrets.
-- Semantic changes remain validated current hash-bound V2 patches compiled deterministically.
-- Optimizer reset cannot delete initialized project knowledge.
-- Unknown/corrupt/newer state fails safely without destructive rewrite.
-
-## Subtasks
-
-- [x] Inventory every current persistence seam and reset path.
-- [x] Revalidate workspace fingerprint stability and isolation.
-- [x] Freeze a versioned session envelope and migration/retention policy with focused tests.
-- [x] Implement the bounded extension-managed store and migrations. Existing readers remain as intentional downgrade-compatible mirrors.
-- [x] Wire restart/resume and optimizer-only reset through host protocol and webview.
-- [x] Complete accessible recovery/provenance controls.
-- [x] Prove corruption, limits, partial write, downgrade tolerance, reset preservation, and isolation.
-- [x] Prove no recovery/navigation egress and deterministic preservation on provider failure.
-- [x] Run focused, repository, typecheck, schema, build, VSIX, archive, and diff gates.
-- [x] Run same-process and cross-process installed Phase 5 functional flows plus clean reinstall/activation checks.
-- [x] Review the final diff and archive the outcome.
-- [x] Create atomic local implementation and evidence commits under the user-authorized local-only delivery mode.
+- No real optimizer provider, fixed executor, credentials, prompt/project transmission, spend, Phase 4 retry, or change to its frozen evidence.
+- No default-branch mutation, merge, tag, release, deployment, marketplace publication, repository administration, branch deletion, or history rewrite.
+- No Platform, PMS, gateway, Atlas, MCP, management analytics, self-training, persistent semantic memory, generic engine extraction, or Goal Optimizer work.
+- No broad refactor, dependency upgrade, feature removal, assertion weakening, consent bypass, or relabeling of failed/blocked evidence.
+- No deletion of historical documents, old branches, the temporary walkthrough ref, or user data.
 
 ## Acceptance
 
-- [x] One bounded versioned store owns current durable optimizer recovery state; legacy copies remain rollback mirrors rather than read authority.
-- [x] Supported older records migrate/read safely; unknown newer/corrupt state is not destructively rewritten.
-- [x] Restart restores only the matching workspace and never leaks cross-workspace state.
-- [x] Optimizer reset is available only for a current approved project with a confirmed compilable brief, clears optimizer state, and preserves the approved project brief and `.dwi/project.yaml`.
-- [x] Enforced count bounds and serialized UTF-8 byte bounds prevent unbounded storage growth.
-- [x] Stored call/evaluation summaries are content-free; no credentials or reusable raw project/prompt content enter telemetry/identifiers.
-- [x] Local navigation/recovery/reset makes zero provider calls.
-- [x] Provider failure preserves and labels the deterministic candidate.
-- [x] Recovery/reset controls are keyboard accessible, scoped, and disclose retained state.
-- [x] Existing initialization, legacy optimizer, library/template, and deterministic flows remain recoverable.
-- [x] Focused and repository-wide verification passes on the final candidate.
-- [x] A packaged flow proves initialization/review → local session → restart/resume → reset → initialized-project preservation.
-- [x] Final review discrepancies are classified and corrected with regression coverage; independent exact-candidate re-review remains part of the exact-SHA gate.
-- [x] Phase 4 remains blocked; Phase 5 is not semantic qualification or promotion readiness.
+1. Exact source and product SHAs, branch base, refs, tag state, tree state, inherited-claim classifications, toolchain, OS, CI, and missing-evidence boundary are recorded.
+2. Active docs are repository-relative and limited to one index, context, contract, progress record, evidence matrix, runbook, and append-only ledger.
+3. A true disposable clone at the intended exact SHA proves frozen install and child-process toolchain resolution.
+4. Root tests, six package typechecks, schema no-drift, build, VSIX, archive, hygiene, and diff checks pass on the final candidate.
+5. VSIX evidence includes identity, exact source SHA, product-source SHA, clean/dirty state, file count, bytes, SHA-256, required/forbidden entries, OS, and VS Code version where used.
+6. Installed one-process evidence is labeled accurately: packaged functional execution through the installed directory as extension-development path with the production-fail-closed test confirmation seam; it is not native-consent or cross-process proof.
+7. A three-process installed lane proves project/optimizer restoration, optimizer-only reset, second-restart reset persistence, and retained approved project knowledge in one isolated profile.
+8. Portable continuity and native macOS consent are separate rows. A non-production confirmation adapter must be explicit, fail closed outside test boundaries, and cannot count as native production consent.
+9. Explicit semantic success accepts a valid current bounded hash-bound V2 patch/projection through an out-of-process loopback transport. Malformed/provider/transport failure retains a visibly labeled deterministic fallback without navigation egress. Copy produces exact clipboard output.
+10. Absence/install/reinstall, no-workspace/uninitialized behavior, compact layout, keyboard/focus, accessible names, save, reset, and zero-navigation-egress are exercised or individually classified.
+11. VS Code `1.125.0` and `1.134.0` are independent compatibility rows; failures are diagnosed before changing the advertised minimum.
+12. The CI fresh-clone lane checks out `${GITHUB_SHA}` or an equivalent immutable triggering commit before attribution.
+13. The missing DWI-PO-0033, current main/feature reconciliation, storage-location correction, lost-run boundary, and Phase 4 tombstone are durably recorded without rewriting older entries.
+14. An independent reviewer who did not author changes checks source, tests, package/SHA binding, consent/privacy, persistence, portability, docs, and false-positive pass risk; actionable findings are fixed and affected gates rerun.
+15. The final reviewed commit is pushed on the dedicated branch, exact-SHA CI passes, and `main` remains unchanged.
 
 ## Failure behavior
 
-- Missing workspace: use only bounded generic deterministic state; never co-mingle project sessions.
-- Fingerprint mismatch: do not hydrate another workspace's session.
-- Corrupt/oversized envelope: fail closed, preserve project knowledge and deterministic usability, and avoid destructive overwrite.
-- Unknown newer schema: tolerate/ignore safely and leave recoverable data intact.
-- Partial write/interrupted migration: recover the last valid bounded record or report recovery unavailable without erasing project state.
-- Reset failure: report it and do not claim state was cleared.
-- Provider unavailable/stale/cancelled: preserve deterministic candidate and content-free failure summary.
-- Stale project review: block semantic progression pending renewed review.
+- Preserve first-failure evidence before repair.
+- Stop a lane on an invariant breach; never delete behavior, weaken assertions, bypass production consent, raise a frozen threshold, or transfer a pass between SHAs/artifacts.
+- Use only `passed`, `failed`, `blocked`, or `not run`; historical evidence remains labeled historical.
+- Keep raw prompt/project content, credentials, secrets, and reversible sensitive hashes out of committed evidence.
+- A loopback simulator proves only contract/transport/failure behavior. Real-provider and semantic-quality lanes remain blocked.
 
-## Verification
+## Rollback and next duty
 
-- Nearest domain/host/webview tests after each material change.
-- Root `pnpm test`; all package typechecks; clean schema export diff.
-- `pnpm build`, `pnpm vsix`, archive inspection, and `git diff --check`.
-- `pnpm verify:extension` plus a Phase 5-specific isolated installed flow.
-- Independent clean absence/install/uninstall/absence/fresh-install.
-- Egress assertions use deterministic fakes/simulator only; no real provider or fixed executor.
+Before merge, rollback is abandoning this recovery branch. After any separately authorized merge, use a normal revert and rerun the same package and recovery matrix. Preserve `main`, the pre-vNext tag, `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`, the temporary walkthrough branch, and the Phase 4 tombstone.
 
-## Migration and rollback
-
-Migrations are additive and tolerant. Preserve older readers and never rewrite unknown newer or invalid state. Before merge, rollback means abandoning this local branch and restoring `ff0bbea30b2e502bc3c5b9287da003994fc13ce0`; the checkpoint at `docs/prompt-optimizer-program/archives/2026-08-31-phase-4-blocked-transition/` restores Git history and local evidence. After an authorized merge, use a normal revert and rerun storage/recovery qualification; never rewrite shared history.
-
-## Next-phase duty
-
-Phase 6 local POC qualification is complete under the recorded matrix. Phase 5 and Phase 6 cannot waive blocked Phase 4 semantic/fixed-executor gates. Default qualification, merge, and baseline tagging require complete later evidence and explicit authority.
-
-## 2026-09-01 local POC amendment
-
-The user superseded the earlier no-commit/no-Phase-6-local-work limits for this branch by explicitly requiring atomic local commits and a broad local Phase 6 POC matrix. Provider/fixed-executor transmission, credentials, push, merge, tag, release, and promotion remain unauthorized. The packaged functional restart/resume/reset journey and remaining local authority/privacy checks now pass; the recorded Phase 5/6 outcomes are local POC evidence only, not semantic qualification or promotion.
+After this contract genuinely closes, start a new contract for one material clarification question at a time with answer/skip, document/revision/base-hash binding, deterministic section application, stale-answer invalidation, return position, accessibility, recovery, and no provider egress.
