@@ -65,6 +65,29 @@ describe("bounded semantic enhancement", () => {
     assertNonContentEvidenceV1(outcome.trace);
   });
 
+  it("explains rejected provider output without logging its body and preserves observed latency", async () => {
+    const outcome = await execute({
+      execute: async () => ({
+        text: "provider body that is not json and must not be copied into diagnostics",
+        latencyMs: 37,
+        finishReason: "stop",
+        inputTokens: 23,
+        outputTokens: 11,
+      }),
+    });
+    expect(outcome.status).toBe("fallback");
+    if (outcome.status !== "fallback") return;
+    expect(outcome.failureCode).toBe("INVALID_RESPONSE");
+    expect(outcome.diagnostic).toMatchObject({
+      expected: expect.stringContaining("prompt-enhance-result.v2"),
+      received: "Provider returned text that was not valid JSON.",
+      notAllowed: expect.stringContaining("locked/non-allowlisted"),
+      happened: "The provider response could not be parsed as JSON.",
+    });
+    expect(JSON.stringify(outcome.diagnostic)).not.toContain("provider body that is not json");
+    expect(outcome.trace.calls[0]).toMatchObject({ latencyMs: 37, inputTokens: 23, outputTokens: 11, result: "rejected" });
+  });
+
   it("fails closed when cancelled before provider execution", async () => {
     const controller = new AbortController();
     controller.abort();
