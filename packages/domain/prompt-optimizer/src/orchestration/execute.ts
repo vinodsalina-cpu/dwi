@@ -135,6 +135,14 @@ function diagnostic(error: unknown, response: PromptSemanticProviderResponseV2 |
   };
 }
 
+function validLatency(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function validTokenCount(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
 export async function executeBoundedSemanticEnhancementV2(input: {
   readonly document: PromptDocumentV2;
   readonly provider: PromptSemanticProviderPortV2;
@@ -246,9 +254,9 @@ export async function executeBoundedSemanticEnhancementV2(input: {
       baseHash: request.baseHash,
       result: cancelled ? "cancelled" : "rejected",
       failureCode,
-      ...(response ? { latencyMs: response.latencyMs } : {}),
-      ...(response?.inputTokens === undefined ? {} : { inputTokens: response.inputTokens }),
-      ...(response?.outputTokens === undefined ? {} : { outputTokens: response.outputTokens }),
+      ...(validLatency(response?.latencyMs) ? { latencyMs: response.latencyMs } : {}),
+      ...(validTokenCount(response?.inputTokens) ? { inputTokens: response.inputTokens } : {}),
+      ...(validTokenCount(response?.outputTokens) ? { outputTokens: response.outputTokens } : {}),
     };
     return {
       status: cancelled ? "cancelled" : "fallback",
