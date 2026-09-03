@@ -270,19 +270,18 @@ async function main() {
   if (!(await exists(collectorModulePath))) {
     throw new Error(`Built collector is missing: ${collectorModulePath}`);
   }
+  if (!(await exists(adapterModulePath)) || !(await exists(coreModulePath))) {
+    throw new Error("Built canonical fixture adapter is missing; run the repository build before fixture verification.");
+  }
   const {
     collectProjectIntelligence,
     isSupportedProjectEvidencePath,
   } = await import(pathToFileURL(collectorModulePath));
 
-  let adapter;
-  let validateProjectSnapshot;
-  if (await exists(adapterModulePath)) {
-    ({ projectIntelligenceToSnapshot: adapter } = await import(
-      pathToFileURL(adapterModulePath)
-    ));
-    ({ validateProjectSnapshot } = await import(pathToFileURL(coreModulePath)));
-  }
+  const { projectIntelligenceToSnapshot: adapter } = await import(
+    pathToFileURL(adapterModulePath)
+  );
+  const { validateProjectSnapshot } = await import(pathToFileURL(coreModulePath));
 
   const roots = await resolveFixtureRoots(process.argv.slice(2));
   const results = [];
