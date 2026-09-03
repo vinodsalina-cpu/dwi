@@ -44,6 +44,13 @@ export interface PromptSemanticProviderResponseV2 {
   readonly actualModel?: string;
 }
 
+export interface SemanticFailureDiagnosticV2 {
+  readonly expected: string;
+  readonly received: string;
+  readonly notAllowed: string;
+  readonly happened: string;
+}
+
 /** Host-owned implementations may perform network I/O; domain orchestration cannot. */
 export interface PromptSemanticProviderPortV2 {
   execute(
@@ -67,6 +74,7 @@ export type BoundedSemanticEnhancementOutcomeV2 =
       readonly compiled: CompiledPromptDocumentV2;
       readonly trace: OptimizationTraceV1;
       readonly failureCode: SemanticFailureCodeV2;
+      readonly diagnostic: SemanticFailureDiagnosticV2;
     };
 
 function trace(
@@ -94,6 +102,39 @@ function failure(error: unknown): SemanticFailureCodeV2 {
   return "INVALID_RESPONSE";
 }
 
+function receivedShape(response: PromptSemanticProviderResponseV2 | undefined): string {
+  if (!response) return "No provider response reached semantic validation.";
+  const trimmed = response.text.trim();
+  if (!trimmed) return "Provider returned an empty response body.";
+  const candidate = trimmed.startsWith("```")
+    ? trimmed.replace(/^```(?:json)?\s*/iu, "").replace(/\s*```$/u, "")
+    : trimmed;
+  try {
+    const parsed = JSON.parse(candidate) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return "Provider returned JSON, but the top level was not an object.";
+    const keys = Object.keys(parsed as Record<string, unknown>).sort();
+    return `Provider returned a JSON object with top-level keys: ${keys.length ? keys.join(", ") : "(none)"}.`;
+  } catch {
+    return "Provider returned text that was not valid JSON.";
+  }
+}
+
+function failureReason(error: unknown): string {
+  if (error instanceof SyntaxError) return "The provider response could not be parsed as JSON.";
+  if (error instanceof SemanticProviderErrorV2) return error.message;
+  if (error instanceof Error) return error.message;
+  return "Semantic validation rejected the provider response for an unknown reason.";
+}
+
+function diagnostic(error: unknown, response: PromptSemanticProviderResponseV2 | undefined): SemanticFailureDiagnosticV2 {
+  return {
+    expected: "prompt-enhance-result.v2 for operation enhance, the exact request baseHash, allowlisted unlocked patch operations, and a valid same-call projection when estimation is requested.",
+    received: receivedShape(response),
+    notAllowed: "Malformed or extra contract fields, wrong operation or baseHash, missing/invalid projection, secret/binary material, or edits to locked/non-allowlisted sections.",
+    happened: failureReason(error),
+  };
+}
+
 export async function executeBoundedSemanticEnhancementV2(input: {
   readonly document: PromptDocumentV2;
   readonly provider: PromptSemanticProviderPortV2;
@@ -109,6 +150,7 @@ export async function executeBoundedSemanticEnhancementV2(input: {
   const local = compilePromptDocumentV2(input.document);
   const budget = new OptimizationCallBudgetV1();
   const ordinal = budget.reserve("restructure");
+  let response: PromptSemanticProviderResponseV2 | undefined;
   let request = createPromptSemanticRequestV2(input.document, {
     operation: "enhance",
     requestId: input.requestId,
@@ -133,7 +175,7 @@ export async function executeBoundedSemanticEnhancementV2(input: {
       });
     }
     if (input.signal?.aborted) throw new SemanticProviderErrorV2("CANCELLED", "Semantic enhancement was cancelled.");
-    const response = await input.provider.execute(request, input.signal);
+    response = await input.provider.execute(request, input.signal);
     if (input.signal?.aborted) throw new SemanticProviderErrorV2("CANCELLED", "Semantic enhancement was cancelled.");
     if (response.truncated) throw new SemanticProviderErrorV2("TRUNCATED", "Semantic enhancement was truncated.");
     let semanticText = response.text;
@@ -204,6 +246,9 @@ export async function executeBoundedSemanticEnhancementV2(input: {
       baseHash: request.baseHash,
       result: cancelled ? "cancelled" : "rejected",
       failureCode,
+      ...(response ? { latencyMs: response.latencyMs } : {}),
+      ...(response?.inputTokens === undefined ? {} : { inputTokens: response.inputTokens }),
+      ...(response?.outputTokens === undefined ? {} : { outputTokens: response.outputTokens }),
     };
     return {
       status: cancelled ? "cancelled" : "fallback",
@@ -211,6 +256,7 @@ export async function executeBoundedSemanticEnhancementV2(input: {
       compiled: local,
       trace: trace(input.document, request, call, cancelled ? "cancelled" : "fallback"),
       failureCode,
+      diagnostic: diagnostic(error, response),
     };
   }
 }
