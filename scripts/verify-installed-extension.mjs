@@ -62,7 +62,9 @@ try {
   const extensionsDir = join(sandbox, 'extensions');
   const userDataDir = join(sandbox, 'user-data');
   const workspaceDir = join(sandbox, 'workspace');
+  const emptyWorkspacePath = join(sandbox, 'no-project.code-workspace');
   await Promise.all([mkdir(extensionsDir), mkdir(userDataDir), mkdir(workspaceDir)]);
+  await writeFile(emptyWorkspacePath, JSON.stringify({ folders: [] }));
   await writeFile(join(workspaceDir, 'package.json'), JSON.stringify({
     name: 'dwi-smoke-workspace',
     private: true,
@@ -111,7 +113,7 @@ try {
     vscodeExecutablePath,
     extensionDevelopmentPath: installed,
     extensionTestsPath: join(root, 'tests/extension-host/index.cjs'),
-    launchArgs: [...ciElectronArgs, `--remote-debugging-port=${noWorkspacePort}`, '--extensions-dir', extensionsDir, '--user-data-dir', userDataDir, '--disable-workspace-trust'],
+    launchArgs: [emptyWorkspacePath, ...ciElectronArgs, `--remote-debugging-port=${noWorkspacePort}`, '--extensions-dir', extensionsDir, '--user-data-dir', userDataDir, '--disable-workspace-trust'],
     extensionTestsEnv: { ...commonEnvironment, DWI_SMOKE_PHASE: 'no-workspace', DWI_SMOKE_DEBUG_PORT: String(noWorkspacePort) },
   });
   console.log('DWI_SMOKE_NO_WORKSPACE_HOST_OK');
