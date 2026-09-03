@@ -112,6 +112,14 @@ function boundedActivityText(value: string, maxChars: number): string {
   return normalized.length <= maxChars ? normalized : `${normalized.slice(0, Math.max(0, maxChars - 1))}…`;
 }
 
+function semanticFailureActivityDetail(diagnostic: { expected: string; received: string; notAllowed: string; happened: string }): string {
+  const expected = boundedActivityText(diagnostic.expected, 44);
+  const received = boundedActivityText(diagnostic.received, 44);
+  const notAllowed = boundedActivityText(diagnostic.notAllowed, 44);
+  const happened = boundedActivityText(diagnostic.happened, 44);
+  return `Expected: ${expected} Received: ${received} Not allowed: ${notAllowed} Happened: ${happened}`;
+}
+
 class WorkspaceSelectionChangedError extends Error {
   constructor() {
     super("The selected workspace root changed while Prompt Optimizer was working; retry in the current root.");
@@ -627,9 +635,6 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       }
       if (request.type === "dwi.library.item.get") {
         await this.postTemplateLibrary(webview, { type: "dwi.library.detail", detail: await this.templateLibrary.get(request.templateId) });
-        // Detail is the only response carrying a template body. Refresh the
-        // summary-only state separately so the newly opened item appears in
-        // Recents without asking the webview to reconstruct host state.
         await this.postTemplateLibrary(webview, { type: "dwi.library.state", state: await this.templateLibrary.open() });
         return true;
       }
@@ -839,9 +844,6 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
       }, current?.revision ?? "new");
       return true;
     } catch {
-      // A stale authoritative record is worse than falling back to the current
-      // workspace snapshot. Remove it when possible so restart migration cannot
-      // overwrite newer successfully persisted workflow state.
       try { await this.optimizerSessions.reset(workspaceFingerprint); } catch { /* Preserve corrupt/newer state unchanged. */ }
       return false;
     }
@@ -1171,6 +1173,14 @@ class DwiSidebarProvider implements vscode.WebviewViewProvider {
               ? "Prompt rewrite cancelled."
               : "The provider result was rejected. The unchanged local candidate remains available.",
           });
+          if (outcome.status !== "cancelled") {
+            this.recordActivity({
+              level: "error",
+              category: "LLM rewrite",
+              title: `Provider result rejected · ${outcome.failureCode}`,
+              detail: semanticFailureActivityDetail(outcome.diagnostic),
+            }, webview);
+          }
         });
         return true;
       }
