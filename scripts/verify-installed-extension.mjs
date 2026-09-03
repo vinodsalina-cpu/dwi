@@ -51,7 +51,11 @@ async function startLoopback() {
       }
     });
   });
-  return { child, baseUrl: `http://127.0.0.1:${ready.port}/v1` };
+  if (typeof ready.baseUrl !== 'string' || !ready.baseUrl.startsWith('http://127.0.0.1:')) {
+    child.kill('SIGTERM');
+    throw new Error('Loopback provider returned an invalid local base URL.');
+  }
+  return { child, baseUrl: ready.baseUrl };
 }
 
 try {
